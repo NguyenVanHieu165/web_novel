@@ -1,0 +1,569 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model TaiKhoan {
+  idTaiKhoan        Int                   @id @default(autoincrement()) @map("idTAI_KHOAN")
+  tenTaiKhoan       String                @unique(map: "ten_tai_khoan") @map("ten_tai_khoan") @db.VarChar(45)
+  email             String                @unique(map: "email") @map("email") @db.VarChar(100)
+  matKhau           String                @map("mat_khau") @db.VarChar(255)
+  emailXacThuc      Boolean?              @default(false) @map("email_xac_thuc")
+  trangThai         tai_khoan_trang_thai? @default(active) @map("trang_thai")
+  lastLogin         DateTime?             @map("last_login") @db.DateTime(0)
+  ip_dang_nhap_cuoi String?               @db.VarChar(45)
+  createdAt         DateTime?             @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt         DateTime?             @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  isDeleted         Boolean?              @default(false) @map("is_deleted")
+  binhLuan          BinhLuan[]
+  chuongDaMua       ChuongDaMua[]
+  danhGiaTruyen     DanhGiaTruyen[]
+  hoSoCaNhan        HoSoCaNhan?
+  hoaDonNap         HoaDonNap[]
+  lichSuDoc         LichSuDoc[]
+  lichSuGiaoDich    LichSuGiaoDich[]
+  likeBinhLuan      LikeBinhLuan[]
+  reportViPham      ReportViPham[]
+  suDungKhuyenMai   SuDungKhuyenMai[]
+  tangThuong        TangThuong[]
+  theoDoiTruyen     TheoDoiTruyen[]
+  thongBao          ThongBao[]
+  tienDoDoc         TienDoDoc[]
+  vaiTroNguoiDung   VaiTroNguoiDung[]
+  viTien            ViTien?
+  yeuc_cau_rut_tien yeuc_cau_rut_tien[]
+
+  @@index([email], map: "idx_email")
+  @@index([tenTaiKhoan], map: "idx_ten_tai_khoan")
+  @@map("tai_khoan")
+}
+
+model VaiTro {
+  idVaiTro        Int               @id @default(autoincrement()) @map("idVAI_TRO")
+  tenVaiTro       String            @map("ten_vai_tro") @db.VarChar(50)
+  moTa            String?           @map("mo_ta") @db.VarChar(100)
+  createdAt       DateTime?         @default(now()) @map("created_at") @db.DateTime(0)
+  vaiTroNguoiDung VaiTroNguoiDung[]
+
+  @@map("vai_tro")
+}
+
+model VaiTroNguoiDung {
+  idVaiTroNguoiDung Int       @id @default(autoincrement()) @map("idVAI_TRO_NGUOI_DUNG")
+  idTaiKhoan        Int       @map("idTAI_KHOAN")
+  idVaiTro          Int       @map("idVAI_TRO")
+  createdAt         DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan          TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "vai_tro_nguoi_dung_ibfk_1")
+  vaiTro            VaiTro    @relation(fields: [idVaiTro], references: [idVaiTro], onDelete: NoAction, onUpdate: NoAction, map: "vai_tro_nguoi_dung_ibfk_2")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@index([idVaiTro], map: "idVAI_TRO")
+  @@map("vai_tro_nguoi_dung")
+}
+
+model ViTien {
+  idTaiKhoan Int       @id @map("idTAI_KHOAN")
+  soDuXu     Int?      @default(0) @map("so_du_xu") @db.UnsignedInt
+  tongNapXu  Int?      @default(0) @map("tong_nap_xu") @db.UnsignedInt
+  createdAt  DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  taiKhoan   TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: Cascade, onUpdate: NoAction, map: "vi_tien_ibfk_1")
+
+  @@map("vi_tien")
+}
+
+model HoSoCaNhan {
+  idHoSoCaNhan  Int                      @id @default(autoincrement()) @map("idHO_SO_CA_NHAN")
+  idTaiKhoan    Int                      @unique(map: "idTAI_KHOAN") @map("idTAI_KHOAN")
+  ho_ten        String                   @db.VarChar(255)
+  anh           String?                  @db.VarChar(500)
+  mo_ta         String?                  @db.Text
+  ngay_sinh     DateTime?                @db.Date
+  gioi_tinh     ho_so_ca_nhan_gioi_tinh?
+  so_dien_thoai String?                  @db.VarChar(20)
+  createdAt     DateTime?                @default(now()) @map("created_at") @db.DateTime(0)
+  updated_at    DateTime?                @default(now()) @db.DateTime(0)
+  taiKhoan      TaiKhoan                 @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: Cascade, onUpdate: NoAction, map: "ho_so_ca_nhan_ibfk_1")
+
+  @@map("ho_so_ca_nhan")
+}
+
+model Truyen {
+  idTruyen             Int                   @id @default(autoincrement()) @map("idTRUYEN")
+  tenTruyen            String                @map("ten_truyen") @db.VarChar(255)
+  slug                 String                @unique(map: "slug") @map("slug") @db.VarChar(300)
+  anhBia               String                @map("anh_bia") @db.LongText
+  anhThumbnail         String?               @map("anh_thumbnail") @db.LongText
+  moTa                 String?               @map("mo_ta") @db.MediumText
+  trang_thai           truyen_trang_thai?    @default(dang_tien_hanh)
+  tuoiKhuyenNghi       Int?                  @default(16) @map("tuoi_khuyen_nghi") @db.UnsignedTinyInt
+  nguon                truyen_nguon?         @default(dich) @map("nguon")
+  luotXem              Int?                  @default(0) @map("luot_xem") @db.UnsignedInt
+  luotTheoDoi          Int?                  @default(0) @map("luot_theo_doi") @db.UnsignedInt
+  diemDanhGiaTrungBinh Decimal?              @default(0.00) @map("diem_danh_gia_trung_binh") @db.Decimal(3, 2)
+  soLuotDanhGia        Int?                  @default(0) @map("so_luot_danh_gia") @db.UnsignedInt
+  soChuong             Int?                  @default(0) @map("so_chuong") @db.UnsignedInt
+  tag                  String?               @map("tag") @db.VarChar(500)
+  createdAt            DateTime?             @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt            DateTime?             @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  isDeleted            Boolean?              @default(false) @map("is_deleted")
+  binh_luan            BinhLuan[]
+  chuong               Chuong[]
+  danhGiaTruyen        DanhGiaTruyen[]
+  lichSuDoc            LichSuDoc[]
+  quyen                Quyen[]
+  theoDoiTruyen        TheoDoiTruyen[]
+  truyen_tac_gia_dich  truyen_tac_gia_dich[]
+  truyenTheLoai        TruyenTheLoai[]
+
+  @@index([slug], map: "idx_slug")
+  @@index([trang_thai], map: "idx_trang_thai")
+  @@map("truyen")
+}
+
+model Chuong {
+  idChuong      Int            @id @default(autoincrement()) @map("idCHUONG")
+  idTruyen      Int            @map("idTRUYEN")
+  idQUYEN       Int?
+  chuongSo      Decimal        @map("chuong_so") @db.Decimal(7, 1)
+  tieuDeChuong  String         @map("tieu_de_chuong") @db.VarChar(300)
+  slug          String         @map("slug") @db.VarChar(300)
+  isFree        Boolean?       @default(true) @map("is_free")
+  giaXu         Int?           @default(0) @map("gia_xu") @db.UnsignedInt
+  luotXem       Int?           @default(0) @map("luot_xem") @db.UnsignedInt
+  createdAt     DateTime?      @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  isDeleted     Boolean?       @default(false) @map("is_deleted")
+  binhLuan      BinhLuan[]
+  truyen        Truyen         @relation(fields: [idTruyen], references: [idTruyen], onDelete: Cascade, onUpdate: NoAction, map: "chuong_ibfk_1")
+  quyen         Quyen?         @relation(fields: [idQUYEN], references: [idQuyen], onDelete: NoAction, onUpdate: NoAction, map: "chuong_ibfk_2")
+  chuongDaMua   ChuongDaMua[]
+  lichSuDoc     LichSuDoc[]
+  noiDungChuong NoiDungChuong?
+  tienDoDoc     TienDoDoc[]
+
+  @@index([idQUYEN], map: "idQUYEN")
+  @@index([idTruyen, chuongSo], map: "idx_chuong_truyen")
+  @@map("chuong")
+}
+
+model NoiDungChuong {
+  idNoiDungChuong Int                           @id @default(autoincrement()) @map("idNOI_DUNG_CHUONG")
+  idChuong        Int                           @unique(map: "idCHUONG") @map("idCHUONG")
+  noiDung         String?                       @map("noi_dung") @db.LongText
+  duongDanFile    String?                       @map("duong_dan_file") @db.VarChar(500)
+  contentType     noi_dung_chuong_content_type? @default(db) @map("content_type")
+  createdAt       DateTime?                     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime?                     @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  chuong          Chuong                        @relation(fields: [idChuong], references: [idChuong], onDelete: Cascade, onUpdate: NoAction, map: "noi_dung_chuong_ibfk_1")
+
+  @@map("noi_dung_chuong")
+}
+
+model ChuongDaMua {
+  idTaiKhoan Int       @map("idTAI_KHOAN")
+  idChuong   Int       @map("idCHUONG")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan   TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "chuong_da_mua_ibfk_1")
+  chuong     Chuong    @relation(fields: [idChuong], references: [idChuong], onDelete: NoAction, onUpdate: NoAction, map: "chuong_da_mua_ibfk_2")
+
+  @@id([idTaiKhoan, idChuong])
+  @@index([idChuong], map: "idCHUONG")
+  @@map("chuong_da_mua")
+}
+
+model TheLoai {
+  idTheLoai     Int             @id @default(autoincrement()) @map("idTHE_LOAI")
+  tenTheLoai    String          @map("ten_the_loai") @db.VarChar(100)
+  moTa          String?         @map("mo_ta") @db.VarChar(255)
+  createdAt     DateTime?       @default(now()) @map("created_at") @db.DateTime(0)
+  truyenTheLoai TruyenTheLoai[]
+
+  @@map("the_loai")
+}
+
+model TruyenTheLoai {
+  idTruyen  Int     @map("idTRUYEN")
+  idTheLoai Int     @map("idTHE_LOAI")
+  truyen    Truyen  @relation(fields: [idTruyen], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "truyen_the_loai_ibfk_1")
+  theLoai   TheLoai @relation(fields: [idTheLoai], references: [idTheLoai], onDelete: NoAction, onUpdate: NoAction, map: "truyen_the_loai_ibfk_2")
+
+  @@id([idTruyen, idTheLoai])
+  @@index([idTheLoai], map: "idTHE_LOAI")
+  @@map("truyen_the_loai")
+}
+
+model TacGiaDich {
+  idTacGiaDich        Int                   @id @default(autoincrement()) @map("idTAC_GIA_DICH")
+  ten                 String                @map("ten") @db.VarChar(200)
+  loai                tac_gia_dich_loai     @map("loai")
+  anhDaiDien          String?               @map("anh_dai_dien") @db.VarChar(500)
+  mo_ta               String?               @db.Text
+  facebook            String?               @map("facebook") @db.VarChar(255)
+  website             String?               @map("website") @db.VarChar(255)
+  quocGia             String?               @default("Việt Nam") @map("quoc_gia") @db.VarChar(100)
+  createdAt           DateTime?             @default(now()) @map("created_at") @db.DateTime(0)
+  updated_at          DateTime?             @default(now()) @db.DateTime(0)
+  truyen_tac_gia_dich truyen_tac_gia_dich[]
+
+  @@map("tac_gia_dich")
+}
+
+model TheoDoiTruyen {
+  idTheoDoiTruyen      Int       @id @default(autoincrement()) @map("idTHEO_DOI_TRUYEN")
+  idTruyen             Int       @map("idTRUYEN")
+  idTaiKhoan           Int       @map("idTAI_KHOAN")
+  thong_bao_chuong_moi Boolean?  @default(true)
+  createdAt            DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  truyen               Truyen    @relation(fields: [idTruyen], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "theo_doi_truyen_ibfk_1")
+  taiKhoan             TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "theo_doi_truyen_ibfk_2")
+
+  @@unique([idTaiKhoan, idTruyen], map: "uk_theo_doi")
+  @@index([idTruyen], map: "idTRUYEN")
+  @@map("theo_doi_truyen")
+}
+
+model BinhLuan {
+  idBinhLuan    Int            @id @default(autoincrement()) @map("idBINH_LUAN")
+  idTaiKhoan    Int            @map("idTAI_KHOAN")
+  idTRUYEN      Int
+  idChuong      Int?           @map("idCHUONG")
+  idBinhLuanCha Int?           @map("id_binh_luan_cha")
+  noiDung       String         @map("noi_dung") @db.VarChar(1000)
+  likeCount     Int?           @default(0) @map("like_count") @db.UnsignedInt
+  createdAt     DateTime?      @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  isDeleted     Boolean?       @default(false) @map("is_deleted")
+  taiKhoan      TaiKhoan       @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "binh_luan_ibfk_1")
+  truyen        Truyen         @relation(fields: [idTRUYEN], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "binh_luan_ibfk_2")
+  chuong        Chuong?        @relation(fields: [idChuong], references: [idChuong], onDelete: NoAction, onUpdate: NoAction, map: "binh_luan_ibfk_3")
+  likeBinhLuan  LikeBinhLuan[]
+
+  @@index([idChuong], map: "idCHUONG")
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@index([idTRUYEN], map: "idTRUYEN")
+  @@map("binh_luan")
+}
+
+model LikeBinhLuan {
+  idLike     Int       @id @default(autoincrement()) @map("idLIKE")
+  idTaiKhoan Int       @map("idTAI_KHOAN")
+  idBinhLuan Int       @map("idBINH_LUAN")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan   TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "like_binh_luan_ibfk_1")
+  binhLuan   BinhLuan  @relation(fields: [idBinhLuan], references: [idBinhLuan], onDelete: NoAction, onUpdate: NoAction, map: "like_binh_luan_ibfk_2")
+
+  @@unique([idTaiKhoan, idBinhLuan], map: "uk_like")
+  @@index([idBinhLuan], map: "idBINH_LUAN")
+  @@map("like_binh_luan")
+}
+
+model DanhGiaTruyen {
+  idDanhGia  Int       @id @default(autoincrement()) @map("idDANH_GIA")
+  idTaiKhoan Int       @map("idTAI_KHOAN")
+  idTruyen   Int       @map("idTRUYEN")
+  soSao      Int       @map("so_sao") @db.UnsignedTinyInt
+  noiDung    String?   @map("noi_dung") @db.Text
+  createdAt  DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  isDeleted  Boolean?  @default(false) @map("is_deleted")
+  taiKhoan   TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "danh_gia_truyen_ibfk_1")
+  truyen     Truyen    @relation(fields: [idTruyen], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "danh_gia_truyen_ibfk_2")
+
+  @@unique([idTaiKhoan, idTruyen], map: "uk_danhgia")
+  @@index([idTruyen], map: "idTRUYEN")
+  @@map("danh_gia_truyen")
+}
+
+model ReportViPham {
+  idReport       Int                           @id @default(autoincrement()) @map("idREPORT")
+  idTaiKhoan     Int                           @map("idTAI_KHOAN")
+  loai_doi_tuong report_vi_pham_loai_doi_tuong
+  idDoiTuong     Int                           @map("id_doi_tuong")
+  lyDo           String                        @map("ly_do") @db.Text
+  trang_thai     report_vi_pham_trang_thai?    @default(pending)
+  createdAt      DateTime?                     @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan       TaiKhoan                      @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "report_vi_pham_ibfk_1")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("report_vi_pham")
+}
+
+model TienDoDoc {
+  idTienDoDoc Int       @id @default(autoincrement()) @map("idTIEN_DO_DOC")
+  idTaiKhoan  Int       @map("idTAI_KHOAN")
+  idChuong    Int       @map("idCHUONG")
+  viTriDoc    Int?      @default(0) @map("vi_tri_doc") @db.UnsignedInt
+  phanTramDoc Decimal?  @default(0.00) @map("phan_tram_doc") @db.Decimal(5, 2)
+  ngayDocCuoi DateTime? @default(now()) @map("ngay_doc_cuoi") @db.DateTime(0)
+  taiKhoan    TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "tien_do_doc_ibfk_1")
+  chuong      Chuong    @relation(fields: [idChuong], references: [idChuong], onDelete: NoAction, onUpdate: NoAction, map: "tien_do_doc_ibfk_2")
+
+  @@unique([idTaiKhoan, idChuong], map: "uk_tiendo")
+  @@index([idChuong], map: "idCHUONG")
+  @@map("tien_do_doc")
+}
+
+model LichSuDoc {
+  idLichSuDoc Int       @id @default(autoincrement()) @map("idLICH_SU_DOC")
+  idTaiKhoan  Int       @map("idTAI_KHOAN")
+  idTruyen    Int       @map("idTRUYEN")
+  idChuong    Int       @map("idCHUONG")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan    TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "lich_su_doc_ibfk_1")
+  truyen      Truyen    @relation(fields: [idTruyen], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "lich_su_doc_ibfk_2")
+  chuong      Chuong    @relation(fields: [idChuong], references: [idChuong], onDelete: NoAction, onUpdate: NoAction, map: "lich_su_doc_ibfk_3")
+
+  @@index([idChuong], map: "idCHUONG")
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@index([idTruyen], map: "idTRUYEN")
+  @@map("lich_su_doc")
+}
+
+model HoaDonNap {
+  idHoaDonNap   Int                     @id @default(autoincrement()) @map("idHOA_DON_NAP")
+  idTaiKhoan    Int                     @map("idTAI_KHOAN")
+  maGiaoDich    String?                 @unique(map: "ma_giao_dich") @map("ma_giao_dich") @db.VarChar(100)
+  so_xu_nap     Int                     @db.UnsignedInt
+  soTienVnd     Decimal                 @map("so_tien_vnd") @db.Decimal(12, 0)
+  trang_thai    hoa_don_nap_trang_thai? @default(pending)
+  phuongThuc    hoa_don_nap_phuong_thuc @map("phuong_thuc")
+  ghiChu        String?                 @map("ghi_chu") @db.Text
+  createdAt     DateTime?               @default(now()) @map("created_at") @db.DateTime(0)
+  ngay_xac_nhan DateTime?               @db.DateTime(0)
+  taiKhoan      TaiKhoan                @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "hoa_don_nap_ibfk_1")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("hoa_don_nap")
+}
+
+model LichSuGiaoDich {
+  idLichSuGiaoDich Int                    @id @default(autoincrement()) @map("idLICH_SU_GIAO_DICH")
+  idTaiKhoan       Int                    @map("idTAI_KHOAN")
+  loai             lich_su_giao_dich_loai @map("loai")
+  id_doi_tuong     Int?
+  so_xu_thay_doi   Int
+  soDuTruoc        Int                    @map("so_du_truoc") @db.UnsignedInt
+  soDuSau          Int                    @map("so_du_sau") @db.UnsignedInt
+  createdAt        DateTime?              @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan         TaiKhoan               @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "lich_su_giao_dich_ibfk_1")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("lich_su_giao_dich")
+}
+
+model TangThuong {
+  idTangThuong Int              @id @default(autoincrement()) @map("idTANG_THUONG")
+  idTaiKhoan   Int              @map("idTAI_KHOAN")
+  loai         tang_thuong_loai @map("loai")
+  soXu         Int              @map("so_xu") @db.UnsignedInt
+  moTa         String?          @map("mo_ta") @db.VarChar(255)
+  createdAt    DateTime?        @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan     TaiKhoan         @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "tang_thuong_ibfk_1")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("tang_thuong")
+}
+
+model KhuyenMai {
+  idKhuyenMai      Int               @id @default(autoincrement()) @map("idKHUYEN_MAI")
+  tenKhuyenMai     String            @map("ten_khuyen_mai") @db.VarChar(200)
+  maCode           String?           @unique(map: "ma_code") @map("ma_code") @db.VarChar(50)
+  loai             khuyen_mai_loai   @map("loai")
+  giaTri           Decimal           @map("gia_tri") @db.Decimal(12, 2)
+  ngayBatDau       DateTime          @map("ngay_bat_dau") @db.DateTime(0)
+  ngayKetThuc      DateTime          @map("ngay_ket_thuc") @db.DateTime(0)
+  soLuongSuDung    Int?              @default(0) @map("so_luong_su_dung") @db.UnsignedInt
+  gioi_han_su_dung Int?              @db.UnsignedInt
+  isActive         Boolean?          @default(true) @map("is_active")
+  createdAt        DateTime?         @default(now()) @map("created_at") @db.DateTime(0)
+  suDungKhuyenMai  SuDungKhuyenMai[]
+
+  @@map("khuyen_mai")
+}
+
+model SuDungKhuyenMai {
+  idSU_DUNG   Int       @id @default(autoincrement())
+  idTaiKhoan  Int       @map("idTAI_KHOAN")
+  idKhuyenMai Int       @map("idKHUYEN_MAI")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan    TaiKhoan  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "su_dung_khuyen_mai_ibfk_1")
+  khuyenMai   KhuyenMai @relation(fields: [idKhuyenMai], references: [idKhuyenMai], onDelete: NoAction, onUpdate: NoAction, map: "su_dung_khuyen_mai_ibfk_2")
+
+  @@index([idKhuyenMai], map: "idKHUYEN_MAI")
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("su_dung_khuyen_mai")
+}
+
+model ThongBao {
+  idThongBao   Int             @id @default(autoincrement()) @map("idTHONG_BAO")
+  idTaiKhoan   Int             @map("idTAI_KHOAN")
+  tieu_de      String          @db.VarChar(200)
+  noiDung      String          @map("noi_dung") @db.Text
+  loai         thong_bao_loai?
+  id_doi_tuong Int?
+  daDoc        Boolean?        @default(false) @map("da_doc")
+  createdAt    DateTime?       @default(now()) @map("created_at") @db.DateTime(0)
+  taiKhoan     TaiKhoan        @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "thong_bao_ibfk_1")
+
+  @@index([idTaiKhoan], map: "idTAI_KHOAN")
+  @@map("thong_bao")
+}
+
+model Quyen {
+  idQuyen   Int       @id @default(autoincrement()) @map("idQUYEN")
+  idTRUYEN  Int
+  tenQuyen  String    @map("ten_quyen") @db.VarChar(255)
+  soThuTu   Int       @map("so_thu_tu") @db.UnsignedInt
+  createdAt DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  chuong    Chuong[]
+  truyen    Truyen    @relation(fields: [idTRUYEN], references: [idTruyen], onDelete: Cascade, onUpdate: NoAction, map: "quyen_ibfk_1")
+
+  @@index([idTRUYEN], map: "idTRUYEN")
+  @@map("quyen")
+}
+
+model CaiDatHeThong {
+  khoa   String  @id @map("khoa") @db.VarChar(100)
+  giaTri String  @map("gia_tri") @db.Text
+  moTa   String? @map("mo_ta") @db.VarChar(255)
+
+  @@map("cai_dat_he_thong")
+}
+
+model truyen_tac_gia_dich {
+  idTRUYEN       Int
+  idTAC_GIA_DICH Int
+  vai_tro        truyen_tac_gia_dich_vai_tro
+  truyen         Truyen                      @relation(fields: [idTRUYEN], references: [idTruyen], onDelete: NoAction, onUpdate: NoAction, map: "truyen_tac_gia_dich_ibfk_1")
+  tac_gia_dich   TacGiaDich                  @relation(fields: [idTAC_GIA_DICH], references: [idTacGiaDich], onDelete: NoAction, onUpdate: NoAction, map: "truyen_tac_gia_dich_ibfk_2")
+
+  @@id([idTRUYEN, idTAC_GIA_DICH])
+  @@index([idTAC_GIA_DICH], map: "idTAC_GIA_DICH")
+}
+
+model yeuc_cau_rut_tien {
+  idRUT_TIEN          Int                           @id @default(autoincrement())
+  idTAI_KHOAN         Int
+  so_tien_vnd         Decimal                       @db.Decimal(12, 0)
+  so_xu               Int                           @db.UnsignedInt
+  tai_khoan_ngan_hang String                        @db.VarChar(255)
+  ten_ngan_hang       String                        @db.VarChar(100)
+  trang_thai          yeuc_cau_rut_tien_trang_thai? @default(pending)
+  ghi_chu             String?                       @db.Text
+  created_at          DateTime?                     @default(now()) @db.DateTime(0)
+  ngay_xu_ly          DateTime?                     @db.DateTime(0)
+  tai_khoan           TaiKhoan                      @relation(fields: [idTAI_KHOAN], references: [idTaiKhoan], onDelete: NoAction, onUpdate: NoAction, map: "yeuc_cau_rut_tien_ibfk_1")
+
+  @@index([idTAI_KHOAN], map: "idTAI_KHOAN")
+}
+
+enum lich_su_giao_dich_loai {
+  nap_xu
+  mua_chuong
+  donate
+  hoan_xu
+  khuyen_mai
+  rut_tien
+}
+
+enum report_vi_pham_loai_doi_tuong {
+  truyen
+  chuong
+  binhluan
+}
+
+enum tac_gia_dich_loai {
+  tac_gia
+  dich_gia
+  both
+}
+
+enum tang_thuong_loai {
+  dang_ky
+  doc_du_chuong
+  moi_ban_be
+  su_kien
+}
+
+enum truyen_tac_gia_dich_vai_tro {
+  tac_gia_chinh
+  tac_gia_phu
+  dich_gia_chinh
+  dich_gia_phu
+}
+
+enum khuyen_mai_loai {
+  tang_xu
+  giam_gia_chuong
+  giam_gia_nap
+}
+
+enum noi_dung_chuong_content_type {
+  db
+  file
+}
+
+enum thong_bao_loai {
+  chuong_moi
+  reply
+  khuyen_mai
+  rut_tien
+  tang_xu
+}
+
+enum hoa_don_nap_trang_thai {
+  pending
+  success
+  failed
+  cancelled
+}
+
+enum report_vi_pham_trang_thai {
+  pending
+  approved
+  rejected
+}
+
+enum tai_khoan_trang_thai {
+  active
+  locked
+  banned
+}
+
+enum ho_so_ca_nhan_gioi_tinh {
+  male
+  female
+  other
+}
+
+enum hoa_don_nap_phuong_thuc {
+  momo
+  vnpay
+  bank
+  khuyen_mai
+}
+
+enum truyen_trang_thai {
+  dang_tien_hanh
+  hoan_thanh
+  tam_dung
+  sap_ra_mat
+}
+
+enum yeuc_cau_rut_tien_trang_thai {
+  pending
+  approved
+  rejected
+  done
+}
+
+enum truyen_nguon {
+  sang_tac
+  dich
+  convert
+}
