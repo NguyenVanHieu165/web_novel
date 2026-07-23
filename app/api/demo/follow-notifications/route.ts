@@ -35,105 +35,191 @@ export async function GET() {
     }
 }
 
-// POST: Thực hiện theo dõi truyện và trigger gửi thông báo qua WebSocket
+// POST: Thực hiện theo dõi hoặc giả lập các loại thông báo khác và lưu vào Database thực tế
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const idTruyen = Number(body.idTruyen);
-        const idTaiKhoan = Number(body.idTaiKhoan);
+        const category = body.category || "follow";
+        const priority = body.priority || "normal";
+        const socketServerUrl = process.env.SOCKET_SERVER_URL || "http://localhost:3001";
+        const secretToken = process.env.INTERNAL_SECRET_TOKEN || "super-secret-token";
 
-        if (!idTruyen || !idTaiKhoan) {
-            return NextResponse.json({
-                success: false,
-                message: "Thiếu idTruyen hoặc idTaiKhoan"
-            }, { status: 400 });
-        }
+        // Tìm một tài khoản Admin/User ngẫu nhiên làm người nhận thông báo để tránh lỗi khóa ngoại (Foreign Key)
+        const firstUser = await prisma.taiKhoan.findFirst({ select: { idTaiKhoan: true } });
+        const idTaiKhoanAdmin = firstUser?.idTaiKhoan || 1;
 
-        // 1. Kiểm tra xem truyện và tài khoản có tồn tại không
-        const [story, user] = await Promise.all([
-            prisma.truyen.findUnique({ where: { idTruyen } }),
-            prisma.taiKhoan.findUnique({ where: { idTaiKhoan } })
-        ]);
+        // 1. GIẢ LẬP THEO DÕI TRUYỆN (FOLLOW) - CÓ TƯƠNG TÁC DB THỰC TẾ
+        if (category === "follow") {
+            const idTruyen = Number(body.idTruyen);
+            const idTaiKhoan = Number(body.idTaiKhoan);
 
-        if (!story || !user) {
-            return NextResponse.json({
-                success: false,
-                message: "Không tìm thấy Truyện hoặc Tài khoản tương ứng"
-            }, { status: 404 });
-        }
-
-        // 2. Kiểm tra xem đã theo dõi chưa, nếu chưa thì tạo mới
-        const existingFollow = await prisma.theoDoiTruyen.findUnique({
-            where: {
-                idTaiKhoan_idTruyen: { idTaiKhoan, idTruyen }
+            if (!idTruyen || !idTaiKhoan) {
+                return NextResponse.json({ success: false, message: "Thiếu idTruyen hoặc idTaiKhoan" }, { status: 400 });
             }
-        });
 
-        let followRecord;
-        let actionType = "follow";
+            const [story, user] = await Promise.all([
+                prisma.truyen.findUnique({ where: { idTruyen } }),
+                prisma.taiKhoan.findUnique({ where: { idTaiKhoan } })
+            ]);
 
-        if (existingFollow) {
-            // Nếu đã theo dõi rồi, demo sẽ hủy theo dõi để có thể bấm lại nhiều lần test
-            await prisma.theoDoiTruyen.delete({
-                where: {
-                    idTheoDoiTruyen: existingFollow.idTheoDoiTruyen
-                }
+            if (!story || !user) {
+                return NextResponse.json({ success: false, message: "Không tìm thấy Truyện hoặc Tài khoản" }, { status: 404 });
+            }
+
+            const existingFollow = await prisma.theoDoiTruyen.findUnique({
+                where: { idTaiKhoan_idTruyen: { idTaiKhoan, idTruyen } }
             });
-            actionType = "unfollow";
-        } else {
-            followRecord = await prisma.theoDoiTruyen.create({
-                data: {
-                    idTruyen,
-                    idTaiKhoan,
-                    thong_bao_chuong_moi: true
-                }
-            });
-        }
 
-        // 3. Nếu là hành động theo dõi (follow), gọi điện kích hoạt thông báo qua Socket Server
-        if (actionType === "follow") {
-            const socketServerUrl = process.env.SOCKET_SERVER_URL || "http://localhost:3001";
-            const secretToken = process.env.INTERNAL_SECRET_TOKEN || "super-secret-token";
+            let actionType = "follow";
 
-            try {
-                // Gọi bất đồng bộ (fire-and-forget), không dùng await để tránh block client nếu socket server phản hồi chậm
-                fetch(`${socketServerUrl}/api/trigger-notification`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${secretToken}`
-                    },
-                    body: JSON.stringify({
-                        type: "new-follow",
-                        title: "Lượt theo dõi mới! 📖",
-                        message: `Độc giả "${user.tenTaiKhoan}" vừa bấm theo dõi truyện "${story.tenTruyen}"`,
-                        data: {
-                            idTruyen,
-                            tenTruyen: story.tenTruyen,
-                            tenTaiKhoan: user.tenTaiKhoan,
-                            idTaiKhoan
-                        }
-                    })
-                }).then(res => {
-                    if (!res.ok) {
-                        console.error(`[Next.js API] Socket server returned status ${res.status}`);
-                    }
-                }).catch(err => {
-                    console.error("[Next.js API] Socket server request connection failed:", err.message);
+            if (existingFollow) {
+                await prisma.theoDoiTruyen.delete({ where: { idTheoDoiTruyen: existingFollow.idTheoDoiTruyen } });
+                actionType = "unfollow";
+            } else {
+                await prisma.theoDoiTruyen.create({
+                    data: { idTruyen, idTaiKhoan, thong_bao_chuong_moi: true }
                 });
-            } catch (socketErr: any) {
-                console.error("[Next.js API] Fail to fetch Socket Server:", socketErr.message);
             }
+
+            // Gọi trigger sang Socket Server nếu là follow
+            if (actionType === "follow") {
+                const title = "Lượt theo dõi mới! 📖";
+                const message = `Độc giả "${user.tenTaiKhoan}" vừa bấm theo dõi truyện "${story.tenTruyen}"`;
+
+                // Lưu vào bảng ThongBao trong Database
+                await prisma.thongBao.create({
+                    data: {
+                        idTaiKhoan: idTaiKhoan, // Độc giả nhận thông báo
+                        tieu_de: title,
+                        noiDung: message,
+                        daDoc: false
+                    }
+                });
+
+                triggerSocketNotification(socketServerUrl, secretToken, {
+                    type: "new-follow",
+                    category: "follow",
+                    priority: "normal",
+                    title,
+                    message,
+                    data: { idTruyen, tenTruyen: story.tenTruyen, tenTaiKhoan: user.tenTaiKhoan, idTaiKhoan }
+                });
+            }
+
+            return NextResponse.json({
+                success: true,
+                action: actionType,
+                message: actionType === "follow" ? "Theo dõi truyện thành công" : "Hủy theo dõi truyện thành công"
+            });
         }
 
-        return NextResponse.json({
-            success: true,
-            action: actionType,
-            message: actionType === "follow" ? "Theo dõi truyện thành công" : "Hủy theo dõi truyện thành công"
-        });
+        // 2. GIẢ LẬP BÁO CÁO VI PHẠM (REPORT)
+        if (category === "report") {
+            const reportReason = body.reportReason || "Chương bị trùng lặp nội dung";
+            const storyName = body.storyName || "Đường Chuyên (Demo)";
+            const username = body.username || "Thành viên ẩn danh";
+            const title = "Báo cáo vi phạm mới! ⚠️";
+            const message = `Độc giả "${username}" báo cáo lỗi truyện "${storyName}"`;
+
+            // Lưu vào bảng ThongBao trong Database
+            await prisma.thongBao.create({
+                data: {
+                    idTaiKhoan: idTaiKhoanAdmin,
+                    tieu_de: title,
+                    noiDung: message,
+                    daDoc: false
+                }
+            });
+
+            triggerSocketNotification(socketServerUrl, secretToken, {
+                type: "new-report",
+                category: "report",
+                priority: priority,
+                title,
+                message,
+                data: { tenTaiKhoan: username, tenTruyen: storyName, reportReason }
+            });
+
+            return NextResponse.json({ success: true, message: "Giả lập gửi báo cáo vi phạm thành công" });
+        }
+
+        // 3. GIẢ LẬP GIAO DỊCH NẠP TIỀN (TRANSACTION)
+        if (category === "transaction") {
+            const amount = Number(body.amount) || 50000;
+            const username = body.username || "Độc giả VIP";
+            const title = "Giao dịch nạp tiền mới! 💰";
+            const message = `Tài khoản "${username}" vừa nạp thành công ${amount.toLocaleString("vi-VN")} đ vào ví`;
+
+            // Lưu vào bảng ThongBao trong Database
+            await prisma.thongBao.create({
+                data: {
+                    idTaiKhoan: idTaiKhoanAdmin,
+                    tieu_de: title,
+                    noiDung: message,
+                    daDoc: false
+                }
+            });
+
+            triggerSocketNotification(socketServerUrl, secretToken, {
+                type: "new-transaction",
+                category: "transaction",
+                priority: priority,
+                title,
+                message,
+                data: { tenTaiKhoan: username, amount }
+            });
+
+            return NextResponse.json({ success: true, message: "Giả lập giao dịch nạp tiền thành công" });
+        }
+
+        // 4. GIẢ LẬP SỰ KIỆN HỆ THỐNG (SYSTEM)
+        if (category === "system") {
+            const systemEvent = body.systemEvent || "Cập nhật thành công Version 2.1.0";
+            const title = "Cập nhật hệ thống! 🛡️";
+            const message = `Hệ thống vừa ghi nhận sự kiện: ${systemEvent}`;
+
+            // Lưu vào bảng ThongBao trong Database
+            await prisma.thongBao.create({
+                data: {
+                    idTaiKhoan: idTaiKhoanAdmin,
+                    tieu_de: title,
+                    noiDung: message,
+                    daDoc: false
+                }
+            });
+
+            triggerSocketNotification(socketServerUrl, secretToken, {
+                type: "system-alert",
+                category: "system",
+                priority: priority,
+                title,
+                message,
+                data: { systemEvent }
+            });
+
+            return NextResponse.json({ success: true, message: "Giả lập sự kiện hệ thống thành công" });
+        }
+
+        return NextResponse.json({ success: false, message: "Category không hợp lệ" }, { status: 400 });
 
     } catch (error) {
         console.error("POST Follow Demo Error:", error);
         return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
     }
+}
+
+// Hàm phụ trợ gửi request sang Socket Server độc lập
+function triggerSocketNotification(serverUrl: string, token: string, payload: any) {
+    fetch(`${serverUrl}/api/trigger-notification`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    }).then(res => {
+        if (!res.ok) console.error(`[Socket Trigger] Returned status ${res.status}`);
+    }).catch(err => {
+        console.error("[Socket Trigger] Connection failed:", err.message);
+    });
 }

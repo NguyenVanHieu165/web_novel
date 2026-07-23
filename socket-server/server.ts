@@ -12,13 +12,11 @@ const app = express();
 const PORT: number = Number(process.env.PORT) || 3001;
 const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGINS || "http://localhost:3000").split(",");
 const SECRET_TOKEN: string = process.env.INTERNAL_SECRET_TOKEN || "super-secret-token";
-
 app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true
 }));
 app.use(express.json());
-
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
@@ -27,10 +25,11 @@ const io = new Server(httpServer, {
         credentials: true
     }
 });
-
 // Định nghĩa kiểu dữ liệu cho thông báo gửi đến từ Next.js
 interface NotificationPayload {
     type: string;
+    category?: string;
+    priority?: "urgent" | "warning" | "success" | "normal";
     title?: string;
     message: string;
     data?: Record<string, any>;
@@ -54,24 +53,26 @@ io.on("connection", (socket: Socket) => {
 // Endpoint HTTP để Next.js API gửi tin nhắn kích hoạt thông báo
 app.post("/api/trigger-notification", (req: Request<{}, {}, NotificationPayload>, res: Response) => {
     const authHeader = req.headers["authorization"];
-    
+
     // Kiểm tra Secret Token bảo mật tránh spam thông báo
     if (!authHeader || authHeader !== `Bearer ${SECRET_TOKEN}`) {
         console.warn("[Auth] Unauthorized trigger request attempt");
         return res.status(401).json({ success: false, message: "Unauthorized token" });
     }
 
-    const { type, title, message, data } = req.body;
+    const { type, category, priority, title, message, data } = req.body;
 
     if (!type || !message) {
         return res.status(400).json({ success: false, message: "Missing type or message" });
     }
 
-    console.log(`[Notification] Triggering '${type}': ${message}`);
+    console.log(`[Notification] Triggering '${type}' [Category: ${category}] [Priority: ${priority}]: ${message}`);
 
     // Phát tín hiệu WebSocket cho tất cả admin đã join room
     io.to("admins").emit("notification", {
         type,
+        category: category || "follow",
+        priority: priority || "normal",
         title: title || "Thông báo mới",
         message,
         data: data || {},

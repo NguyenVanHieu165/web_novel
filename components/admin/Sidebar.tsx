@@ -23,7 +23,31 @@ const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [unreadFollows, setUnreadFollows] = useState(0);
 
-  // Kết nối socket toàn cục cho admin panel
+  // 1. Đồng bộ số lượng chưa đọc từ Database khi mount và khi có cập nhật từ trang con
+  useEffect(() => {
+    const updateUnreadCount = async () => {
+      try {
+        const response = await fetch("/api/admin/notifications");
+        const resData = await response.json();
+        if (resData.success) {
+          const unread = resData.data.filter((item: any) => !item.daDoc).length;
+          setUnreadFollows(unread);
+        }
+      } catch (e) {
+        console.error("Lỗi lấy thông báo chưa xem trên Sidebar:", e);
+      }
+    };
+
+    updateUnreadCount();
+    window.addEventListener("notifications-updated", updateUnreadCount);
+    window.addEventListener("new-follow-event", updateUnreadCount);
+    return () => {
+      window.removeEventListener("notifications-updated", updateUnreadCount);
+      window.removeEventListener("new-follow-event", updateUnreadCount);
+    };
+  }, []);
+
+  // 2. Kết nối socket toàn cục cho admin panel
   useEffect(() => {
     const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:3001";
     console.log("[Sidebar WebSocket] Connecting to:", socketServerUrl);
@@ -43,20 +67,40 @@ const Sidebar = () => {
 
     socket.on("notification", (notification: any) => {
       console.log("[Sidebar WebSocket] Received notification:", notification);
-      if (notification.type === "new-follow") {
-        // Tăng bộ đếm thông báo chưa đọc
-        setUnreadFollows((prev) => prev + 1);
+      
+      const title = notification.title || "Thông báo mới";
+      const desc = notification.message;
+      const category = notification.category || "follow";
 
-        // Hiển thị thông báo toàn cục ở bất cứ trang admin nào đang mở
-        toast.success(notification.title, {
-          description: notification.message,
-          icon: "🔔",
+      // Hiển thị Toast đẹp mắt dựa trên phân loại (Category)
+      if (category === "report") {
+        toast.error(title, {
+          description: desc,
+          icon: "⚠️",
+          duration: 8000,
+        });
+      } else if (category === "transaction") {
+        toast.success(title, {
+          description: desc,
+          icon: "💰",
+          duration: 7000,
+        });
+      } else if (category === "system") {
+        toast.info(title, {
+          description: desc,
+          icon: "⚙️",
+          duration: 7000,
+        });
+      } else {
+        toast.success(title, {
+          description: desc,
+          icon: "❤️",
           duration: 6000,
         });
-
-        // Phát sự kiện DOM để các trang con (như DashboardPage hay NotificationsPage) biết mà tự làm mới dữ liệu
-        window.dispatchEvent(new CustomEvent("new-follow-event", { detail: notification }));
       }
+
+      // Phát sự kiện DOM kèm theo tin nhắn đầy đủ để các trang con cập nhật tự động từ Database
+      window.dispatchEvent(new CustomEvent("new-follow-event", { detail: notification }));
     });
 
     return () => {
@@ -65,10 +109,31 @@ const Sidebar = () => {
     };
   }, []);
 
-  // Tự động xóa bộ đếm thông báo khi admin truy cập vào trang thông báo
+  // 3. Tự động đánh dấu tất cả là đã đọc trong DB khi admin truy cập vào trang thông báo
   useEffect(() => {
     if (pathname === "/admin/notifications") {
       setUnreadFollows(0);
+      
+      const markAllReadInDb = async () => {
+        try {
+          const response = await fetch("/api/admin/notifications", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ all: true })
+          });
+          const resData = await response.json();
+          if (resData.success) {
+            // Phát sự kiện cập nhật để trang notifications biết và cập nhật lại giao diện
+            window.dispatchEvent(new CustomEvent("notifications-updated"));
+          }
+        } catch (e) {
+          console.error("Lỗi cập nhật đã đọc tất cả từ Sidebar:", e);
+        }
+      };
+
+      markAllReadInDb();
     }
   }, [pathname]);
 
