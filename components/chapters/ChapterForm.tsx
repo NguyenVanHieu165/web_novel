@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import api from "@/lib/axios";
@@ -10,6 +10,8 @@ import {
   ChapterFormValues,
 } from "@/schemas/chapter-schema";
 import { Button } from "@/components/ui/button";
+import { useCollaborativeEditor } from "@/hooks/useCollaborativeEditor";
+import CollaborationSwitch from "@/components/editor/CollaborationSwitch";
 import {
   Form,
   FormControl,
@@ -124,6 +126,30 @@ export default function ChapterForm({
       name: "isFree",
     }) ?? true;
 
+  const [collabEnabled, setCollabEnabled] = useState(false);
+
+  // 1. THAY THẾ Ở ĐÂY: Đổi từ textareaRef sang editorContainerRef dành cho CodeMirror
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  const [authorName, setAuthorName] = useState("");
+
+  useEffect(() => {
+    let name = localStorage.getItem("collab_author_name");
+    if (!name) {
+      name = `Tác giả #${Math.floor(1000 + Math.random() * 9000)}`;
+      localStorage.setItem("collab_author_name", name);
+    }
+    setAuthorName(name);
+  }, []);
+
+  // 2. THAY THẾ Ở ĐÂY: Cập nhật Hook để nhận containerRef và lấy hàm getContent thay thế
+  const { onlineUsers, isConnected, getContent } = useCollaborativeEditor({
+    chapterId: data?.idChuong ?? 0,
+    initialContent: data?.noiDungChuong?.noiDung ?? "",
+    enabled: collabEnabled,
+    userName: authorName,
+    editorContainerRef,
+  });
+
   useEffect(() => {
     if (data) {
       form.reset({
@@ -161,8 +187,16 @@ export default function ChapterForm({
 
   const onSubmit = async (values: ChapterFormValues) => {
     try {
+      // 3. THAY THẾ Ở ĐÂY: Nếu đang bật chế độ cộng tác, ta phải lấy dữ liệu mới nhất từ CodeMirror
+      // trước khi gửi lên API, do react-hook-form không tự động bắt sự kiện gõ của CodeMirror nữa.
+      let finalContent = values.noiDung;
+      if (collabEnabled) {
+        finalContent = getContent();
+      }
+
       const payload = {
         ...values,
+        noiDung: finalContent,
         giaXu: values.isFree ? 0 : values.giaXu,
       };
 
@@ -209,6 +243,7 @@ export default function ChapterForm({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+          {/* ... Phần thông tin chương giữ nguyên không đổi ... */}
           <div className="rounded-lg border bg-white p-3 shadow-sm">
             <h3 className="mb-3 text-xs font-semibold uppercase text-gray-500">
               Thông tin chương
@@ -258,10 +293,7 @@ export default function ChapterForm({
                         step="0.1"
                         min="0.1"
                         className="h-9"
-                        name={field.name}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        value={field.value}
+                        {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -385,6 +417,14 @@ export default function ChapterForm({
           </div>
 
           <div className="rounded-lg border bg-white p-3 shadow-sm">
+            <CollaborationSwitch
+              enabled={collabEnabled}
+              onToggle={setCollabEnabled}
+              isConnected={isConnected}
+              onlineUsers={onlineUsers}
+              disabled={!data}
+            />
+
             <FormField
               control={form.control}
               name="noiDung"
@@ -392,11 +432,21 @@ export default function ChapterForm({
                 <FormItem className="space-y-1">
                   <FormLabel>Nội dung chương</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Nhập nội dung chương..."
-                      className="min-h-[260px] resize-y leading-6"
-                      {...field}
-                    />
+                    {/* 4. THAY THẾ Ở ĐÂY: Rẽ nhánh giao diện tùy thuộc trạng thái nút switch */}
+                    {collabEnabled ? (
+                      /* Khi bật cộng tác: Hiện Div Container cho CodeMirror hiển thị */
+                      <div
+                        ref={editorContainerRef}
+                        className="min-h-[260px] border rounded-md p-1 bg-gray-50/50 [&_.cm-editor]:outline-none [&_.cm-scroller]:font-sans [&_.cm-content]:leading-6"
+                      />
+                    ) : (
+                      /* Khi tắt cộng tác: Quay lại ô Textarea truyền thống */
+                      <Textarea
+                        placeholder="Nhập nội dung chương..."
+                        className="min-h-[260px] resize-y leading-6"
+                        {...field}
+                      />
+                    )}
                   </FormControl>
                   <FormMessage />
                 </FormItem>

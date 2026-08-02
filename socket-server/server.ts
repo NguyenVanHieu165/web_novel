@@ -35,15 +35,16 @@ interface NotificationPayload {
     data?: Record<string, any>;
 }
 
+import { registerNotificationHandlers } from "./handlers/notification";
+import { registerCollaborativeHandlers } from "./handlers/collaborative";
+
 // Quản lý các kết nối Socket.IO
 io.on("connection", (socket: Socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
-    // Cho phép admin kết nối tham gia vào phòng 'admins'
-    socket.on("join-admin-room", () => {
-        socket.join("admins");
-        console.log(`[Socket] Socket ${socket.id} joined 'admins' room`);
-    });
+    // Đăng ký các Handler
+    registerNotificationHandlers(io, socket);
+    registerCollaborativeHandlers(io, socket);
 
     socket.on("disconnect", (reason: string) => {
         console.log(`[Socket] Client disconnected: ${socket.id} (Reason: ${reason})`);

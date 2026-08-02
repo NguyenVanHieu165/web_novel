@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
     try {
         const list = await prisma.thongBao.findMany({
-            where: { idTaiKhoan: 4 },
             orderBy: { createdAt: "desc" },
             take: 30
         });
@@ -15,7 +14,6 @@ export async function GET() {
         return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
     }
 }
-
 // PUT: Đánh dấu đã đọc thông báo (từng cái hoặc tất cả)
 export async function PUT(req: Request) {
     try {
@@ -58,7 +56,7 @@ export async function DELETE(req: Request) {
         if (all) {
             // Xóa tất cả thông báo của admin
             await prisma.thongBao.deleteMany({
-                where: { idTaiKhoan: 1 }
+                where: { idTaiKhoan: 4 }
             });
             return NextResponse.json({ success: true, message: "Đã xóa toàn bộ thông báo" });
         }

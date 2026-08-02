@@ -46,22 +46,19 @@ export async function POST(req: NextRequest) {
 
         // Tìm một tài khoản Admin/User ngẫu nhiên làm người nhận thông báo để tránh lỗi khóa ngoại (Foreign Key)
         const firstUser = await prisma.taiKhoan.findFirst({ select: { idTaiKhoan: true } });
-        const idTaiKhoanAdmin = firstUser?.idTaiKhoan || 1;
+        const idTaiKhoanAdmin = firstUser?.idTaiKhoan || 4;
 
         // 1. GIẢ LẬP THEO DÕI TRUYỆN (FOLLOW) - CÓ TƯƠNG TÁC DB THỰC TẾ
         if (category === "follow") {
             const idTruyen = Number(body.idTruyen);
             const idTaiKhoan = Number(body.idTaiKhoan);
-
             if (!idTruyen || !idTaiKhoan) {
                 return NextResponse.json({ success: false, message: "Thiếu idTruyen hoặc idTaiKhoan" }, { status: 400 });
             }
-
             const [story, user] = await Promise.all([
                 prisma.truyen.findUnique({ where: { idTruyen } }),
                 prisma.taiKhoan.findUnique({ where: { idTaiKhoan } })
             ]);
-
             if (!story || !user) {
                 return NextResponse.json({ success: false, message: "Không tìm thấy Truyện hoặc Tài khoản" }, { status: 404 });
             }
