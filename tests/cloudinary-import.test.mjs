@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import sharp from "sharp";
 import { loadNotificationModule as load } from "./notification-support.mjs";
@@ -8,6 +9,18 @@ const sourceUrl = "https://source.example/cover.png";
 const cloudUrl = "https://res.cloudinary.com/review/image/upload/v1/cover.webp";
 const configured = { VERCEL: "1", CLOUDINARY_CLOUD_NAME: "review", CLOUDINARY_API_KEY: "test-key", CLOUDINARY_API_SECRET: "test-secret" };
 const png = await sharp({ create: { width: 1, height: 1, channels: 3, background: "#123456" } }).png().toBuffer();
+
+test("admin story list route does not eagerly load native image processing", async () => {
+  const source = await readFile(new URL("../app/api/admin/stories/route.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /^import .*@\/lib\/cloudinary/m);
+  assert.match(source, /await import\("@\/lib\/cloudinary"\)/);
+});
+
+test("Cloudinary loads sharp only when image bytes require normalization", async () => {
+  const source = await readFile(new URL("../lib/cloudinary.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /^import sharp from "sharp";/m);
+  assert.match(source, /await import\("sharp"\)/);
+});
 
 function uploader(env = configured, fetcher = async () => Response.json({ secure_url: cloudUrl })) {
   const disk = [], requests = [];

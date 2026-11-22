@@ -1,4 +1,3 @@
-import { ImageUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
 export const maxDuration = 60;
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicStories } from "@/lib/server/public-cache";
@@ -64,6 +63,8 @@ const storySchema = z.object({
 export async function POST(req: NextRequest) {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+
+    const { ImageUploadError, uploadImageToCloudinary } = await import("@/lib/cloudinary");
 
     try {
         const body = await req.json();

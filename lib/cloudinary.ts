@@ -3,7 +3,6 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import { publicTarget, safeRequest } from "./scraper/network";
 
 type CloudinaryConfig = { cloudName: string; apiKey: string; apiSecret: string };
@@ -35,6 +34,7 @@ async function normalizedImage(input: Buffer): Promise<Buffer> {
   if (!input.length || input.length > maxImageBytes) {
     throw new ImageUploadError("Ảnh rỗng hoặc vượt giới hạn 16 MB.", "INVALID_IMAGE", 400);
   }
+  const { default: sharp } = await import("sharp");
   try {
     const image = sharp(input, { limitInputPixels: 40_000_000, animated: false });
     if ((await image.metadata()).format === "svg") throw new Error("Unsupported image format");
