@@ -14,6 +14,7 @@ import { getHomeData } from "@/lib/queries/home.query";
 import { mapStory, mapRecentlyUpdated } from "@/lib/mappers/story.mapper";
 import { getHomeGenres, mergeUniqueStories } from "@/lib/home-discovery";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
