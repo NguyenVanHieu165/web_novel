@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import HeroStory from "@/components/home/HeroStory";
 import ContinueReading from "@/components/home/ContinueReading";
@@ -24,6 +25,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ReaderHomePage() {
+  // Prevent build-time rendering even when a hosting adapter evaluates routes.
+  await connection();
   // 1. Lấy dữ liệu từ database qua query module
   const { featured, latest, updated, popular, rated, completed } = await getHomeData();
 

@@ -60,8 +60,10 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
     // - DATABASE_URL chứa sslaccept=strict / sslaccept=accept_invalid_certs / ssl=true / sslmode=...
     // - Host thuộc TiDB Cloud (*.tidbcloud.com luôn bắt buộc TLS/SSL)
     // - Môi trường production với host từ xa (không phải localhost/127.0.0.1)
+    const isTiDbCloud = host.includes("tidbcloud.com");
     const isSslRequired =
-        !isExplicitlyDisabled &&
+        isTiDbCloud ||
+        (!isExplicitlyDisabled &&
         (process.env.DATABASE_SSL === "true" ||
             process.env.DATABASE_SSL === "1" ||
             urlSslAccept === "strict" ||
@@ -70,18 +72,18 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
             urlSslMode?.toUpperCase() === "REQUIRED" ||
             urlSslMode?.toUpperCase() === "VERIFY_IDENTITY" ||
             urlSslMode?.toUpperCase() === "VERIFY_CA" ||
-            host.includes("tidbcloud.com") ||
+            isTiDbCloud ||
             (process.env.NODE_ENV === "production" &&
                 host !== "localhost" &&
                 host !== "127.0.0.1" &&
                 host !== "::1" &&
-                !host.endsWith(".local")));
+                !host.endsWith(".local"))));
 
     let ssl: DatabaseConnectionConfig["ssl"] = undefined;
     if (isSslRequired) {
         // TiDB Cloud requires a verified TLS connection; never allow its
         // certificate validation to be downgraded through environment flags.
-        const rejectUnauthorized = host.includes("tidbcloud.com") ||
+        const rejectUnauthorized = isTiDbCloud ||
             (urlSslAccept !== "accept_invalid_certs" &&
                 process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false");
 
