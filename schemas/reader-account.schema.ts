@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { strongPasswordSchema } from "./auth.schema";
 
 export const avatarUrlSchema = z.url({
   protocol: /^https$/,
@@ -20,9 +21,9 @@ export const readerProfileSchema = z.strictObject({
 
 export const readerPasswordSchema = z.strictObject({
   currentPassword: z.string().min(1, "Nhập mật khẩu hiện tại").max(1024, "Mật khẩu quá dài"),
-  newPassword: z.string().min(6, "Mật khẩu mới cần ít nhất 6 ký tự").max(50, "Mật khẩu mới tối đa 50 ký tự")
+  newPassword: strongPasswordSchema
     .refine((value) => new TextEncoder().encode(value).length <= 72, "Mật khẩu mới không được vượt quá 72 byte"),
-  confirmPassword: z.string().min(1, "Nhập lại mật khẩu mới").max(50, "Mật khẩu xác nhận tối đa 50 ký tự"),
+  confirmPassword: z.string().min(1, "Nhập lại mật khẩu mới").max(128, "Mật khẩu xác nhận tối đa 128 ký tự"),
 }).refine((value) => value.newPassword !== value.currentPassword, {
   path: ["newPassword"],
   message: "Chọn mật khẩu khác mật khẩu hiện tại",

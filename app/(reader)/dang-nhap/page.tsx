@@ -8,6 +8,8 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { safeAuthRedirect } from "@/lib/auth-redirect";
 
+const oauthErrors: Record<string, string> = { account_locked: "Tài khoản của bạn đã bị khóa.", email_not_verified: "Email Google chưa được xác minh.", oauth_state_invalid: "Phiên đăng nhập Google không hợp lệ. Hãy thử lại.", oauth_unavailable: "Đăng nhập Google chưa được cấu hình.", oauth_failed: "Không thể đăng nhập bằng Google." };
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,7 +18,7 @@ function LoginForm() {
 
   const [form, setForm] = useState({ usernameOrEmail: "", matKhau: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => oauthErrors[searchParams.get("error") ?? ""] ?? "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,6 +150,9 @@ function LoginForm() {
         </button>
       </form>
 
+      <div className="my-5 flex items-center gap-3 text-xs text-slate-400 before:h-px before:flex-1 before:bg-slate-200 after:h-px after:flex-1 after:bg-slate-200 dark:before:bg-zinc-800 dark:after:bg-zinc-800">hoặc</div>
+      <a href={`/api/auth/google?redirect=${encodeURIComponent(redirectUrl)}`} className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"><GoogleLogo />Tiếp tục với Google</a>
+
       {/* Footer */}
       <div className="mt-8 pt-6 border-t border-slate-100 dark:border-zinc-800 text-center text-xs text-slate-400">
         Chưa có tài khoản WebNovel?{" "}
@@ -161,6 +166,8 @@ function LoginForm() {
     </div>
   );
 }
+
+function GoogleLogo() { return <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M21.35 12.27c0-.7-.06-1.37-.18-2H12v3.79h5.24a4.48 4.48 0 0 1-1.94 2.94v2.52h3.14c1.84-1.7 2.91-4.2 2.91-7.25Z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.23l-3.14-2.52c-.87.58-1.99.93-3.31.93-2.54 0-4.7-1.72-5.47-4.03H3.28v2.6A9.75 9.75 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M6.53 13.9A5.86 5.86 0 0 1 6.22 12c0-.66.11-1.29.31-1.9V7.5H3.28A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.06 1.03 4.5l3.25-2.6Z"/><path fill="#EA4335" d="M12 6.07c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.83 3.16 14.62 2.25 12 2.25A9.75 9.75 0 0 0 3.28 7.5l3.25 2.6C7.3 7.79 9.46 6.07 12 6.07Z"/></svg>; }
 
 export default function LoginPage() {
   return (

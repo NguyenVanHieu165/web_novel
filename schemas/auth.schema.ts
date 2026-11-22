@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const strongPasswordSchema = z.string().min(8, "Mật khẩu cần ít nhất 8 ký tự").max(128, "Mật khẩu không được quá 128 ký tự")
+  .regex(/[a-z]/, "Mật khẩu cần có chữ thường")
+  .regex(/[A-Z]/, "Mật khẩu cần có chữ in hoa")
+  .regex(/\d/, "Mật khẩu cần có chữ số");
+
 export const registerSchema = z
   .object({
     tenTaiKhoan: z
@@ -13,10 +18,7 @@ export const registerSchema = z
       .trim()
       .email("Email không đúng định dạng")
       .max(100, "Email không được vượt quá 100 ký tự"),
-    matKhau: z
-      .string()
-      .min(6, "Mật khẩu tối thiểu 6 ký tự")
-      .max(128, "Mật khẩu không được quá 128 ký tự"),
+    matKhau: strongPasswordSchema,
     xacNhanMatKhau: z.string().min(1, "Vui lòng xác nhận lại mật khẩu").max(128),
   })
   .refine((data) => data.matKhau === data.xacNhanMatKhau, {

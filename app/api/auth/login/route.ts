@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, signToken, passwordVersion } from "@/lib/auth";
+import { verifyPassword } from "@/lib/auth";
 import { loginSchema } from "@/schemas/auth.schema";
 import { checkRateLimit, requestIp } from "@/lib/server/rate-limit";
+import { setSessionCookie } from "@/lib/server/auth-cookie";
 
 export async function POST(req: NextRequest) {
   const rate = checkRateLimit(`login:${requestIp(req)}`, 10, 5 * 60_000);
@@ -65,15 +66,6 @@ export async function POST(req: NextRequest) {
     // 5. Trích xuất Roles (RBAC)
     const roles = user.vaiTroNguoiDung.map((item) => item.vaiTro.tenVaiTro);
 
-    // 6. Ký JWT Token với jose
-    const token = await signToken({
-      idTaiKhoan: user.idTaiKhoan,
-      tenTaiKhoan: user.tenTaiKhoan,
-      email: user.email,
-      roles,
-      passwordVersion: passwordVersion(user.matKhau),
-    });
-
     // 7. Cập nhật last_login ngầm
     prisma.taiKhoan.update({
       where: { idTaiKhoan: user.idTaiKhoan },
@@ -92,13 +84,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.COOKIE_SECURE === "false" ? false : process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 7 * 24 * 3600, // 7 ngày
-    });
+    await setSessionCookie(response, { ...user, roles });
 
     return response;
   } catch (error) {

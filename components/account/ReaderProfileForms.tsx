@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { readerPasswordSchema, readerProfileSchema, type ReaderPasswordInput, ty
 import { AccountField, AccountFormStatus } from "./AccountField";
 import { submitAccountForm } from "./account-request";
 import ReaderAvatar from "./ReaderAvatar";
+import PasswordStrengthInput from "@/components/auth/PasswordStrengthInput";
 
 export function ProfileForm({ initial }: { initial: ReaderProfileInput }) {
   const { refreshUser } = useAuth();
@@ -53,8 +54,9 @@ const passwordDefaults: ReaderPasswordInput = { currentPassword: "", newPassword
 
 export function PasswordForm() {
   const [message, setMessage] = useState("");
-  const { register, handleSubmit, setError, reset, formState: { errors, isSubmitting } } =
+  const { register, handleSubmit, setError, reset, setValue, control, formState: { errors, isSubmitting } } =
     useForm<ReaderPasswordInput>({ resolver: zodResolver(readerPasswordSchema), defaultValues: passwordDefaults });
+  const [newPassword, confirmPassword] = useWatch({ control, name: ["newPassword", "confirmPassword"] });
 
   return (
     <form noValidate className="space-y-5" onSubmit={handleSubmit(async (values) => {
@@ -73,10 +75,8 @@ export function PasswordForm() {
       <fieldset className="space-y-5">
         <AccountField {...register("currentPassword")} id="current-password" type="password" label="Mật khẩu hiện tại"
           autoComplete="current-password" maxLength={1024} required readOnly={isSubmitting} error={errors.currentPassword?.message} />
-        <AccountField {...register("newPassword")} id="new-password" type="password" label="Mật khẩu mới"
-          autoComplete="new-password" maxLength={50} required readOnly={isSubmitting} hint="Dùng từ 6 đến 50 ký tự, tối đa 72 byte." error={errors.newPassword?.message} />
-        <AccountField {...register("confirmPassword")} id="confirm-password" type="password" label="Xác nhận mật khẩu mới"
-          autoComplete="new-password" maxLength={50} required readOnly={isSubmitting} error={errors.confirmPassword?.message} />
+        <PasswordStrengthInput id="new-password" password={newPassword} onPasswordChange={(value) => setValue("newPassword", value, { shouldValidate: true })} confirmPassword={confirmPassword} onConfirmPasswordChange={(value) => setValue("confirmPassword", value, { shouldValidate: true })} disabled={isSubmitting} passwordLabel="Mật khẩu mới" confirmLabel="Xác nhận mật khẩu mới" />
+        {errors.newPassword?.message || errors.confirmPassword?.message ? <p className="text-sm text-red-600">{errors.newPassword?.message || errors.confirmPassword?.message}</p> : null}
       </fieldset>
       <Button type="submit" disabled={isSubmitting}
         className="min-h-11 w-full bg-blue-700 text-white transition-colors hover:bg-blue-800 sm:w-auto">
