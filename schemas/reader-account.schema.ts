@@ -1,0 +1,35 @@
+import { z } from "zod";
+
+export const avatarUrlSchema = z.url({
+  protocol: /^https$/,
+  error: "Nhập đường dẫn ảnh HTTPS hợp lệ",
+}).refine((value) => {
+  try {
+    const url = new URL(value);
+    return !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Đường dẫn ảnh không được chứa thông tin đăng nhập");
+
+export const readerProfileSchema = z.strictObject({
+  displayName: z.string().trim().min(1, "Nhập tên hiển thị").max(255, "Tên tối đa 255 ký tự"),
+  avatar: z.string().trim().max(500, "Đường dẫn ảnh tối đa 500 ký tự")
+    .pipe(z.union([z.literal(""), avatarUrlSchema])),
+});
+
+export const readerPasswordSchema = z.strictObject({
+  currentPassword: z.string().min(1, "Nhập mật khẩu hiện tại").max(1024, "Mật khẩu quá dài"),
+  newPassword: z.string().min(6, "Mật khẩu mới cần ít nhất 6 ký tự").max(50, "Mật khẩu mới tối đa 50 ký tự")
+    .refine((value) => new TextEncoder().encode(value).length <= 72, "Mật khẩu mới không được vượt quá 72 byte"),
+  confirmPassword: z.string().min(1, "Nhập lại mật khẩu mới").max(50, "Mật khẩu xác nhận tối đa 50 ký tự"),
+}).refine((value) => value.newPassword !== value.currentPassword, {
+  path: ["newPassword"],
+  message: "Chọn mật khẩu khác mật khẩu hiện tại",
+}).refine((value) => value.newPassword === value.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "Mật khẩu xác nhận không khớp",
+});
+
+export type ReaderProfileInput = z.infer<typeof readerProfileSchema>;
+export type ReaderPasswordInput = z.infer<typeof readerPasswordSchema>;

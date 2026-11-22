@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resSuccess } from "@/lib/api";
 
 import * as z from "zod";
+import { requireAdmin } from "@/lib/server/auth-session";
 
 // =======================
 // SAFE JSON BIGINT
@@ -62,6 +63,9 @@ export async function GET(
         params: Promise<tParams>;
     },
 ) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const { id } = await params;
         const storyId = Number(id);
@@ -140,6 +144,9 @@ export async function PUT(
         params: Promise<tParams>;
     }
 ) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const { id } = await params;
 
@@ -237,7 +244,6 @@ export async function PUT(
 
                     code: prismaError.code,
 
-                    meta: prismaError.meta,
                 },
                 {
                     status: 400,
@@ -263,7 +269,7 @@ export async function PUT(
             {
                 message: "Update failed",
 
-                error: getErrorMessage(error),
+                error: "Đã xảy ra lỗi khi cập nhật truyện.",
             },
             {
                 status: 500,
@@ -280,6 +286,9 @@ export async function DELETE(
         params: Promise<tParams>;
     }
 ) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const { id } = await params;
         const storyId = Number(id);

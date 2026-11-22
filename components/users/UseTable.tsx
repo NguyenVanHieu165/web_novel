@@ -4,9 +4,15 @@ import { useMemo, useState } from "react";
 import axiosClient from "@/lib/axios";
 import { sort } from "fast-sort";
 import type { User } from "@/hooks/useUsers";
+import { roleLabel } from "@/schemas/admin-roles.schema";
 
 type SortKey = "idTaiKhoan" | "tenTaiKhoan" | "email" | "vaiTro" | "trangThai";
 type SortOrder = "asc" | "desc";
+
+function userRoles(user: User) {
+  return [...new Set(user.vaiTroNguoiDung?.flatMap(({ vaiTro }) =>
+    vaiTro?.tenVaiTro ? [roleLabel(vaiTro.tenVaiTro)] : []) ?? [])].sort().join(", ");
+}
 
 type UserTableProps = {
   data?: User[];
@@ -44,7 +50,7 @@ export default function UserTable({
   const sortedData = useMemo(() => {
     const getValue = (item: User) => {
       if (sortKey === "vaiTro") {
-        return item.vaiTroNguoiDung?.[0]?.vaiTro?.tenVaiTro ?? "";
+        return userRoles(item);
       }
 
       return item[sortKey] ?? "";
@@ -133,7 +139,7 @@ export default function UserTable({
               <td className="border p-2">{item.tenTaiKhoan}</td>
               <td className="border p-2">{item.email}</td>
               <td className="border p-2">
-                {item.vaiTroNguoiDung?.[0]?.vaiTro?.tenVaiTro ?? "User"}
+                {userRoles(item) || "Chưa có vai trò"}
               </td>
               <td className="border p-2">{item.trangThai}</td>
 

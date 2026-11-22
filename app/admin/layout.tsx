@@ -1,15 +1,19 @@
-"use client";
-
 import Sidebar from "@/components/admin/Sidebar";
 import Navbar from "@/components/admin/Navbar";
 import { Toaster } from "@/components/ui/sonner";
-export default function DashboardLayout({
+import { requireAdminPage } from "@/lib/server/admin-page";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireAdminPage();
   return (
-    <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
+    <div
+      className="flex h-screen w-full overflow-hidden bg-background"
+      style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif" }}
+    >
       {/* Sidebar - Cố định bên trái */}
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

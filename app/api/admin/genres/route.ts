@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/server/auth-session";
 import { resSuccess, getRequestId } from "@/lib/api";
 import { genres_schema } from "@/schemas/genres_schema";
 import * as z from "zod";
 
 export async function GET(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     const requestId = getRequestId();
     const pathname = req.nextUrl.pathname;
     const searchParams = req.nextUrl.searchParams;
@@ -66,6 +70,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     const requestId = getRequestId();
     const pathname = req.nextUrl.pathname;
 

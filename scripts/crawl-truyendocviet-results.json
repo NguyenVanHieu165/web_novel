@@ -1,0 +1,100 @@
+{
+  "database": "web_truyen",
+  "finishedAt": "2026-11-21T15:22:08.996Z",
+  "limit": 110,
+  "sourceStopped": true,
+  "sourceRestriction": "security-check/access restriction; remaining network requests were not attempted",
+  "discovered": {
+    "stories": 110,
+    "fullPriority": 15,
+    "full": 94,
+    "ongoing": 16
+  },
+  "imported": {
+    "full": 3,
+    "ongoing": 0,
+    "normal": 29,
+    "vip": 6,
+    "chapters": 35,
+    "stories": 3,
+    "vipStories": 2
+  },
+  "initial": {
+    "genres": 65,
+    "stories": 28,
+    "chapters": 354,
+    "normal": 306,
+    "vip": 48
+  },
+  "after": {
+    "genres": 72,
+    "stories": 31,
+    "chapters": 389,
+    "normal": 335,
+    "vip": 54
+  },
+  "newGenres": 7,
+  "errors": [
+    {
+      "slug": "sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui",
+      "error": "HTTP 302: /doc-truyen/sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui/read/5145090.html -> /security-check; HTTP 302: /doc-truyen/sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui/read/5145091.html -> /security-check; HTTP 302: /doc-truyen/sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui/read/5145092.html -> /security-check; HTTP 302: /doc-truyen/sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui/read/5145093.html -> /security-check; HTTP 302: /doc-truyen/sau-vu-qua-thien-son-mua-rao-vuot-ngan-nui/read/5145095.html -> /security-check"
+    },
+    {
+      "slug": "thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien",
+      "error": "HTTP 302: /doc-truyen/thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien/read/5141524.html -> /security-check; HTTP 302: /doc-truyen/thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien/read/5141525.html -> /security-check; HTTP 302: /doc-truyen/thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien/read/5141526.html -> /security-check; HTTP 302: /doc-truyen/thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien/read/5141523.html -> /security-check; HTTP 302: /doc-truyen/thien-duong-tinh-dau-cua-phong-tu-ky-phong-tu-ky-dich-so-luyen-lac-vien/read/5141522.html -> /security-check"
+    }
+  ],
+  "verification": {
+    "existing28StoriesAnd354ChaptersUnchanged": true,
+    "schemaUnchanged": true,
+    "newGenreDuplicates": 0,
+    "newAuthorDuplicates": 0,
+    "coverFilesDecoded": 3,
+    "allNewTextNFC": true,
+    "chapterNumberAndSlugDuplicates": 0,
+    "mysqlChapterRollbackPassed": true,
+    "newGenres": [
+      "Truyện Trinh Thám",
+      "Truyện Huyền ảo",
+      "Truyện Đô Thị",
+      "Truyện Ngôn Tình",
+      "Thanh Xuân Vườn Trường",
+      "Ngọt Sủng",
+      "Tâm Lý"
+    ],
+    "newAuthors": 3,
+    "newStories": [
+      {
+        "id": 104,
+        "title": "Hầu Đại Lợi: Ký Sự Hình Trinh",
+        "chapters": 20,
+        "vip": 3
+      },
+      {
+        "id": 105,
+        "title": "Sậu Vũ Quá Thiên Sơn (Mưa Rào Vượt Ngàn Núi)",
+        "chapters": 15,
+        "vip": 3
+      },
+      {
+        "id": 106,
+        "title": "Thiên Đường Tình Đầu Của Phòng Tư Kỳ (Phòng Tư Kỳ Đích Sơ Luyến Lạc Viên)",
+        "chapters": 0,
+        "vip": 0
+      }
+    ],
+    "manifestUniqueTitlesAndUrls": 110,
+    "manifestExcludesOriginalDatabase": true,
+    "localReaderHttpStatus": 200,
+    "localReaderContainsImportedText": true
+  },
+  "checks": {
+    "lint": "Passed",
+    "typescript": "Passed",
+    "tests": {
+      "passed": 25,
+      "failed": 0
+    },
+    "build": "Not run"
+  }
+}

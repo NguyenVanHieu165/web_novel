@@ -42,3 +42,12 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# generated socket build output
+/socket-server/dist/
+
+# Generated chapter speech cache (including VIP content)
+/public/uploads/audio/
+
+# Private source-import checkpoints (owner/options/progress)
+/.data/story-imports/

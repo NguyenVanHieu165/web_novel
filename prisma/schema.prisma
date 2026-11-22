@@ -62,6 +62,7 @@ model VaiTroNguoiDung {
 
   @@index([idTaiKhoan], map: "idTAI_KHOAN")
   @@index([idVaiTro], map: "idVAI_TRO")
+  @@unique([idTaiKhoan, idVaiTro], map: "uk_tai_khoan_vai_tro")
   @@map("vai_tro_nguoi_dung")
 }
 
@@ -148,6 +149,8 @@ model Chuong {
 
   @@index([idQUYEN], map: "idQUYEN")
   @@index([idTruyen, chuongSo], map: "idx_chuong_truyen")
+  @@unique([idTruyen, chuongSo], map: "uk_chuong_so_truyen")
+  @@unique([idTruyen, slug], map: "uk_chuong_slug_truyen")
   @@map("chuong")
 }
 

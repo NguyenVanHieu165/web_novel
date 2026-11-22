@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { resSuccess } from "@/lib/api";
 import * as z from "zod";
+import { requireAdmin } from "@/lib/server/auth-session";
 type tParams = {
     id: string;
 };
@@ -9,11 +10,18 @@ const genresSchema = z.object({
     tenTheLoai: z.string().min(1, "Tên thể loại không được để trống"),
     moTa: z.string().optional(),
 });
+const getErrorCode = (error: unknown) =>
+    typeof error === "object" && error !== null && "code" in error
+        ? String(error.code)
+        : undefined;
 
 export async function PUT(
     req: NextRequest,
     { params }: { params: Promise<tParams> }
 ) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const { id } = await params;
         const genreId = Number(id);
@@ -58,7 +66,7 @@ export async function PUT(
                 data: updatedGenre,
             })
         );
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("UPDATE GENRE ERROR:", error);
 
         if (error instanceof z.ZodError) {
@@ -71,7 +79,7 @@ export async function PUT(
                 { status: 400 }
             );
         }
-        if (error.code === "P2025") {
+        if (getErrorCode(error) === "P2025") {
             return NextResponse.json(
                 { success: false, message: "Không tìm thấy thể loại" },
                 { status: 404 }
@@ -81,7 +89,7 @@ export async function PUT(
             {
                 success: false,
                 message: "Cập nhật thể loại thất bại",
-                error: error?.message || error,
+                error: "Đã xảy ra lỗi khi cập nhật thể loại.",
             },
             { status: 500 }
         );
@@ -94,6 +102,9 @@ export async function DELETE(req: NextRequest,
     }: {
         params: Promise<tParams>;
     }) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const { id } = await params;
         const genreId = Number(id);
@@ -115,11 +126,11 @@ export async function DELETE(req: NextRequest,
             })
         );
     }
-    catch (error: any) {
+    catch (error: unknown) {
         console.error("DELETE STORY ERROR:", error);
 
         // Trường hợp Prisma không tìm thấy bản ghi để xoá
-        if (error.code === "P2025") {
+        if (getErrorCode(error) === "P2025") {
             return NextResponse.json(
                 {
                     success: false,
@@ -134,7 +145,7 @@ export async function DELETE(req: NextRequest,
             {
                 success: false,
                 message: "Xoá truyện thất bại (có thể do ràng buộc dữ liệu)",
-                error: error?.message || error,
+                error: "Đã xảy ra lỗi khi xoá thể loại.",
             },
             { status: 500 }
         );

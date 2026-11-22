@@ -1,16 +1,30 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/server/auth-session";
 
 const notDeletedWhere = {
   OR: [{ isDeleted: false }, { isDeleted: null }],
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.authorized) return auth.response;
+
   try {
+    const page = Math.max(Number(req.nextUrl.searchParams.get("page") || 1), 1);
+    const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit") || 1000), 1), 5000);
     const chapters = await prisma.chuong.findMany({
       where: notDeletedWhere,
-      include: {
+      select: {
+        idChuong: true,
+        idTruyen: true,
+        chuongSo: true,
+        tieuDeChuong: true,
+        slug: true,
+        isFree: true,
+        giaXu: true,
+        createdAt: true,
         truyen: {
           select: {
             tenTruyen: true,
@@ -18,6 +32,8 @@ export async function GET() {
         },
       },
       orderBy: [{ idTruyen: "asc" }, { chuongSo: "asc" }],
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -62,6 +78,8 @@ export async function GET() {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": 'attachment; filename="danh-sach-chuong.xlsx"',
+        "X-Export-Page": String(page),
+        "X-Export-Limit": String(limit),
       },
     });
   } catch (error) {

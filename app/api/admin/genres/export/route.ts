@@ -1,13 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/server/auth-session";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.authorized) return auth.response;
+
   try {
+    const page = Math.max(Number(req.nextUrl.searchParams.get("page") || 1), 1);
+    const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit") || 1000), 1), 5000);
     const genres = await prisma.theLoai.findMany({
       orderBy: {
         idTheLoai: "asc",
       },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -42,6 +50,8 @@ export async function GET() {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": 'attachment; filename="danh-sach-the-loai.xlsx"',
+        "X-Export-Page": String(page),
+        "X-Export-Limit": String(limit),
       },
     });
   } catch (error) {

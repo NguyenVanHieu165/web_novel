@@ -1,12 +1,14 @@
 "use client";
 
+import ChapterCountBadges from "./ChapterCountBadges";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import axiosClient from "@/lib/axios";
 import type { Story } from "@/hooks/useStories";
 import { Edit2, Trash2, Eye, BookOpen, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useReorderedItems } from "@/hooks/useReorderedItems";
 
 import {
   DragDropContext,
@@ -16,7 +18,7 @@ import {
 } from "@hello-pangea/dnd";
 
 type CardProps = {
-  data: Story[];
+  data: (Story & { soChuongVip?: number })[];
   onEdit: (story: Story) => void;
   refetch: () => void;
 };
@@ -39,20 +41,13 @@ const statusLabels: Record<Story["trang_thai"], string> = {
 
 export default function StoryCardList({ data, onEdit, refetch }: CardProps) {
   const router = useRouter();
-  const [items, setItems] = useState<Story[]>(data);
+  const { items, reorder } = useReorderedItems(data);
 
-  useEffect(() => {
-    setItems(data);
-  }, [data]);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const newItems = Array.from(items);
-    const [movedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, movedItem);
-
-    setItems(newItems);
+    reorder(result.source.index, result.destination.index);
   };
 
   const handleDelete = async (id: number) => {
@@ -82,7 +77,7 @@ export default function StoryCardList({ data, onEdit, refetch }: CardProps) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-b-lg border bg-white p-10 text-center text-black">
+      <div className="rounded-b-lg border bg-card p-10 text-center text-card-foreground">
         Không có truyện nào để hiển thị.
       </div>
     );
@@ -107,46 +102,50 @@ export default function StoryCardList({ data, onEdit, refetch }: CardProps) {
                   <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
-                    className={`rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+                    className={`rounded-xl border bg-card text-card-foreground p-4 shadow-sm transition hover:shadow-md ${
                       snapshot.isDragging ? "bg-blue-50 shadow-lg" : ""
                     }`}
                   >
-                    <div className="mb-3 flex h-15 items-start justify-between gap-3">
+                    <div className="mb-3 flex min-h-15 items-start justify-between gap-3">
                       <div>
                         <p className="text-xs text-gray-400">
                           #{item.idTruyen}
                         </p>
-                        <h3 className="line-clamp-2 font-semibold text-slate-800">
+                        <h3 className="line-clamp-2 font-semibold">
                           {item.tenTruyen}
                         </h3>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-fuchsia-100 px-2 py-1 text-xs font-medium text-fuchsia-700">
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="rounded-full bg-fuchsia-100 px-2 py-1 text-xs font-medium text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-200">
                           {statusLabels[item.trang_thai] || item.trang_thai}
                         </span>
 
                         <button
                           type="button"
+                          aria-label={`Đổi vị trí truyện ${item.tenTruyen}`}
                           {...provided.dragHandleProps}
-                          className="cursor-grab text-gray-400 hover:text-gray-700"
+                          className="cursor-grab text-gray-400 hover:text-foreground"
                         >
                           <GripVertical className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="flex aspect-[3/4] items-center justify-center overflow-hidden bg-slate-100">
-                      <img
+                    <div className="relative aspect-[3/4] overflow-hidden bg-slate-100">
+                      <Image
                         src={item.anhThumbnail || item.anhBia || "/default.jpg"}
                         alt={item.tenTruyen}
-                        className="max-h-full max-w-full object-contain"
+                        fill
+                        unoptimized
+                        loading="eager"
+                        className="object-scale-down"
                       />
                     </div>
 
-                    <div className="mt-3 h-28 space-y-2 text-sm text-gray-600">
+                    <div className="mt-3 min-h-28 space-y-2 text-sm text-muted-foreground">
                       <p>
-                        <span className="font-medium text-gray-700">
+                        <span className="font-medium text-foreground">
                           Thể loại:{" "}
                         </span>
                         {item.truyenTheLoai
@@ -156,15 +155,15 @@ export default function StoryCardList({ data, onEdit, refetch }: CardProps) {
                       </p>
 
                       <p>
-                        <span className="font-medium text-gray-700">
+                        <span className="font-medium text-foreground">
                           Ngày tạo:{" "}
                         </span>
                         {new Date(item.createdAt).toLocaleDateString()}
                       </p>
 
-                      <p className="flex items-center gap-1">
+                      <p className="flex flex-wrap items-center gap-1">
                         <BookOpen className="h-4 w-4" />
-                        Số chương: {item.soChuong ?? "Chưa cập nhật"}
+                        <ChapterCountBadges count={item.soChuong} vipCount={item.soChuongVip} />
                       </p>
 
                       <p className="flex items-center gap-1">

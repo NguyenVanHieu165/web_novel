@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   storySchema,
@@ -236,7 +237,11 @@ export default function StoryForm({ data, onClose, onSuccess }: Props) {
     }
   };
 
-  const previewImage = form.watch("anhThumbnail") || form.watch("anhBia") || "";
+  const [thumbnail, cover] = useWatch({
+    control: form.control,
+    name: ["anhThumbnail", "anhBia"],
+  });
+  const previewImage = thumbnail || cover || "";
 
   return (
     <div className="rounded-lg bg-white">
@@ -419,12 +424,16 @@ export default function StoryForm({ data, onClose, onSuccess }: Props) {
               <div className="space-y-1 md:col-span-2">
                 <p className="text-sm font-medium">Xem trước ảnh</p>
 
-                <div className="flex h-40 w-28 items-center justify-center overflow-hidden rounded-md border bg-slate-100">
+                <div className="relative flex h-40 w-28 items-center justify-center overflow-hidden rounded-md border bg-slate-100">
                   {previewImage ? (
-                    <img
+                    <Image
                       src={previewImage}
                       alt="Preview ảnh truyện"
-                      className="h-full w-full object-cover"
+                      fill
+                      unoptimized
+                      loading="eager"
+                      sizes="112px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="px-2 text-center text-xs text-gray-400">

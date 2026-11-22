@@ -1,140 +1,80 @@
+import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
 import { resSuccess } from "@/lib/api";
-import * as z from "zod";
-type tParams = {
-    id: string;
-};
-const userSchema = z.object(
-    {
-        tenTaikhoan: z.string().min(1, "Tên tài khoản không được để trống"),
-        email: z.string().email("Email không hợp lệ"),
-        trangThai: z.enum(["active", "locked", "banned"]),
-    }
-);
-export async function PUT(req: NextRequest, { params }: { params: Promise<tParams> }) {
-    try {
-        const { id } = await params;
-        const body = await req.json();
-        const validated = userSchema.parse(body);
-        const existUser =
-            await prisma.taiKhoan.findUnique({
-                where: {
-                    idTaiKhoan: Number(id),
-                },
-            });
+import { requireAdmin } from "@/lib/server/auth-session";
+import {
+  AccountRoleError,
+  getRoleTarget,
+  isSameOriginAccountWrite,
+  lockActiveAdministrator,
+  protectActiveAdministrator,
+  visibleAccounts,
+} from "@/lib/server/account-roles";
+import { accountIdParamSchema } from "@/schemas/admin-roles.schema";
+import { userSchema } from "@/schemas/user_schema";
 
-        if (!existUser) {
-            return NextResponse.json(
-                {
-                    message:
-                        "Không tìm thấy người dùng",
-                },
-                {
-                    status: 404,
-                }
-            );
-        }
-        const updatedUser = await prisma.taiKhoan.update({
-            where: {
-                idTaiKhoan: Number(id),
-            },
-            data: {
-                tenTaiKhoan: validated.tenTaikhoan,
-                email: validated.email,
-                trangThai: validated.trangThai,
-            },
-        });
-        return NextResponse.json(resSuccess({ user: updatedUser }, { message: "Cập nhật người dùng thành công" }));
-    }
-    catch (error: unknown) {
-        if (error instanceof z.ZodError) {
-            return NextResponse.json(
-                {
-                    message: "Dữ liệu không hợp lệ"
-                },
-                {
-                    status: 400,
-                }
-            );
-        }
-        console.error("Lỗi cập nhật người dùng:", error);
-        return NextResponse.json(
-            {
-                message: "Lỗi máy chủ",
-            },
-            {
-                status: 500,
-            }
-        );
-    }
+type Context = { params: Promise<{ id: string }> };
 
+function accountError(error: unknown, operation: string) {
+  if (error instanceof AccountRoleError) {
+    return NextResponse.json({ success: false, message: error.message }, { status: error.status });
+  }
+  console.error(operation, error);
+  return NextResponse.json({ success: false, message: "Không thể lưu thay đổi tài khoản." }, { status: 500 });
 }
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: Promise<tParams> }
-) {
-    try {
-        const { id } = await params;
-        const userId = Number(id);
 
-        if (!userId || Number.isNaN(userId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "ID người dùng không hợp lệ",
-                },
-                { status: 400 }
-            );
-        }
-
-        const existUser = await prisma.taiKhoan.findFirst({
-            where: {
-                idTaiKhoan: userId,
-                OR: [{ isDeleted: false }, { isDeleted: null }],
-            },
-        });
-
-        if (!existUser) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Không tìm thấy người dùng hoặc người dùng đã bị xoá",
-                },
-                { status: 404 }
-            );
-        }
-
-        const deletedUser = await prisma.taiKhoan.update({
-            where: {
-                idTaiKhoan: userId,
-            },
-            data: {
-                isDeleted: true,
-            },
-            select: {
-                idTaiKhoan: true,
-                tenTaiKhoan: true,
-                email: true,
-                isDeleted: true,
-            },
-        });
-
-        return NextResponse.json(
-            resSuccess({
-                message: "Xoá mềm người dùng thành công",
-                data: deletedUser,
-            })
-        );
-    } catch (error) {
-        console.error("SOFT DELETE USER ERROR:", error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Lỗi máy chủ khi xoá người dùng",
-            },
-            { status: 500 }
-        );
+export async function PUT(request: NextRequest, { params }: Context) {
+  if (!isSameOriginAccountWrite(request)) return NextResponse.json({ message: "Yêu cầu không hợp lệ." }, { status: 403 });
+  try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) return auth.response;
+    const id = accountIdParamSchema.safeParse((await params).id);
+    const body = userSchema.safeParse(await request.json().catch(() => null));
+    if (!id.success || !body.success) {
+      return NextResponse.json({ message: "Dữ liệu không hợp lệ." }, { status: 400 });
     }
+
+    const { tenTaikhoan, email, trangThai } = body.data;
+    const actorId = auth.user.idTaiKhoan;
+    const user = await prisma.$transaction(async (tx) => {
+      const adminRoleIds = await lockActiveAdministrator(tx, actorId);
+      const target = await getRoleTarget(tx, id.data);
+      if (trangThai !== "active") await protectActiveAdministrator(tx, actorId, id.data, target, adminRoleIds);
+      return tx.taiKhoan.update({
+        where: { ...visibleAccounts, idTaiKhoan: id.data },
+        data: { tenTaiKhoan: tenTaikhoan, email, trangThai },
+        select: { idTaiKhoan: true, tenTaiKhoan: true, email: true, trangThai: true, updatedAt: true },
+      });
+    }, { isolationLevel: "ReadCommitted" });
+
+    return NextResponse.json(resSuccess({ user }, { message: "Cập nhật người dùng thành công" }));
+  } catch (error) {
+    return accountError(error, "Update account failed");
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Context) {
+  if (!isSameOriginAccountWrite(request)) return NextResponse.json({ message: "Yêu cầu không hợp lệ." }, { status: 403 });
+  try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) return auth.response;
+    const id = accountIdParamSchema.safeParse((await params).id);
+    if (!id.success) return NextResponse.json({ success: false, message: "ID người dùng không hợp lệ." }, { status: 400 });
+
+    const actorId = auth.user.idTaiKhoan;
+    const data = await prisma.$transaction(async (tx) => {
+      const adminRoleIds = await lockActiveAdministrator(tx, actorId);
+      const target = await getRoleTarget(tx, id.data);
+      await protectActiveAdministrator(tx, actorId, id.data, target, adminRoleIds);
+      return tx.taiKhoan.update({
+        where: { ...visibleAccounts, idTaiKhoan: id.data },
+        data: { isDeleted: true },
+        select: { idTaiKhoan: true, tenTaiKhoan: true, email: true, isDeleted: true },
+      });
+    }, { isolationLevel: "ReadCommitted" });
+
+    return NextResponse.json(resSuccess({ message: "Xóa mềm người dùng thành công", data }));
+  } catch (error) {
+    return accountError(error, "Delete account failed");
+  }
 }

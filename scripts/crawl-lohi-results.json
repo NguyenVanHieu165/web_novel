@@ -1,0 +1,17 @@
+{
+  "database": "web_truyen",
+  "stoppedByUser": true,
+  "at": "2026-11-21T15:56:01.470Z",
+  "imported": {
+    "stories": 46,
+    "chapters": 2104,
+    "normal": 2095,
+    "vip": 9
+  },
+  "databaseTotals": {
+    "stories": 77,
+    "chapters": 2493,
+    "normal": 2430,
+    "vip": 63
+  }
+}

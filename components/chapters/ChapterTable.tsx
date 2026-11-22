@@ -1,314 +1,67 @@
 "use client";
-
-import axiosClient from "@/lib/axios";
+import { useState } from "react";
+import { Edit2, Trash2, Eye, Copy, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { useReorderedItems } from "@/hooks/useReorderedItems";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, GripVertical } from "lucide-react";
+import api from "@/lib/axios";
 import { toast } from "sonner";
-import { useEffect, useMemo, useState } from "react";
-import { sort } from "fast-sort";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  type DropResult,
-} from "@hello-pangea/dnd";
+import type { AdminChaptersQuery } from "@/schemas/admin-chapters.schema";
+import ChapterPriceSheet from "./ChapterPriceSheet";
 
 export type Chapter = {
-  idChuong: number;
-  idTruyen?: number;
-  chuongSo: string | number;
-  tieuDeChuong: string;
-  slug: string;
-  isFree?: boolean | null;
-  giaXu?: number | null;
-  truyen?: {
-    idTruyen?: number;
-    tenTruyen?: string;
-  };
+  idChuong: number; idTruyen?: number; chuongSo: string | number; tieuDeChuong: string; slug: string;
+  isFree?: boolean | null; giaXu?: number | null; wordCount?: number; createdAt?: string | null;
+  truyen?: { idTruyen?: number; tenTruyen?: string }; noiDungChuong?: { noiDung?: string | null } | null;
 };
-
-type Props = {
-  data: Chapter[];
-  onEdit: (chapter: Chapter) => void;
-  refresh: () => void;
-};
-
-type ApiErrorResponse = {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-  message?: string;
-};
-
-type SortKey =
-  | "idChuong"
-  | "truyen"
-  | "chuongSo"
-  | "tieuDeChuong"
-  | "slug"
-  | "gia"
-  | null;
-
-type SortOrder = "asc" | "desc";
-
-export default function ChapterTable({ data, onEdit, refresh }: Props) {
-  const [items, setItems] = useState<Chapter[]>(data);
-  const [sortKey, setSortKey] = useState<SortKey>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-
-  useEffect(() => {
-    setItems(data);
-  }, [data]);
-
-  const handleSort = (key: Exclude<SortKey, null>) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
-    }
-  };
-
-  const cancelSort = () => {
-    setSortKey(null);
-    setSortOrder("asc");
-  };
-
-  const getSortIcon = (key: Exclude<SortKey, null>) => {
-    if (sortKey !== key) return "↕";
-    return sortOrder === "asc" ? "↑" : "↓";
-  };
-
-  const sortedData = useMemo(() => {
-    if (sortKey === null) {
-      return items;
-    }
-
-    const getValue = (item: Chapter) => {
-      if (sortKey === "idChuong") return item.idChuong;
-      if (sortKey === "truyen") return item.truyen?.tenTruyen || "";
-      if (sortKey === "chuongSo") return Number(item.chuongSo) || 0;
-      if (sortKey === "tieuDeChuong") return item.tieuDeChuong || "";
-      if (sortKey === "slug") return item.slug || "";
-      if (sortKey === "gia") return item.isFree ? 0 : (item.giaXu ?? 0);
-
-      return "";
-    };
-
-    return sortOrder === "asc"
-      ? sort(items).asc(getValue)
-      : sort(items).desc(getValue);
-  }, [items, sortKey, sortOrder]);
-
-  const renderSortHeader = (
-    label: string,
-    sortName: Exclude<SortKey, null>,
-  ) => {
-    return (
-      <button
-        type="button"
-        onClick={() => handleSort(sortName)}
-        className="inline-flex items-center gap-1 font-semibold hover:text-blue-600"
-      >
-        {label}
-        <span className="text-xs normal-case">{getSortIcon(sortName)}</span>
-      </button>
-    );
-  };
-
-  const handleDragEnd = (result: DropResult) => {
-    if (sortKey !== null) {
-      toast.warning("Hãy huỷ sắp xếp trước khi kéo thả");
-      return;
-    }
-
-    if (!result.destination) return;
-
-    const newItems = Array.from(items);
-    const [movedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, movedItem);
-
-    setItems(newItems);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Xóa chương này?")) return;
-
-    const loadingToast = toast.loading("Đang xóa chương...");
-
+type Props = { data: Chapter[]; onEdit: (chapter: Chapter) => void; onPreview: (id: number) => void; refresh: () => void; query: AdminChaptersQuery; onSort: (sort: AdminChaptersQuery["sortBy"]) => void };
+const columns: [string, AdminChaptersQuery["sortBy"]][] = [["ID", "id"], ["Truyện", "truyen"], ["Số chương", "soChuong"], ["Tiêu đề", "tieuDe"], ["Giá xu", "giaXu"], ["Độ dài", "wordCount"], ["Ngày tạo", "ngayTao"]];
+export default function ChapterTable({ data, onEdit, onPreview, refresh, query, onSort }: Props) {
+  const { items, reorder } = useReorderedItems(data);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const dragDisabled = query.sortBy !== "soChuong" || query.sortOrder !== "asc";
+  const toggle = (id: number) => setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  async function bulk(action: "set-free" | "delete", chapterIds: number[]) {
+    if (busy) return;
+    if (action === "delete" && !window.confirm(`Xóa vĩnh viễn ${chapterIds.length} chương, nội dung, bình luận, lịch sử đọc và quyền đã mua liên quan? Thao tác không thể hoàn tác.`)) return;
+    setBusy(true);
     try {
-      const res = await axiosClient.delete(`/admin/chapter/${id}`);
-
-      if (!res.data.success) {
-        throw new Error(res.data.message || "Xóa thất bại");
-      }
-
-      toast.dismiss(loadingToast);
-      toast.success("Xóa chương thành công");
-      refresh();
-    } catch (err: unknown) {
-      const apiError = err as ApiErrorResponse;
-
-      toast.dismiss(loadingToast);
-      toast.error("Xóa chương thất bại", {
-        description:
-          apiError.response?.data?.message ||
-          apiError.message ||
-          "Có lỗi xảy ra",
-      });
-    }
-  };
-
-  return (
-    <div>
-      {sortKey !== null && (
-        <div className="mb-3 flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={cancelSort}
-          >
-            Huỷ sắp xếp
-          </Button>
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <table className="w-full border-collapse text-left text-sm text-gray-800">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="w-10 border-b p-3"></th>
-              <th className="border-b p-3">
-                {renderSortHeader("ID", "idChuong")}
-              </th>
-              <th className="border-b p-3">
-                {renderSortHeader("Truyện", "truyen")}
-              </th>
-              <th className="border-b p-3">
-                {renderSortHeader("Số chương", "chuongSo")}
-              </th>
-              <th className="border-b p-3">
-                {renderSortHeader("Tiêu đề", "tieuDeChuong")}
-              </th>
-              <th className="border-b p-3">
-                {renderSortHeader("Slug", "slug")}
-              </th>
-              <th className="border-b p-3">{renderSortHeader("Giá", "gia")}</th>
-              <th className="border-b p-3 text-right">Hành động</th>
-            </tr>
-          </thead>
-
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="chapters">
-              {(provided) => (
-                <tbody ref={provided.innerRef} {...provided.droppableProps}>
-                  {sortedData.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="p-6 text-center text-gray-500">
-                        Không có dữ liệu
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedData.map((item, index) => (
-                      <Draggable
-                        key={item.idChuong}
-                        draggableId={String(item.idChuong)}
-                        index={index}
-                        isDragDisabled={sortKey !== null}
-                      >
-                        {(provided, snapshot) => (
-                          <tr
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className={`hover:bg-gray-50 ${
-                              snapshot.isDragging ? "bg-blue-50" : ""
-                            }`}
-                          >
-                            <td className="border-b p-3">
-                              <button
-                                type="button"
-                                {...provided.dragHandleProps}
-                                className={`text-gray-400 hover:text-gray-700 ${
-                                  sortKey !== null
-                                    ? "cursor-not-allowed opacity-40"
-                                    : "cursor-grab"
-                                }`}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
-                            </td>
-
-                            <td className="border-b p-3 font-medium">
-                              #{item.idChuong}
-                            </td>
-
-                            <td className="border-b p-3">
-                              {item.truyen?.tenTruyen || "Không rõ truyện"}
-                            </td>
-
-                            <td className="border-b p-3">
-                              {String(item.chuongSo)}
-                            </td>
-
-                            <td className="border-b p-3 font-medium">
-                              {item.tieuDeChuong}
-                            </td>
-
-                            <td className="border-b p-3 text-gray-500">
-                              {item.slug}
-                            </td>
-
-                            <td className="border-b p-3">
-                              {item.isFree ? (
-                                <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
-                                  Miễn phí
-                                </span>
-                              ) : (
-                                <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-                                  {item.giaXu ?? 0} xu
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="border-b p-3">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onEdit(item)}
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                  Sửa
-                                </Button>
-
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDelete(item.idChuong)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  Xóa
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Draggable>
-                    ))
-                  )}
-
-                  {provided.placeholder}
-                </tbody>
-              )}
-            </Droppable>
-          </DragDropContext>
-        </table>
-      </div>
-    </div>
-  );
+      const response = await api.post("/admin/chapters/bulk", { action, chapterIds });
+      if (!response.data.success) throw new Error(response.data.message);
+      toast.success(`Đã ${action === "delete" ? "xóa" : "chuyển miễn phí"} ${response.data.data.count} chương`); setSelected([]); refresh();
+    } catch { toast.error("Không thể cập nhật chương. Hãy tải lại và thử lại."); } finally { setBusy(false); }
+  }
+  async function deleteOne(id: number) {
+    if (busy || !window.confirm("Chuyển chương này vào thùng rác?")) return;
+    setBusy(true);
+    try {
+      const response = await api.delete(`/admin/chapter/${id}`);
+      if (!response.data.success) throw new Error("Delete failed");
+      toast.success("Đã chuyển chương vào thùng rác"); refresh();
+    } catch { toast.error("Không thể xóa chương. Hãy thử lại."); } finally { setBusy(false); }
+  }
+  const drag = (result: DropResult) => { if (!dragDisabled && result.destination) reorder(result.source.index, result.destination.index); };
+  return <div className="space-y-3">
+    {selected.length > 0 && <div aria-label="Thao tác chương đã chọn" className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 text-card-foreground shadow-lg"><strong aria-live="polite" className="mr-2 text-sm">Đã chọn {selected.length} chương</strong><Button disabled={busy} onClick={() => setPriceOpen(true)}>Đặt giá VIP</Button><Button disabled={busy} variant="outline" onClick={() => void bulk("set-free", selected)}>Chuyển miễn phí</Button><Button disabled={busy} variant="destructive" onClick={() => void bulk("delete", selected)}>Xóa hàng loạt</Button><Button disabled={busy} variant="ghost" onClick={() => setSelected([])}>Bỏ chọn</Button></div>}
+    <div className="overflow-x-auto rounded-lg border bg-card text-card-foreground"><table className="w-full text-left text-sm"><thead className="bg-muted text-muted-foreground"><tr>
+      <th className="p-3"><input type="checkbox" aria-label="Chọn tất cả trên trang" checked={items.length > 0 && selected.length === items.length} ref={(node) => { if (node) node.indeterminate = selected.length > 0 && selected.length < items.length; }} onChange={(event) => setSelected(event.target.checked ? items.map((item) => item.idChuong) : [])} disabled={busy || !items.length} /></th>
+      <th className="p-2"><span className="sr-only">Đổi vị trí</span></th>
+      {columns.map(([label, key]) => <th key={key} scope="col" aria-sort={query.sortBy === key ? (query.sortOrder === "asc" ? "ascending" : "descending") : "none"} className="whitespace-nowrap p-3"><button type="button" className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => onSort(key)}>{label} <span aria-hidden="true">{query.sortBy === key ? (query.sortOrder === "asc" ? "↑" : "↓") : "↕"}</span></button></th>)}
+      <th className="p-3">Hành động</th>
+    </tr></thead><DragDropContext onDragEnd={drag}><Droppable droppableId="chapters">{(provided) => <tbody ref={provided.innerRef} {...provided.droppableProps}>
+      {!items.length ? <tr><td colSpan={10} className="p-8 text-center">Không có chương phù hợp.</td></tr> : items.map((item, index) => <Draggable key={item.idChuong} draggableId={String(item.idChuong)} index={index} isDragDisabled={dragDisabled || busy}>{(provided) => <tr ref={provided.innerRef} {...provided.draggableProps} className="border-t hover:bg-muted/50">
+        <td className="p-3"><input type="checkbox" aria-label={`Chọn chương ${item.chuongSo}: ${item.tieuDeChuong}`} checked={selected.includes(item.idChuong)} onChange={() => toggle(item.idChuong)} disabled={busy} /></td>
+        <td className="p-2"><button type="button" {...provided.dragHandleProps} aria-label={`Đổi vị trí chương ${item.chuongSo}`} className="text-muted-foreground disabled:opacity-30" disabled={dragDisabled || busy}><GripVertical className="size-4" /></button></td>
+        <td className="p-3 tabular-nums">#{item.idChuong}</td><td className="min-w-36 max-w-52 break-words p-3">{item.truyen?.tenTruyen}</td><td className="p-3 tabular-nums">{item.chuongSo}</td>
+        <td className="min-w-56 max-w-96 break-words p-3"><p className="font-medium">{item.tieuDeChuong}</p><div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><span className="max-w-52 truncate" title={item.slug}>{item.slug}</span><button type="button" aria-label={`Sao chép slug ${item.slug}`} className="rounded p-1 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => void navigator.clipboard.writeText(item.slug).then(() => toast.success("Đã sao chép slug")).catch(() => toast.error("Không thể sao chép"))}><Copy className="size-3" /></button></div></td>
+        <td className="whitespace-nowrap p-3 tabular-nums"><span className={(item.giaXu ?? 0) > 0 ? "font-medium text-fuchsia-700 dark:text-fuchsia-300" : "text-muted-foreground"}>{(item.giaXu ?? 0) > 0 ? `${item.giaXu} xu VIP` : "Miễn phí"}</span></td>
+        <td className="whitespace-nowrap p-3 tabular-nums"><span className={`rounded-full px-2 py-1 text-xs ${(item.wordCount ?? 0) < 100 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200" : "bg-muted"}`}>{(item.wordCount ?? 0).toLocaleString("vi-VN")} chữ</span></td>
+        <td className="whitespace-nowrap p-3 text-xs">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("vi-VN") : "—"}</td>
+        <td className="p-3"><div className="flex gap-1"><Button size="sm" variant="outline" onClick={() => onPreview(item.idChuong)}><Eye className="size-3.5" />Xem</Button><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Edit2 className="size-3.5" />Sửa</Button><Button size="sm" variant="destructive" disabled={busy} onClick={() => void deleteOne(item.idChuong)}><Trash2 className="size-3.5" />Xóa</Button></div></td>
+      </tr>}</Draggable>)}{provided.placeholder}
+    </tbody>}</Droppable></DragDropContext></table></div>
+    <ChapterPriceSheet target={priceOpen ? { kind: "chapters", ids: selected } : null} onClose={() => setPriceOpen(false)} onSuccess={() => { setSelected([]); refresh(); }} />
+  </div>;
 }

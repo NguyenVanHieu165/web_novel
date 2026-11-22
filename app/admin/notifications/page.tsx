@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useSyncExternalStore } from "react";
 import {
   Bell,
   Trash2,
@@ -23,6 +23,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
+import type { AdminNotificationResponse } from "@/lib/admin-notification-types";
 
 export type NotificationCategory =
   | "follow"
@@ -51,26 +52,42 @@ interface NotificationItem {
   };
 }
 
+const subscribeToHydration = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [activeTab, setActiveTab] = useState<CategoryTab>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleCount, setVisibleCount] = useState(15);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const requestRef = useRef<AbortController | null>(null);
+  const requestVersion = useRef(0);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToHydration, getClientSnapshot, getServerSnapshot);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await api.get(`/admin/notifications?_t=${Date.now()}`);
-
+  const fetchNotifications = useCallback((nextPage = 1, append = false) => {
+    if (append && requestRef.current) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const version = ++requestVersion.current;
+    setLoading(true);
+    setLoadError(false);
+    return api.get<AdminNotificationResponse>("/admin/notifications", { params: { page: nextPage, limit: 20 }, signal: controller.signal }).then((res) => {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
       const result = res.data;
 
       if (result.success) {
         // Ánh xạ dữ liệu từ DB sang cấu trúc hiển thị của UI
-        const mappedList: NotificationItem[] = result.data.map((dbItem: any) => {
+        const mappedList: NotificationItem[] = result.data.map((dbItem) => {
           const title = dbItem.tieu_de || "Thông báo mới";
           let category: NotificationCategory = "follow";
           let priority: "urgent" | "warning" | "success" | "normal" = "normal";
@@ -88,7 +105,7 @@ export default function NotificationsPage() {
           }
 
           // Trích xuất dữ liệu phụ trợ
-          let data: any = {};
+          const data: NonNullable<NotificationItem["data"]> = {};
           
           const userMatch = dbItem.noiDung?.match(/(?:Độc giả|Tài khoản)\s+"([^"]+)"/);
           if (userMatch && userMatch[1]) {
@@ -124,19 +141,26 @@ export default function NotificationsPage() {
           };
         });
 
-        setNotifications(mappedList);
+        setNotifications((previous) => append ? [...new Map([...previous, ...mappedList].map((item) => [item.id, item])).values()] : mappedList);
+        setPage(result.meta.page);
+        setHasMore(result.meta.page < result.meta.totalPage);
+        setUnreadCount(result.unreadCount);
       }
-    } catch (error) {
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
       console.error(error);
+      setLoadError(true);
       toast.error("Không thể tải thông báo");
-    }
-  };
+    }).finally(() => {
+      if (!controller.signal.aborted && version === requestVersion.current) { requestRef.current = null; setLoading(false); }
+    });
+  }, []);
 
   // 1. Đọc dữ liệu khi component mount
   useEffect(() => {
-    setMounted(true);
-    fetchNotifications();
-  }, []);
+    void fetchNotifications();
+    return () => { requestRef.current?.abort(); };
+  }, [fetchNotifications]);
 
   // 2. Lắng nghe sự kiện WebSocket cập nhật từ Sidebar (Real-time)
   useEffect(() => {
@@ -153,7 +177,7 @@ export default function NotificationsPage() {
         handleNotificationUpdate,
       );
     };
-  }, []);
+  }, [fetchNotifications]);
 
   // 3. Đóng menu ngữ cảnh 3 chấm khi click ngoài
   useEffect(() => {
@@ -186,6 +210,7 @@ export default function NotificationsPage() {
       }
     } catch (e) {
       console.error("Lỗi cập nhật trạng thái đã đọc:", e);
+      toast.error("Không thể cập nhật trạng thái đọc");
     }
     setActiveMenuId(null);
   };
@@ -201,6 +226,7 @@ export default function NotificationsPage() {
       }
     } catch (e) {
       console.error("Lỗi đánh dấu đọc tất cả:", e);
+      toast.error("Không thể đánh dấu tất cả đã đọc");
     }
   };
 
@@ -312,7 +338,7 @@ export default function NotificationsPage() {
     return categoryMatch && statusMatch && searchMatch;
   });
 
-  const paginatedNotifications = filteredNotifications.slice(0, visibleCount);
+  const paginatedNotifications = filteredNotifications;
 
   // 7. Styling phụ thuộc vào Phân loại (Category) & Độ ưu tiên (Priority)
 
@@ -363,7 +389,7 @@ export default function NotificationsPage() {
   };
 
   const handleLoadMore = () => {
-    setVisibleCount((prev) => prev + 10);
+    void fetchNotifications(page + 1, true);
   };
 
   if (!mounted) {
@@ -406,7 +432,7 @@ export default function NotificationsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <Bell size={24} className="text-blue-600 animate-pulse" />
-              Trung tâm Thông báo
+              Trung tâm Thông báo <span className="text-sm tabular-nums" aria-live="polite">({unreadCount} chưa đọc)</span>
             </h1>
             <p className="text-xs text-gray-500">
               Quản lý, tìm kiếm và phân loại thông báo từ độc giả thời gian
@@ -416,7 +442,7 @@ export default function NotificationsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {notifications.some((n) => !n.isRead) && (
+          {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors duration-200 cursor-pointer border border-blue-100/50"
@@ -482,7 +508,7 @@ export default function NotificationsPage() {
               key={tab.key}
               onClick={() => {
                 setActiveTab(tab.key as CategoryTab);
-                setVisibleCount(15); // Reset visible count khi đổi tab
+
               }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                 isActive
@@ -507,8 +533,9 @@ export default function NotificationsPage() {
         })}
       </div>
 
+      {loadError && <p role="alert" className="text-sm text-red-600">Không thể tải thông báo. <button type="button" onClick={() => void fetchNotifications()} className="underline">Thử lại</button></p>}
       {/* DANH SÁCH THÔNG BÁO */}
-      {paginatedNotifications.length === 0 ? (
+      {loading && notifications.length === 0 ? <p role="status">Đang tải thông báo…</p> : paginatedNotifications.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-2xl p-16 text-center flex flex-col items-center justify-center space-y-4 shadow-sm">
           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
             <Inbox size={32} />
@@ -629,6 +656,8 @@ export default function NotificationsPage() {
                     onClick={() =>
                       setActiveMenuId(isMenuOpen ? null : notif.id)
                     }
+                    aria-label={`Tùy chọn thông báo: ${notif.title}`}
+                    aria-expanded={isMenuOpen}
                     className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <MoreVertical size={16} />
@@ -675,13 +704,14 @@ export default function NotificationsPage() {
       )}
 
       {/* NÚT TẢI THÊM THÔNG BÁO (PAGINATION) */}
-      {filteredNotifications.length > visibleCount && (
+      {hasMore && (
         <div className="flex justify-center pt-3">
           <button
+            disabled={loading}
             onClick={handleLoadMore}
             className="px-6 py-2.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 font-bold text-xs rounded-xl shadow-sm transition-all duration-200 flex items-center gap-1.5 cursor-pointer"
           >
-            Tải thêm thông báo (+10)
+            {loading ? "Đang tải…" : "Tải thêm thông báo"}
             <ChevronDown size={14} />
           </button>
         </div>

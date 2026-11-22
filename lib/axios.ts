@@ -3,7 +3,7 @@ import axios from "axios";
 const axiosClient = axios.create({
     baseURL:
         process.env.NEXT_PUBLIC_API_URL ||
-        "http://localhost:3000/api",
+        "/api",
     headers: {
         "Content-Type": "application/json",
     },
@@ -16,13 +16,21 @@ const axiosClient = axios.create({
  */
 axiosClient.interceptors.response.use(
     (response) => response,
-    (error) => {
+    (error: unknown) => {
+        // Filter changes and React effect cleanup intentionally cancel requests.
+        if (axios.isCancel(error)) return Promise.reject(error);
+
         // log lỗi rõ hơn để debug backend
-        console.error("Axios Error:", {
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data,
-        });
+        if (axios.isAxiosError(error)) {
+            console.error("Axios Error:", {
+                message: error.message,
+                code: error.code,
+                status: error.response?.status,
+                data: error.response?.data,
+            });
+        } else {
+            console.error("Axios Error:", error instanceof Error ? error.message : "Unknown request error");
+        }
 
         return Promise.reject(error);
     }

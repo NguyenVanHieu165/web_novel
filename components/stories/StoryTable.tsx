@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import axiosClient from "@/lib/axios";
 import type { Story } from "@/hooks/useStories";
 import { toast } from "sonner";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { sort } from "fast-sort";
+import ChapterCountBadges from "./ChapterCountBadges";
+import type { AdminStorySort } from "@/schemas/admin-story-query.schema";
+import { useReorderedItems } from "@/hooks/useReorderedItems";
 import { Edit2, Eye, Trash2, GripVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { sort } from "fast-sort";
 
 import {
   DragDropContext,
@@ -17,7 +20,11 @@ import {
 } from "@hello-pangea/dnd";
 
 type StoryTableProps = {
-  data: Story[];
+  data: (Story & { soChuongVip?: number })[];
+  sortBy?: AdminStorySort;
+  sortOrder?: "asc" | "desc";
+  onSort?: (key: AdminStorySort) => void;
+  onResetSort?: () => void;
   onEdit: (story: Story) => void;
   refresh: () => void;
 };
@@ -31,15 +38,7 @@ type ApiErrorResponse = {
   message?: string;
 };
 
-type SortKey =
-  | "idTruyen"
-  | "tenTruyen"
-  | "trang_thai"
-  | "createdAt"
-  | "luotXem"
-  | null;
-
-type SortOrder = "asc" | "desc";
+const EMPTY_STORIES: Story[] = [];
 
 const statusLabels: Record<Story["trang_thai"], string> = {
   dang_tien_hanh: "Đang tiến hành",
@@ -49,88 +48,65 @@ const statusLabels: Record<Story["trang_thai"], string> = {
 };
 
 export default function StoryTable({
-  data = [],
+  data = EMPTY_STORIES,
   onEdit,
   refresh,
+  sortBy: serverSortBy, sortOrder: serverSortOrder, onSort, onResetSort,
 }: StoryTableProps) {
   const router = useRouter();
 
-  const [items, setItems] = useState<Story[]>(data);
-  const [sortKey, setSortKey] = useState<SortKey>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-
-  useEffect(() => {
-    setItems(data);
-  }, [data]);
-
-  const handleSort = (key: Exclude<SortKey, null>) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
-    }
+  const { items, reorder } = useReorderedItems(data);
+  const [localSort, setLocalSort] = useState<{ key: AdminStorySort | null; order: "asc" | "desc" }>({ key: null, order: "asc" });
+  const sortBy = onSort ? serverSortBy : localSort.key;
+  const sortOrder = onSort ? serverSortOrder : localSort.order;
+  const handleSort = (key: AdminStorySort) => {
+    if (onSort) onSort(key);
+    else setLocalSort({ key, order: localSort.key === key && localSort.order === "asc" ? "desc" : "asc" });
   };
-
-  const cancelSort = () => {
-    setSortKey(null);
-    setSortOrder("asc");
-  };
-
-  const getSortIcon = (key: Exclude<SortKey, null>) => {
-    if (sortKey !== key) return "↕";
-    return sortOrder === "asc" ? "↑" : "↓";
-  };
-
+  const resetSort = () => { if (onResetSort) onResetSort(); else setLocalSort({ key: null, order: "asc" }); };
   const sortedData = useMemo(() => {
-    if (sortKey === null) {
-      return items;
-    }
-
-    const getValue = (item: Story) => {
-      if (sortKey === "idTruyen") return item.idTruyen;
-      if (sortKey === "tenTruyen") return item.tenTruyen || "";
-      if (sortKey === "createdAt") return item.createdAt;
-      if (sortKey === "luotXem") return item.luotXem;
-      if (sortKey === "trang_thai") return statusLabels[item.trang_thai];
-
-      return "";
+    if (onSort || !localSort.key) return items;
+    const value = (item: Story) => {
+      switch (localSort.key) {
+        case "id": return item.idTruyen;
+        case "tenTruyen": return item.tenTruyen;
+        case "soChuong": return item.soChuong ?? 0;
+        case "luotXem": return item.luotXem;
+        case "ngayTao": return item.createdAt;
+        case "trang_thai": return statusLabels[item.trang_thai];
+        default: return "";
+      }
     };
-
-    return sortOrder === "asc"
-      ? sort(items).asc(getValue)
-      : sort(items).desc(getValue);
-  }, [items, sortKey, sortOrder]);
+    return localSort.order === "asc" ? sort(items).asc(value) : sort(items).desc(value);
+  }, [items, localSort, onSort]);
+  const isSorted = onSort ? sortBy !== "ngayTao" || sortOrder !== "desc" : localSort.key !== null;
+  const getSortIcon = (key: AdminStorySort) => sortBy === key ? (sortOrder === "asc" ? "↑" : "↓") : "↕";
 
   const renderSortHeader = (
     label: string,
-    sortName: Exclude<SortKey, null>,
+    sortName: AdminStorySort,
   ) => {
     return (
       <button
         type="button"
         onClick={() => handleSort(sortName)}
-        className="flex items-center gap-1 font-semibold hover:text-blue-600"
+        className="flex items-center gap-1 font-semibold hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {label}
-        <span className="text-xs normal-case">{getSortIcon(sortName)}</span>
+        <span className="text-xs normal-case" aria-hidden="true">{getSortIcon(sortName)}</span>
       </button>
     );
   };
 
   const handleDragEnd = (result: DropResult) => {
-    if (sortKey !== null) {
+    if (isSorted) {
       toast.warning("Hãy huỷ sắp xếp trước khi kéo thả");
       return;
     }
 
     if (!result.destination) return;
 
-    const newItems = Array.from(items);
-    const [movedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, movedItem);
-
-    setItems(newItems);
+    reorder(result.source.index, result.destination.index);
   };
 
   const handleDelete = async (id: number) => {
@@ -166,39 +142,42 @@ export default function StoryTable({
 
   return (
     <div>
-      {sortKey !== null && (
+      {isSorted && (
         <div className="mb-3 flex justify-end">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={cancelSort}
+            onClick={resetSort}
           >
             Huỷ sắp xếp
           </Button>
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <table className="w-full border-collapse text-left text-sm text-gray-800">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+      <div className="overflow-x-auto rounded-lg border bg-card">
+        <table className="w-full border-collapse text-left text-sm text-card-foreground">
+          <thead className="bg-muted text-xs uppercase text-muted-foreground">
             <tr>
               <th className="w-10 border-b p-3"></th>
-              <th className="border-b p-3">
-                {renderSortHeader("ID", "idTruyen")}
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "id" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
+                {renderSortHeader("ID", "id")}
               </th>
-              <th className="border-b p-3">
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "tenTruyen" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
                 {renderSortHeader("Tên", "tenTruyen")}
               </th>
               <th className="border-b p-3">Thể loại</th>
-              <th className="border-b p-3">
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "trang_thai" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
                 {renderSortHeader("Trạng thái", "trang_thai")}
               </th>
-              <th className="border-b p-3">
-                {renderSortHeader("Ngày tạo", "createdAt")}
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "ngayTao" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
+                {renderSortHeader("Ngày tạo", "ngayTao")}
               </th>
-              <th className="border-b p-3">
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "luotXem" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
                 {renderSortHeader("Lượt xem", "luotXem")}
+              </th>
+              <th scope="col" className="border-b p-3" aria-sort={sortBy === "soChuong" ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}>
+                {renderSortHeader("Số chương", "soChuong")}
               </th>
               <th className="border-b p-3 text-right">Hành động</th>
             </tr>
@@ -210,7 +189,7 @@ export default function StoryTable({
                 <tbody ref={provided.innerRef} {...provided.droppableProps}>
                   {sortedData.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-6 text-center text-gray-500">
+                      <td colSpan={9} className="p-6 text-center text-gray-500">
                         Không có dữ liệu
                       </td>
                     </tr>
@@ -220,22 +199,23 @@ export default function StoryTable({
                         key={item.idTruyen}
                         draggableId={String(item.idTruyen)}
                         index={index}
-                        isDragDisabled={sortKey !== null}
+                        isDragDisabled={isSorted}
                       >
                         {(provided, snapshot) => (
                           <tr
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className={`hover:bg-gray-50 ${
+                            className={`hover:bg-muted/50 ${
                               snapshot.isDragging ? "bg-blue-50" : ""
                             }`}
                           >
                             <td className="border-b p-3">
                               <button
                                 type="button"
+                                aria-label={`Đổi vị trí truyện ${item.tenTruyen}`}
                                 {...provided.dragHandleProps}
                                 className={`text-gray-400 hover:text-gray-700 ${
-                                  sortKey !== null
+                                  isSorted
                                     ? "cursor-not-allowed opacity-40"
                                     : "cursor-grab"
                                 }`}
@@ -271,6 +251,7 @@ export default function StoryTable({
 
                             <td className="border-b p-3">{item.luotXem}</td>
 
+                            <td className="border-b p-3"><ChapterCountBadges count={item.soChuong} vipCount={item.soChuongVip} /></td>
                             <td className="border-b p-3">
                               <div className="flex justify-end gap-2">
                                 <Button

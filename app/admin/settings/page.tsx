@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/lib/axios";
 import StoryTable from "@/components/stories/StoryTable";
 import StoryFilter from "@/components/stories/StoryFilter";
@@ -8,6 +8,8 @@ import StoryForm from "@/components/stories/StoryForm";
 import { toast } from "sonner";
 import ImportResultToast from "@/components/common/ImportResultToast";
 import axios from "@/lib/axios";
+import { isAxiosError } from "axios";
+import type { Story } from "@/hooks/useStories";
 import {
   Sheet,
   SheetContent,
@@ -17,15 +19,26 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
+type StoryListMeta = { totalPage: number; total: number; page: number };
+type StoryListResponse = {
+  data?: Story[] | { data?: Story[]; meta?: StoryListMeta };
+  meta?: StoryListMeta;
+};
+type ImportResult = {
+  insertedRows?: number;
+  errorRows?: number;
+  errors?: { row: number; message: string; field?: string }[];
+};
+
 export default function StoriesPage() {
-  const [stories, setStories] = useState<any[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
   const [meta, setMeta] = useState({ totalPage: 1, total: 0, page: 1 });
   const [query, setQuery] = useState({ search: "", page: 1, limit: 15 });
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<Story | null>(null);
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
@@ -37,7 +50,7 @@ export default function StoriesPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post("/admin/stories/import", formData, {
+      const res = await axios.post<ImportResult & { data?: ImportResult }>("/admin/stories/import", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -79,8 +92,11 @@ export default function StoriesPage() {
       }
 
       fetchStories();
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
+      const message = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : undefined;
 
       toast.custom(
         () => (
@@ -88,7 +104,7 @@ export default function StoriesPage() {
             type="error"
             title="Import thất bại"
             message={
-              error.response?.data?.message || "Có lỗi xảy ra khi import file"
+              message || "Có lỗi xảy ra khi import file"
             }
           />
         ),
@@ -127,11 +143,11 @@ export default function StoriesPage() {
     }
   };
 
-  const fetchStories = async () => {
+  const fetchStories = useCallback(async () => {
     try {
       setLoading(true);
 
-      const res = await api.get("/admin/stories", {
+      const res = await api.get<StoryListResponse>("/admin/stories", {
         params: {
           page: query.page,
           limit: query.limit,
@@ -144,7 +160,7 @@ export default function StoriesPage() {
         : res.data.data?.data || [];
 
       const metaData = res.data.meta ||
-        res.data.data?.meta || {
+        (Array.isArray(res.data.data) ? undefined : res.data.data?.meta) || {
           totalPage: 1,
           total: 0,
           page: 1,
@@ -158,12 +174,12 @@ export default function StoriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [query]);
 
   useEffect(() => {
     const t = setTimeout(fetchStories, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [fetchStories]);
 
   return (
     <div className="p-6 space-y-4 bg-white min-h-screen">
@@ -209,7 +225,7 @@ export default function StoriesPage() {
       ) : (
         <StoryTable
           data={stories}
-          onEdit={(item: any) => {
+          onEdit={(item) => {
             setSelected(item);
             setOpen(true);
           }}

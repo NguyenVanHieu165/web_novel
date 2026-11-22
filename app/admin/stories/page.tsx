@@ -1,21 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import StoryTable from "@/components/stories/StoryTable";
-import StoryFilter from "@/components/stories/StoryFilter";
+import StoryToolbar from "@/components/stories/StoryToolbar";
+import ImportUrlModal from "@/components/stories/ImportUrlModal";
 import StoryForm from "@/components/stories/StoryForm";
 import { toast } from "sonner";
 import { LayoutGrid, TableProperties } from "lucide-react";
 import ImportResultToast from "@/components/common/ImportResultToast";
 import axios from "@/lib/axios";
-import { useStories, type Story } from "@/hooks/useStories";
+import type { Story } from "@/hooks/useStories";
+import { useAdminStories } from "@/components/stories/useAdminStories";
 import StoryCardList from "@/components/stories/StoryCardList";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -39,8 +40,13 @@ type ApiErrorResponse = {
 type ViewMode = "table" | "card";
 
 export default function StoriesPage() {
+  return <Suspense fallback={<div className="p-6" role="status">Đang tải bộ lọc…</div>}><StoriesContent /></Suspense>;
+}
+
+function StoriesContent() {
   const {
     stories,
+    genres,
     meta,
     query,
     setQuery,
@@ -50,7 +56,7 @@ export default function StoriesPage() {
     setPage,
     limit,
     setLimit,
-  } = useStories();
+  } = useAdminStories();
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -162,7 +168,7 @@ export default function StoriesPage() {
   };
 
   return (
-    <div className="p-6 space-y-4 bg-white min-h-screen">
+    <div className="p-4 sm:p-6 space-y-4 bg-background text-foreground min-h-screen">
       <input
         ref={fileInputRef}
         type="file"
@@ -171,10 +177,10 @@ export default function StoriesPage() {
         onChange={handleImport}
       />
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-800">Quản lý truyện</h1>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <h1 className="text-2xl font-bold">Quản lý truyện</h1>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button
             onClick={() => {
               setSelected(null);
@@ -192,24 +198,26 @@ export default function StoriesPage() {
             {importing ? "Đang import..." : "Import Excel"}
           </Button>
 
+          <ImportUrlModal onImported={fetchStories} />
           <Button onClick={handleExport}>Xuất Excel</Button>
         </div>
       </div>
 
-      <StoryFilter query={query} setQuery={setQuery} />
+      <StoryToolbar query={query} setQuery={setQuery} genres={genres} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           Tổng số:{" "}
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold">
             {stories.length} / {meta.total}
           </span>{" "}
           truyện
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span>Hiển thị</span>
             <select
-              className="h-9 rounded-md border bg-white px-3 text-sm outline-none"
+              aria-label="Số bản ghi mỗi trang"
+              className="h-9 rounded-md border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
             >
@@ -245,18 +253,22 @@ export default function StoriesPage() {
         </div>
       </div>
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="py-10 text-center text-slate-500">
+        <div role="status" className="py-10 text-center text-slate-500">
           Đang tải dữ liệu...
         </div>
       ) : viewMode === "table" ? (
         <StoryTable
           data={stories}
+          sortBy={query.sortBy}
+          sortOrder={query.sortOrder}
+          onSort={(sortBy) => setQuery({ ...query, sortBy, sortOrder: query.sortBy === sortBy && query.sortOrder === "asc" ? "desc" : "asc", page: 1 })}
+          onResetSort={() => setQuery({ ...query, sortBy: "ngayTao", sortOrder: "desc", page: 1 })}
           onEdit={(item) => {
             setSelected(item);
             setOpen(true);
@@ -273,11 +285,11 @@ export default function StoriesPage() {
           refetch={fetchStories}
         />
       )}
-      <div className="flex justify-center items-center gap-4 py-4 text-slate-600">
+      <div className="flex justify-center items-center gap-4 py-4 text-muted-foreground">
         <Button
           variant="outline"
           size="sm"
-          disabled={query.page === 1}
+          disabled={loading || query.page === 1}
           onClick={() => setPage(query.page - 1)}
         >
           Trước
@@ -290,7 +302,7 @@ export default function StoriesPage() {
         <Button
           variant="outline"
           size="sm"
-          disabled={query.page >= (meta?.totalPage ?? 1)}
+          disabled={loading || query.page >= (meta?.totalPage ?? 1)}
           onClick={() => setPage(query.page + 1)}
         >
           Sau
@@ -299,7 +311,7 @@ export default function StoriesPage() {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="!w-full !max-w-[500px] p-0">
-          <SheetHeader className="sticky top-0 z-10 border-b bg-white px-6 py-4">
+          <SheetHeader className="sticky top-0 z-10 border-b bg-background px-6 py-4">
             <SheetTitle>
               {selected ? "Chỉnh sửa truyện" : "Thêm truyện mới"}
             </SheetTitle>

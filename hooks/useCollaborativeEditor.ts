@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import * as Y from "yjs";
 import { EditorView, basicSetup } from "codemirror";
@@ -12,6 +12,23 @@ interface UseCollaborativeEditorProps {
   enabled: boolean;
   userName: string; // Bắt buộc để hiển thị con trỏ chuột màu sắc
   editorContainerRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const CURSOR_COLORS = [
+  { color: "#30bced", light: "#30bced33" },
+  { color: "#6eeb83", light: "#6eeb8333" },
+  { color: "#ffbc42", light: "#ffbc4233" },
+  { color: "#ecd444", light: "#ecd44433" },
+  { color: "#ee6352", light: "#ee635233" },
+  { color: "#9ac2c9", light: "#9ac2c933" },
+] as const;
+
+function getCursorColor(userName: string) {
+  const hash = Array.from(userName).reduce(
+    (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+  return CURSOR_COLORS[hash % CURSOR_COLORS.length];
 }
 
 // Định nghĩa giao diện CSS cho con trỏ chuột của người dùng khác
@@ -60,20 +77,12 @@ export function useCollaborativeEditor({
 }: UseCollaborativeEditorProps) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
   const socketRef = useRef<Socket | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
 
-  // Tạo các màu ngẫu nhiên cho con trỏ của những người dùng khác nhau
-  const userColor = useRef({
-    name: userName,
-    color: ["#30bced", "#6eeb83", "#ffbc42", "#ecd444", "#ee6352", "#9ac2c9"][
-      Math.floor(Math.random() * 6)
-    ],
-    light: ["#30bced33", "#6eeb8333", "#ffbc4233", "#ecd44433", "#ee635233", "#9ac2c933"][
-      Math.floor(Math.random() * 6)
-    ],
-  });
+  const userColor = useMemo(() => getCursorColor(userName), [userName]);
 
   useEffect(() => {
     if (!enabled || !chapterId || !editorContainerRef.current) {
@@ -91,7 +100,10 @@ export function useCollaborativeEditor({
     }
 
     const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:3001";
-    const socket = io(socketServerUrl, { transports: ["websocket"] });
+    const socket = io(socketServerUrl, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
     socketRef.current = socket;
 
     const ydoc = new Y.Doc();
@@ -103,8 +115,8 @@ export function useCollaborativeEditor({
     // Thiết lập thông tin profile cho con trỏ cục bộ của mình
     awareness.setLocalStateField("user", {
       name: userName,
-      color: userColor.current.color,
-      light: userColor.current.light,
+      color: userColor.color,
+      light: userColor.light,
     });
 
     // Phát đi thay đổi awareness (con trỏ/selection) cục bộ lên server
@@ -118,14 +130,17 @@ export function useCollaborativeEditor({
       }
     });
 
-    // Lắng nghe trạng thái con trỏ (awareness) từ các client khác về gộp vào local
     socket.on("awareness-update-client", (update: ArrayBuffer) => {
       awarenessProtocol.applyAwarenessUpdate(awareness, new Uint8Array(update), "remote");
     });
 
     socket.on("connect", () => {
       setIsConnected(true);
-      socket.emit("join-chapter", { chapterId, initialContent, userName });
+      socket.emit("join-chapter", {
+        chapterId,
+        initialContent,
+        stateUpdate: Y.encodeStateAsUpdate(ydoc),
+      });
 
       // Khi vừa kết nối, phát trạng thái awareness hiện tại lên server
       const localAwarenessUpdate = awarenessProtocol.encodeAwarenessUpdate(awareness, [ydoc.clientID]);
@@ -137,6 +152,10 @@ export function useCollaborativeEditor({
     // Nhận tài liệu ban đầu từ Server
     socket.on("initial-document", (stateUpdate: ArrayBuffer) => {
       Y.applyUpdate(ydoc, new Uint8Array(stateUpdate), "remote");
+      socket.emit("update-crdt", {
+        chapterId,
+        update: Y.encodeStateAsUpdate(ydoc),
+      });
 
       // Khởi tạo CodeMirror và "buộc" nó vào Yjs
       const state = EditorState.create({
@@ -167,6 +186,10 @@ export function useCollaborativeEditor({
       Y.applyUpdate(ydoc, new Uint8Array(update), "remote");
     });
 
+    socket.on("document-state", ({ status }: { status: "saved" }) => {
+      if (status === "saved") setSaveStatus("saved");
+    });
+
     socket.on("users-online", ({ users }: { users: string[] }) => {
       setOnlineUsers(users);
     });
@@ -175,6 +198,7 @@ export function useCollaborativeEditor({
     ydoc.on("update", (update, origin) => {
       if (origin === "remote") return;
       if (!socketRef.current) return;
+      setSaveStatus("saving");
       socketRef.current.emit("update-crdt", { chapterId, update });
     });
 
@@ -188,16 +212,17 @@ export function useCollaborativeEditor({
         editorViewRef.current = null;
       }
     };
-  }, [enabled, chapterId, userName]);
+  }, [enabled, chapterId, userName, initialContent, editorContainerRef, userColor]);
 
   // Hàm lấy nội dung hiện tại ra khi cần (ví dụ để lưu vào Database khi bấm nút "Lưu")
   const getContent = () => {
-    return editorViewRef.current ? editorViewRef.current.state.doc.toString() : "";
+    return editorViewRef.current ? editorViewRef.current.state.doc.toString() : initialContent;
   };
 
   return {
     onlineUsers,
     isConnected,
+    saveStatus,
     getContent,
   };
 }

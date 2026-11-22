@@ -1,0 +1,611 @@
+{
+  "database": "web_truyen",
+  "finishedAt": "2026-11-21T14:40:28.852Z",
+  "before": {
+    "stories": 76,
+    "empty": 48,
+    "chapters": 354,
+    "normal": 306,
+    "vip": 48
+  },
+  "after": {
+    "stories": 28,
+    "empty": 0,
+    "chapters": 354,
+    "normal": 306,
+    "vip": 48
+  },
+  "deletedStories": 48,
+  "deletedCovers": 26,
+  "retainedUnchanged": true,
+  "schemaUnchanged": true,
+  "backupDirectory": "D:\\nextjs\\web_novel\\node_modules\\.cache\\prune-empty-stories\\2026-11-21T14-40-27-338Z-execute",
+  "candidates": [
+    {
+      "idTruyen": 4,
+      "tenTruyen": "Truyện hay số 4",
+      "slug": "truyen-hay-so-4",
+      "anhBia": "https://picsum.photos/seed/4/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 5,
+      "tenTruyen": "Truyện hay số 5",
+      "slug": "truyen-hay-so-5",
+      "anhBia": "https://picsum.photos/seed/5/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 6,
+      "tenTruyen": "Truyện hay số 6",
+      "slug": "truyen-hay-so-6",
+      "anhBia": "https://picsum.photos/seed/6/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 7,
+      "tenTruyen": "Truyện hay số 7",
+      "slug": "truyen-hay-so-7",
+      "anhBia": "https://picsum.photos/seed/7/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 8,
+      "tenTruyen": "Truyện hay số 8",
+      "slug": "truyen-hay-so-8",
+      "anhBia": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxITEhUTEhMWFRUXGBgYGBgYGBgVFxUYFRUWGBcXGBcYHSggGBolHRgVITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGxAQGy8lHyUtNS0tLy0tLy0tLSstLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0rLS0tLS0tLS0tLf/AABEIAKIBNwMBIgACEQEDEQH/xAAcAAABBQEBAQAAAAAAAAAAAAAEAAEDBQYCBwj/xABKEAABAgMEBQgIAwYEBQUBAAABAhEAAyEEEjFBBSJRYXEGEzKBkaGxwRQjUnKSstHwB0JiM3OCwtLhFSSi8UNUk7PDNVNjg6M0/8QAGQEAAgMBAAAAAAAAAAAAAAAAAgMAAQQF/8QAMREAAgIBAwEFCAIBBQAAAAAAAAECEQMSITFBBCJRYbETMnGBkcHR8KHhIxQzYrLC/9oADAMBAAIRAxEAPwDPoknbBMqzx1LTB9msxOAjC2dqzmRIEGypEFSLHSsWEqUA0A5AuSRXy7KTlAKbUm+pAFUu+GRaNMhIeMTZP/6J/GZ/3Ii3JGV2Wi55AcffbDLmKpU/fCOuadA4+Zg2XZOifvKD2AcgLmSVPBtnsh2kDjAEzTAlsStKCCSCznqTWu+KabyhQs615W9nhig2Lct6Lu2W+zAlCpyXGTk9+EQqsYWLyCCNowgOxaXsgDqACnd1y76SNl0Al99eEaXk3bLEZt1pNWIMp0by6BdCusHMQai+hWqjOTNHkZQBPs5EeoaR0GkqRdBAVeejhJFBwD4jKMtpTRZSSlQYjH72QKnTphp2ZWy2YKd8RlAlplXVEfdaiLG0SCk0ccKRDKszmGKXUe2nGqAUynyiZNkOcW0mxgY9mZ+9sTiyrPRDcMes/wC0U8gsqfQwMWHH6Yw3NI3ngPqRGksPJabMZkmueA7T5Rd2fkQB01h9wKvFoRLtMY8smxgGT7J7voYZk",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 9,
+      "tenTruyen": "Truyện hay số 9",
+      "slug": "truyen-hay-so-9",
+      "anhBia": "https://picsum.photos/seed/9/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 10,
+      "tenTruyen": "Truyện hay số 10",
+      "slug": "truyen-hay-so-10",
+      "anhBia": "https://picsum.photos/seed/10/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 11,
+      "tenTruyen": "Truyện hay số 11",
+      "slug": "truyen-hay-so-11",
+      "anhBia": "https://picsum.photos/seed/11/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 13,
+      "tenTruyen": "Truyện hay số 13",
+      "slug": "truyen-hay-so-13",
+      "anhBia": "https://picsum.photos/seed/13/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 14,
+      "tenTruyen": "Truyện hay số 14",
+      "slug": "truyen-hay-so-14",
+      "anhBia": "https://picsum.photos/seed/14/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 15,
+      "tenTruyen": "Truyện hay số 15",
+      "slug": "truyen-hay-so-15",
+      "anhBia": "https://picsum.photos/seed/15/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 16,
+      "tenTruyen": "Truyện hay số 16",
+      "slug": "truyen-hay-so-16",
+      "anhBia": "https://picsum.photos/seed/16/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 17,
+      "tenTruyen": "Truyện hay số 17",
+      "slug": "truyen-hay-so-17",
+      "anhBia": "https://picsum.photos/seed/17/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 18,
+      "tenTruyen": "Truyện hay số 18",
+      "slug": "truyen-hay-so-18",
+      "anhBia": "https://picsum.photos/seed/18/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 19,
+      "tenTruyen": "Truyện hay số 19",
+      "slug": "truyen-hay-so-19",
+      "anhBia": "https://picsum.photos/seed/19/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 20,
+      "tenTruyen": "Truyện hay số 20",
+      "slug": "truyen-hay-so-20",
+      "anhBia": "https://picsum.photos/seed/20/300/400",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 21,
+      "tenTruyen": "Hệ Thống Tu Luyện",
+      "slug": "he-thong-tu-luyen",
+      "anhBia": "default.jpg",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 23,
+      "tenTruyen": "Kiếm Đạo Độc Tôn",
+      "slug": "kiem-dao-doc-ton",
+      "anhBia": "data:image/jpeg;base64,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",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 31,
+      "tenTruyen": "Truyện Demo",
+      "slug": "truyen-demo",
+      "anhBia": "",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 32,
+      "tenTruyen": "Truyện A",
+      "slug": "truyen-a",
+      "anhBia": "",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 33,
+      "tenTruyen": "Truyện B",
+      "slug": "truyen-b",
+      "anhBia": "",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 53,
+      "tenTruyen": "Duplicate Slug 1",
+      "slug": "duplicate-slug",
+      "anhBia": "/images/default-story.jpg",
+      "anhThumbnail": null
+    },
+    {
+      "idTruyen": 62,
+      "tenTruyen": "Đại Thừa Kỳ Mới Có Nghịch Tập Hệ Thống",
+      "slug": "dai-thua-ky-moi-co-nghich-tap-he-thong",
+      "anhBia": "/uploads/covers/laca-00fbb265e8d456551d405ee0.webp",
+      "anhThumbnail": "/uploads/covers/laca-00fbb265e8d456551d405ee0.webp"
+    },
+    {
+      "idTruyen": 66,
+      "tenTruyen": "Tro Tàn Biển Sâu",
+      "slug": "tro-tan-bien-sau",
+      "anhBia": "/uploads/covers/laca-4b7963d9765c03c6d5820bbe.webp",
+      "anhThumbnail": "/uploads/covers/laca-4b7963d9765c03c6d5820bbe.webp"
+    },
+    {
+      "idTruyen": 73,
+      "tenTruyen": "Tiên Ấm Nông Trường",
+      "slug": "tien-am-nong-truong",
+      "anhBia": "/uploads/covers/laca-3e60578e06ff1c8b84b94a22.webp",
+      "anhThumbnail": "/uploads/covers/laca-3e60578e06ff1c8b84b94a22.webp"
+    },
+    {
+      "idTruyen": 81,
+      "tenTruyen": "Thánh Bạch Vương Miện",
+      "slug": "thanh-bach-vuong-mien",
+      "anhBia": "/uploads/covers/laca-1491a5e065535d522eb0f03b.webp",
+      "anhThumbnail": "/uploads/covers/laca-1491a5e065535d522eb0f03b.webp"
+    },
+    {
+      "idTruyen": 82,
+      "tenTruyen": "Minecraft: Bắt Đầu Cướp Đoạt Từ Phòng Sau",
+      "slug": "minecraft-bat-dau-cuop-doat-tu-phong-sau",
+      "anhBia": "/uploads/covers/laca-d3ccb5ef2e507c72e80772df.webp",
+      "anhThumbnail": "/uploads/covers/laca-d3ccb5ef2e507c72e80772df.webp"
+    },
+    {
+      "idTruyen": 83,
+      "tenTruyen": "Trạch Thiên Ký",
+      "slug": "trach-thien-ky",
+      "anhBia": "/uploads/covers/laca-6a24b14f92b77b30ead377c9.webp",
+      "anhThumbnail": "/uploads/covers/laca-6a24b14f92b77b30ead377c9.webp"
+    },
+    {
+      "idTruyen": 84,
+      "tenTruyen": "Làm Nũng Trong Lòng Anh",
+      "slug": "lam-nung-trong-long-anh",
+      "anhBia": "/uploads/covers/laca-4249ac5c6776dc1de0263e1b.webp",
+      "anhThumbnail": "/uploads/covers/laca-4249ac5c6776dc1de0263e1b.webp"
+    },
+    {
+      "idTruyen": 85,
+      "tenTruyen": "Showbiz: Cho Ngươi Nằm Thẳng, Sao Thành Đỉnh Lưu Rồi",
+      "slug": "showbiz-cho-nguoi-nam-thang-sao-thanh-dinh-luu-roi",
+      "anhBia": "/uploads/covers/laca-66b7fd667abe98fa2d16b1b9.webp",
+      "anhThumbnail": "/uploads/covers/laca-66b7fd667abe98fa2d16b1b9.webp"
+    },
+    {
+      "idTruyen": 86,
+      "tenTruyen": "Cổ Chân Nhân",
+      "slug": "co-chan-nhan",
+      "anhBia": "/uploads/covers/laca-3bd52eb86d30f75c9596eb38.webp",
+      "anhThumbnail": "/uploads/covers/laca-3bd52eb86d30f75c9596eb38.webp"
+    },
+    {
+      "idTruyen": 87,
+      "tenTruyen": "Tôi Không Phải Thần Hào, Tôi Chỉ Là Máy Thu Hoạch Mỹ Nữ",
+      "slug": "toi-khong-phai-than-hao-toi-chi-la-may-thu-hoach-my-nu",
+      "anhBia": "/uploads/covers/laca-3d1dca252b44263dfa9a5142.webp",
+      "anhThumbnail": "/uploads/covers/laca-3d1dca252b44263dfa9a5142.webp"
+    },
+    {
+      "idTruyen": 88,
+      "tenTruyen": "Võ Đạo Tông Sư",
+      "slug": "vo-dao-tong-su",
+      "anhBia": "/uploads/covers/laca-35532ab6f8380e8271e7d64f.webp",
+      "anhThumbnail": "/uploads/covers/laca-35532ab6f8380e8271e7d64f.webp"
+    },
+    {
+      "idTruyen": 89,
+      "tenTruyen": "Kiếm Thần Trùng Sinh",
+      "slug": "kiem-than-trung-sinh",
+      "anhBia": "/uploads/covers/laca-76fbd8ac4d2bc7cf22f5d1ec.webp",
+      "anhThumbnail": "/uploads/covers/laca-76fbd8ac4d2bc7cf22f5d1ec.webp"
+    },
+    {
+      "idTruyen": 90,
+      "tenTruyen": "Trên Cả Tiên Nhân",
+      "slug": "tren-ca-tien-nhan",
+      "anhBia": "/uploads/covers/laca-34b404fbcb3f91d67a87febb.webp",
+      "anhThumbnail": "/uploads/covers/laca-34b404fbcb3f91d67a87febb.webp"
+    },
+    {
+      "idTruyen": 91,
+      "tenTruyen": "Xích Tâm Tuần Thiên",
+      "slug": "xich-tam-tuan-thien",
+      "anhBia": "/uploads/covers/laca-7555437e8d0884308ff04699.webp",
+      "anhThumbnail": "/uploads/covers/laca-7555437e8d0884308ff04699.webp"
+    },
+    {
+      "idTruyen": 92,
+      "tenTruyen": "Cẩm Y Dạ Hành Chín Vạn Dặm",
+      "slug": "cam-y-da-hanh-chin-van-dam",
+      "anhBia": "/uploads/covers/laca-46bf6862f6caa71a3bf3891a.webp",
+      "anhThumbnail": "/uploads/covers/laca-46bf6862f6caa71a3bf3891a.webp"
+    },
+    {
+      "idTruyen": 93,
+      "tenTruyen": "Thiên Vực Thương Khung",
+      "slug": "thien-vuc-thuong-khung",
+      "anhBia": "/uploads/covers/laca-e1c6dfa37304989d161c7305.webp",
+      "anhThumbnail": "/uploads/covers/laca-e1c6dfa37304989d161c7305.webp"
+    },
+    {
+      "idTruyen": 94,
+      "tenTruyen": "Chăn Nuôi Toàn Nhân Loại",
+      "slug": "chan-nuoi-toan-nhan-loai",
+      "anhBia": "/uploads/covers/laca-6548f8950cbf023ad181c800.webp",
+      "anhThumbnail": "/uploads/covers/laca-6548f8950cbf023ad181c800.webp"
+    },
+    {
+      "idTruyen": 95,
+      "tenTruyen": "Không Có Tiền Tu Cái Gì Tiên?",
+      "slug": "khong-co-tien-tu-cai-gi-tien",
+      "anhBia": "/uploads/covers/laca-5c91fafd8f1f7484a75fb1b6.webp",
+      "anhThumbnail": "/uploads/covers/laca-5c91fafd8f1f7484a75fb1b6.webp"
+    },
+    {
+      "idTruyen": 96,
+      "tenTruyen": "Vớt Thi Nhân",
+      "slug": "vot-thi-nhan",
+      "anhBia": "/uploads/covers/laca-5356e7ee19f3ff74dd7cb5b6.webp",
+      "anhThumbnail": "/uploads/covers/laca-5356e7ee19f3ff74dd7cb5b6.webp"
+    },
+    {
+      "idTruyen": 97,
+      "tenTruyen": "Hệ Thống Học Bá Mạnh Nhất",
+      "slug": "he-thong-hoc-ba-manh-nhat",
+      "anhBia": "/uploads/covers/laca-398801449d74df4f2e20877f.webp",
+      "anhThumbnail": "/uploads/covers/laca-398801449d74df4f2e20877f.webp"
+    },
+    {
+      "idTruyen": 98,
+      "tenTruyen": "Mạt Thế: Tôi Có Nhiều Hơn Người Khác Một Từ Khóa",
+      "slug": "mat-the-toi-co-nhieu-hon-nguoi-khac-mot-tu-khoa",
+      "anhBia": "/uploads/covers/laca-4a6b2c85b092a9e4d7dd7437.webp",
+      "anhThumbnail": "/uploads/covers/laca-4a6b2c85b092a9e4d7dd7437.webp"
+    },
+    {
+      "idTruyen": 99,
+      "tenTruyen": "Vũ Mộ",
+      "slug": "vu-mo",
+      "anhBia": "/uploads/covers/laca-1111498407222fd776054ca5.webp",
+      "anhThumbnail": "/uploads/covers/laca-1111498407222fd776054ca5.webp"
+    },
+    {
+      "idTruyen": 100,
+      "tenTruyen": "Cứ Song Tu Là Mạnh Lên, Khổ Tu Sao Sướng Bằng Song Tu!",
+      "slug": "cu-song-tu-la-manh-len-kho-tu-sao-suong-bang-song-tu",
+      "anhBia": "/uploads/covers/laca-0284e9c77639223bd3236b02.webp",
+      "anhThumbnail": "/uploads/covers/laca-0284e9c77639223bd3236b02.webp"
+    },
+    {
+      "idTruyen": 101,
+      "tenTruyen": "Đạo Quân",
+      "slug": "dao-quan",
+      "anhBia": "/uploads/covers/laca-0dcccf57235fcee29cbd364f.webp",
+      "anhThumbnail": "/uploads/covers/laca-0dcccf57235fcee29cbd364f.webp"
+    },
+    {
+      "idTruyen": 102,
+      "tenTruyen": "Xuyên Sách Thập Niên 80, Mở Màn Đã Yêu Đương Với Gã Thô Hán Ngỗ Ngược",
+      "slug": "xuyen-sach-thap-nien-80-mo-man-da-yeu-duong-voi-ga-tho-han-ngo-nguoc",
+      "anhBia": "/uploads/covers/laca-51f2fd8cb8cbee566a4fc25d.webp",
+      "anhThumbnail": "/uploads/covers/laca-51f2fd8cb8cbee566a4fc25d.webp"
+    },
+    {
+      "idTruyen": 103,
+      "tenTruyen": "Con Đường Mô Phỏng Trường Sinh Của Ta",
+      "slug": "con-duong-mo-phong-truong-sinh-cua-ta",
+      "anhBia": "/uploads/covers/laca-ea5bd846c082b7dcf788fc71.webp",
+      "anhThumbnail": "/uploads/covers/laca-ea5bd846c082b7dcf788fc71.webp"
+    }
+  ],
+  "results": [
+    {
+      "id": 4,
+      "status": "deleted"
+    },
+    {
+      "id": 5,
+      "status": "deleted"
+    },
+    {
+      "id": 6,
+      "status": "deleted"
+    },
+    {
+      "id": 7,
+      "status": "deleted"
+    },
+    {
+      "id": 8,
+      "status": "deleted"
+    },
+    {
+      "id": 9,
+      "status": "deleted"
+    },
+    {
+      "id": 10,
+      "status": "deleted"
+    },
+    {
+      "id": 11,
+      "status": "deleted"
+    },
+    {
+      "id": 13,
+      "status": "deleted"
+    },
+    {
+      "id": 14,
+      "status": "deleted"
+    },
+    {
+      "id": 15,
+      "status": "deleted"
+    },
+    {
+      "id": 16,
+      "status": "deleted"
+    },
+    {
+      "id": 17,
+      "status": "deleted"
+    },
+    {
+      "id": 18,
+      "status": "deleted"
+    },
+    {
+      "id": 19,
+      "status": "deleted"
+    },
+    {
+      "id": 20,
+      "status": "deleted"
+    },
+    {
+      "id": 21,
+      "status": "deleted"
+    },
+    {
+      "id": 23,
+      "status": "deleted"
+    },
+    {
+      "id": 31,
+      "status": "deleted"
+    },
+    {
+      "id": 32,
+      "status": "deleted"
+    },
+    {
+      "id": 33,
+      "status": "deleted"
+    },
+    {
+      "id": 53,
+      "status": "deleted"
+    },
+    {
+      "id": 62,
+      "status": "deleted"
+    },
+    {
+      "id": 66,
+      "status": "deleted"
+    },
+    {
+      "id": 73,
+      "status": "deleted"
+    },
+    {
+      "id": 81,
+      "status": "deleted"
+    },
+    {
+      "id": 82,
+      "status": "deleted"
+    },
+    {
+      "id": 83,
+      "status": "deleted"
+    },
+    {
+      "id": 84,
+      "status": "deleted"
+    },
+    {
+      "id": 85,
+      "status": "deleted"
+    },
+    {
+      "id": 86,
+      "status": "deleted"
+    },
+    {
+      "id": 87,
+      "status": "deleted"
+    },
+    {
+      "id": 88,
+      "status": "deleted"
+    },
+    {
+      "id": 89,
+      "status": "deleted"
+    },
+    {
+      "id": 90,
+      "status": "deleted"
+    },
+    {
+      "id": 91,
+      "status": "deleted"
+    },
+    {
+      "id": 92,
+      "status": "deleted"
+    },
+    {
+      "id": 93,
+      "status": "deleted"
+    },
+    {
+      "id": 94,
+      "status": "deleted"
+    },
+    {
+      "id": 95,
+      "status": "deleted"
+    },
+    {
+      "id": 96,
+      "status": "deleted"
+    },
+    {
+      "id": 97,
+      "status": "deleted"
+    },
+    {
+      "id": 98,
+      "status": "deleted"
+    },
+    {
+      "id": 99,
+      "status": "deleted"
+    },
+    {
+      "id": 100,
+      "status": "deleted"
+    },
+    {
+      "id": 101,
+      "status": "deleted"
+    },
+    {
+      "id": 102,
+      "status": "deleted"
+    },
+    {
+      "id": 103,
+      "status": "deleted"
+    }
+  ],
+  "covers": {
+    "removed": [
+      "laca-00fbb265e8d456551d405ee0.webp",
+      "laca-4b7963d9765c03c6d5820bbe.webp",
+      "laca-3e60578e06ff1c8b84b94a22.webp",
+      "laca-1491a5e065535d522eb0f03b.webp",
+      "laca-d3ccb5ef2e507c72e80772df.webp",
+      "laca-6a24b14f92b77b30ead377c9.webp",
+      "laca-4249ac5c6776dc1de0263e1b.webp",
+      "laca-66b7fd667abe98fa2d16b1b9.webp",
+      "laca-3bd52eb86d30f75c9596eb38.webp",
+      "laca-3d1dca252b44263dfa9a5142.webp",
+      "laca-35532ab6f8380e8271e7d64f.webp",
+      "laca-76fbd8ac4d2bc7cf22f5d1ec.webp",
+      "laca-34b404fbcb3f91d67a87febb.webp",
+      "laca-7555437e8d0884308ff04699.webp",
+      "laca-46bf6862f6caa71a3bf3891a.webp",
+      "laca-e1c6dfa37304989d161c7305.webp",
+      "laca-6548f8950cbf023ad181c800.webp",
+      "laca-5c91fafd8f1f7484a75fb1b6.webp",
+      "laca-5356e7ee19f3ff74dd7cb5b6.webp",
+      "laca-398801449d74df4f2e20877f.webp",
+      "laca-4a6b2c85b092a9e4d7dd7437.webp",
+      "laca-1111498407222fd776054ca5.webp",
+      "laca-0284e9c77639223bd3236b02.webp",
+      "laca-0dcccf57235fcee29cbd364f.webp",
+      "laca-51f2fd8cb8cbee566a4fc25d.webp",
+      "laca-ea5bd846c082b7dcf788fc71.webp"
+    ],
+    "skipped": []
+  },
+  "verification": {
+    "emptyStoriesRemaining": 0,
+    "all354ChaptersAndContentsUnchanged": true,
+    "all28RetainedStoriesAndRelationsUnchanged": true,
+    "retainedCoversUnchanged": 24,
+    "deletedCoverBackupsVerified": 26,
+    "sharedCoverGuardPassed": true,
+    "realMysqlRollbackSmokePassed": true,
+    "dependentRowsDeleted": {
+      "genres": 148,
+      "authors": 35,
+      "volumes": 0,
+      "comments": 1,
+      "commentLikes": 0,
+      "ratings": 1,
+      "follows": 7,
+      "history": 0
+    },
+    "checks": {
+      "lint": "Passed",
+      "typescript": "Passed",
+      "tests": "Passed: 7/7",
+      "build": "Not run"
+    }
+  }
+}

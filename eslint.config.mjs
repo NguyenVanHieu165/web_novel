@@ -11,7 +11,12 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "socket-server/dist/**",
     "next-env.d.ts",
+    ".agents/**",
+    ".aider-desk/**",
+    ".kiro/**",
+    "efficacy_snapshots.json",
   ]),
 ]);
 

@@ -1,19 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
-export async function GET() {
+import { requireAdmin } from "@/lib/server/auth-session";
+
+export async function GET(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
+        const page = Math.max(Number(req.nextUrl.searchParams.get("page") || 1), 1);
+        const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit") || 1000), 1), 5000);
         const stories = await prisma.truyen.findMany({
-            include: {
+            select: {
+                idTruyen: true, tenTruyen: true, soChuong: true, createdAt: true,
                 truyenTheLoai: {
-                    include: {
-                        theLoai: true,
-                    },
+                select: { theLoai: { select: { tenTheLoai: true } } },
                 },
             },
             orderBy: {
                 idTruyen: "asc",
             },
+            skip: (page - 1) * limit,
+            take: limit,
         });
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Danh sách truyện");
@@ -45,6 +53,8 @@ export async function GET() {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "Content-Disposition":
                     'attachment; filename="danh-sach-truyen.xlsx"',
+                "X-Export-Page": String(page),
+                "X-Export-Limit": String(limit),
             },
         });
     } catch (error) {

@@ -16,11 +16,34 @@ import {
 import { toast, Toaster } from "sonner";
 
 type DemoCategory = "follow" | "report" | "transaction" | "system";
+type DemoStory = { idTruyen: number; tenTruyen: string };
+type DemoUser = { idTaiKhoan: number; tenTaiKhoan: string };
+type DemoDataResponse =
+    | { success: true; stories: DemoStory[]; users: DemoUser[] }
+    | { success: false };
+type DemoPayload = {
+    category: DemoCategory;
+    priority: string;
+    idTruyen?: number;
+    idTaiKhoan?: number;
+    username?: string;
+    storyName?: string;
+    reportReason?: string;
+    amount?: number;
+    systemEvent?: string;
+};
+
+const defaultPriority: Record<DemoCategory, string> = {
+    follow: "normal",
+    report: "warning",
+    transaction: "success",
+    system: "warning",
+};
 
 export default function FollowDemoPage() {
     // Dữ liệu lấy từ API
-    const [stories, setStories] = useState<any[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [stories, setStories] = useState<DemoStory[]>([]);
+    const [users, setUsers] = useState<DemoUser[]>([]);
     const [loadingData, setLoadingData] = useState<boolean>(true);
     
     // Tab phân loại muốn demo
@@ -47,20 +70,19 @@ export default function FollowDemoPage() {
     // Độ ưu tiên giả lập (Khẩn cấp, Cảnh báo, Thành công, Bình thường)
     const [priority, setPriority] = useState<string>("normal");
 
-    // Tự động gán độ ưu tiên phù hợp khi chuyển Tab demo
-    useEffect(() => {
-        if (activeDemo === "follow") setPriority("normal");
-        else if (activeDemo === "report") setPriority("warning");
-        else if (activeDemo === "transaction") setPriority("success");
-        else if (activeDemo === "system") setPriority("warning");
-    }, [activeDemo]);
+    function selectDemo(category: DemoCategory) {
+        if (category !== activeDemo) {
+            setActiveDemo(category);
+            setPriority(defaultPriority[category]);
+        }
+        setFollowedState(false);
+    }
 
     useEffect(() => {
         const fetchDemoData = async () => {
             try {
-                setLoadingData(true);
                 const response = await fetch("/api/demo/follow-notifications");
-                const resData = await response.json();
+                const resData: DemoDataResponse = await response.json();
                 if (resData.success) {
                     setStories(resData.stories || []);
                     setUsers(resData.users || []);
@@ -96,7 +118,7 @@ export default function FollowDemoPage() {
     const handleSendNotification = async () => {
         setSubmitting(true);
         try {
-            let bodyPayload: any = { category: activeDemo, priority: priority };
+            const bodyPayload: DemoPayload = { category: activeDemo, priority };
 
             if (activeDemo === "follow") {
                 if (!selectedStory || !selectedUser) {
@@ -214,18 +236,15 @@ export default function FollowDemoPage() {
 
                 {/* THANH TABS CHỌN KIỂU GIẢ LẬP */}
                 <div className="grid grid-cols-4 gap-1 bg-gray-100 p-1 rounded-2xl text-xs font-bold">
-                    {[
+                    {([
                         { key: "follow", label: "Theo dõi", icon: <BookmarkPlus size={14} /> },
                         { key: "report", label: "Báo cáo", icon: <AlertTriangle size={14} /> },
                         { key: "transaction", label: "Giao dịch", icon: <DollarSign size={14} /> },
                         { key: "system", label: "Hệ thống", icon: <ShieldAlert size={14} /> },
-                    ].map((btn) => (
+                    ] as const).map((btn) => (
                         <button
                             key={btn.key}
-                            onClick={() => {
-                                setActiveDemo(btn.key as DemoCategory);
-                                setFollowedState(false);
-                            }}
+                            onClick={() => selectDemo(btn.key)}
                             className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-1 rounded-xl transition-all cursor-pointer ${
                                 activeDemo === btn.key
                                     ? "bg-white text-gray-800 shadow"

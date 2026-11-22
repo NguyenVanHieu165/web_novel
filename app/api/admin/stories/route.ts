@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse, NextRequest } from "next/server";
 import { resSuccess, getRequestId } from "@/lib/api";
 import * as z from "zod";
+import { adminStoryQuerySchema } from "@/schemas/admin-story-query.schema";
+import { listAdminStories } from "./story-list-query";
+import { requireAdmin } from "@/lib/server/auth-session";
 
 function serialize(data: unknown) {
     return JSON.parse(
@@ -11,63 +14,21 @@ function serialize(data: unknown) {
     );
 }
 export async function GET(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     const requestId = getRequestId();
     const pathname = req.nextUrl.pathname;
     const searchParams = req.nextUrl.searchParams;
-    const page = Number(searchParams.get("page") || 1);
-    const limit = Number(searchParams.get("limit") || 15);
-    const search = searchParams.get("search") || "";
-    const skip = (page - 1) * limit;
+    const values = Object.fromEntries(searchParams);
+    const duplicate = [...searchParams.keys()].some((key) => searchParams.getAll(key).length > 1);
+    const parsed = adminStoryQuerySchema.safeParse(values);
+    if (duplicate || !parsed.success) {
+        return NextResponse.json({ success: false, message: "Bộ lọc không hợp lệ", errors: parsed.success ? [] : parsed.error.issues, requestId }, { status: 400 });
+    }
     try {
-        const [truyen, total] = await Promise.all([
-            prisma.truyen.findMany({
-                where: {
-                    isDeleted: false,
-                    ...(search && {
-                        tenTruyen: {
-                            contains: search,
-                        },
-                    }),
-                },
-                include: {
-                    truyenTheLoai: {
-                        include: {
-                            theLoai: true,
-                        },
-                    },
-                },
-                skip,
-                take: limit,
-                orderBy: {
-                    createdAt: "desc",
-                },
-
-            }),
-            prisma.truyen.count({
-                where: {
-                    isDeleted: false,
-                    ...(search && {
-                        tenTruyen: {
-                            contains: search,
-                        },
-                    }),
-                },
-            }),
-        ]);
-        const safeData = serialize(truyen);
-        return NextResponse.json(
-            resSuccess({
-                data: safeData,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPage: Math.ceil(total / limit),
-                },
-                requestId,
-                path: pathname,
-            })
-        );
+        const result = await listAdminStories(parsed.data);
+        return NextResponse.json(resSuccess({ ...result, requestId, path: pathname }));
     } catch (error) {
         console.error(error);
 
@@ -98,6 +59,9 @@ const storySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const body = await req.json();
         // validate input with zod

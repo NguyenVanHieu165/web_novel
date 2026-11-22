@@ -1,7 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resSuccess, resError, getRequestId } from "@/lib/api"
-export async function GET() {
+import { requireAdmin } from "@/lib/server/auth-session";
+
+export async function GET(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     const requestId = getRequestId();
     try {
         const useTotal = await prisma.taiKhoan.count();
@@ -32,10 +37,10 @@ export async function GET() {
                 : "Dashboard data fetched successfully", requestId
         }));
     }
-    catch (err: any) {
-        NextResponse.json(resError({
+    catch (err: unknown) {
+        return NextResponse.json(resError({
             message: "Failed to fetch dashboard data",
-            error: { details: err.message },
+            error: { details: err instanceof Error ? err.message : String(err) },
             requestId
         }), { status: 500 });
     }

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Edit2, Eye, BookOpen } from "lucide-react";
 
@@ -16,7 +17,7 @@ const statusLabels: Record<Story["trang_thai"], string> = {
 
 export default function StoryDetailPage() {
   const params = useParams<{ id: string }>();
-  const { story, loading, error, fetchStory } = useStory(Number(params.id));
+  const { story, loading, fetchStory } = useStory(Number(params.id));
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
@@ -81,10 +82,14 @@ export default function StoryDetailPage() {
 
         <div className="grid gap-8 rounded-xl border bg-white p-6 shadow-sm lg:grid-cols-[400px_1fr]">
           <div className="overflow-hidden rounded-xl border bg-slate-100 p-2">
-            <img
+            <Image
               src={imageUrl}
               alt={story.tenTruyen}
-              className="block w-full rounded-lg object-contain"
+              width={400}
+              height={600}
+              unoptimized
+              loading="eager"
+              className="block h-auto w-full rounded-lg object-contain"
             />
           </div>
 

@@ -1,0 +1,909 @@
+{
+  "date": "2026-11-21",
+  "database": "web_truyen",
+  "outcome": "partial: metadata and covers complete; chapter access requires source login",
+  "firstRun": {
+    "database": "web_truyen",
+    "finishedAt": "2026-11-21T13:30:06.351Z",
+    "limit": 2,
+    "before": {
+      "genres": 15,
+      "authors": 0,
+      "stories": 26,
+      "normal": 5,
+      "vip": 3,
+      "comments": 3,
+      "ratings": 0
+    },
+    "after": {
+      "genres": 20,
+      "authors": 3,
+      "stories": 28,
+      "normal": 5,
+      "vip": 3,
+      "comments": 5,
+      "ratings": 2
+    },
+    "delta": {
+      "genres": 5,
+      "authors": 3,
+      "stories": 2,
+      "normal": 0,
+      "vip": 0,
+      "comments": 2,
+      "ratings": 2
+    },
+    "imported": {
+      "genres": 8,
+      "authors": 3,
+      "stories": 2,
+      "normal": 0,
+      "vip": 0,
+      "comments": 2,
+      "ratings": 2
+    },
+    "results": [
+      {
+        "slug": "khung-bo-phuc-to-ly-hon-roi-toi-khong-ganh-hoa-thay-co-ta-nua",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 55
+      },
+      {
+        "slug": "van-co-than-de",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 54
+      }
+    ]
+  },
+  "fullRun": {
+    "database": "web_truyen",
+    "finishedAt": "2026-11-21T13:33:00.494Z",
+    "limit": 50,
+    "before": {
+      "genres": 65,
+      "authors": 65,
+      "stories": 75,
+      "normal": 5,
+      "vip": 3,
+      "comments": 13,
+      "ratings": 10
+    },
+    "after": {
+      "genres": 65,
+      "authors": 66,
+      "stories": 76,
+      "normal": 5,
+      "vip": 3,
+      "comments": 13,
+      "ratings": 10
+    },
+    "delta": {
+      "genres": 0,
+      "authors": 1,
+      "stories": 1,
+      "normal": 0,
+      "vip": 0,
+      "comments": 0,
+      "ratings": 0
+    },
+    "imported": {
+      "genres": 59,
+      "authors": 66,
+      "stories": 50,
+      "normal": 0,
+      "vip": 0,
+      "comments": 10,
+      "ratings": 10
+    },
+    "results": [
+      {
+        "slug": "khung-bo-phuc-to-ly-hon-roi-toi-khong-ganh-hoa-thay-co-ta-nua",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 55
+      },
+      {
+        "slug": "van-co-than-de",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 54
+      },
+      {
+        "slug": "vu-than-ky",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 56
+      },
+      {
+        "slug": "cho-nguoi-tu-tien-khong-phai-de-nguoi-pha-nat-tu-tien-gioi",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 58
+      },
+      {
+        "slug": "thanh-son",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 57
+      },
+      {
+        "slug": "tro-choi-xam-lan-ta-boc-lot-van-vat-nguoi-voi-gi",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 59
+      },
+      {
+        "slug": "thu-nu-huu-doc",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 60
+      },
+      {
+        "slug": "vo-han-khung-bo",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 61
+      },
+      {
+        "slug": "dai-thua-ky-moi-co-nghich-tap-he-thong",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 775: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 62
+      },
+      {
+        "slug": "game-nay-bat-thuong-toi-nho-dao-mo-ma-thanh-than",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 63
+      },
+      {
+        "slug": "phan-phai-quay-nguoc-thoi-gian-mang-mot-chut-thi-sao",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 64
+      },
+      {
+        "slug": "thanh-khu",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 65
+      },
+      {
+        "slug": "tro-tan-bien-sau",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 853: ACCESS_BLOCKED: not_login (lock=all)"
+        ],
+        "id": 66
+      },
+      {
+        "slug": "canh-bao-ta-than-quyen-thuoc-dang-sat-nhap-quy-di-pho-ban",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 67
+      },
+      {
+        "slug": "tu-mon-phai-vo-lam-den-truong-sinh-tien-mon",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 68
+      },
+      {
+        "slug": "do-thi-tu-da-tien",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 70
+      },
+      {
+        "slug": "nguoi-choi-hung-manh",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 69
+      },
+      {
+        "slug": "hay-goi-ta-la-quy-sai-dai-nhan",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 71
+      },
+      {
+        "slug": "kinh-tieu",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 72
+      },
+      {
+        "slug": "tien-am-nong-truong",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1706: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 73
+      },
+      {
+        "slug": "thien-gioi-chi-ton",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 74
+      },
+      {
+        "slug": "he-thong-troi-nham-nam-phu-bi-ep-phai-dong-vai-chinh",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 75
+      },
+      {
+        "slug": "nguyen-thuy-phap-tac",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 76
+      },
+      {
+        "slug": "tran-van-truong-sinh",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 77
+      },
+      {
+        "slug": "mao-hiem-ngu-thu-ho-tro-hoang-da-lai-khong-lam-nguoi-nua-roi",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 78
+      },
+      {
+        "slug": "su-huynh-cua-ta-qua-manh-2",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 79
+      },
+      {
+        "slug": "ta-o-di-gioi-cay-kinh-nghiem",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 80
+      },
+      {
+        "slug": "thanh-bach-vuong-mien",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 81
+      },
+      {
+        "slug": "minecraft-bat-dau-cuop-doat-tu-phong-sau",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 82
+      },
+      {
+        "slug": "trach-thien-ky",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 83
+      },
+      {
+        "slug": "lam-nung-trong-long-anh",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 104: ACCESS_BLOCKED: not_login (lock=all)"
+        ],
+        "id": 84
+      },
+      {
+        "slug": "showbiz-cho-nguoi-nam-thang-sao-thanh-dinh-luu-roi",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 85
+      },
+      {
+        "slug": "co-chan-nhan",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 86
+      },
+      {
+        "slug": "toi-khong-phai-than-hao-toi-chi-la-may-thu-hoach-my-nu",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 87
+      },
+      {
+        "slug": "vo-dao-tong-su",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 2903: ACCESS_BLOCKED: not_login (lock=all)"
+        ],
+        "id": 88
+      },
+      {
+        "slug": "kiem-than-trung-sinh",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 89
+      },
+      {
+        "slug": "tren-ca-tien-nhan",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 90
+      },
+      {
+        "slug": "xich-tam-tuan-thien",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 91
+      },
+      {
+        "slug": "cam-y-da-hanh-chin-van-dam",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 92
+      },
+      {
+        "slug": "thien-vuc-thuong-khung",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 93
+      },
+      {
+        "slug": "con-duong-mo-phong-truong-sinh-cua-ta",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1783: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 103
+      },
+      {
+        "slug": "chan-nuoi-toan-nhan-loai",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 94
+      },
+      {
+        "slug": "khong-co-tien-tu-cai-gi-tien",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 95
+      },
+      {
+        "slug": "vot-thi-nhan",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 96
+      },
+      {
+        "slug": "he-thong-hoc-ba-manh-nhat",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 97
+      },
+      {
+        "slug": "mat-the-toi-co-nhieu-hon-nguoi-khac-mot-tu-khoa",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 98
+      },
+      {
+        "slug": "vu-mo",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=all)"
+        ],
+        "id": 99
+      },
+      {
+        "slug": "cu-song-tu-la-manh-len-kho-tu-sao-suong-bang-song-tu",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 100
+      },
+      {
+        "slug": "dao-quan",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 101
+      },
+      {
+        "slug": "xuyen-sach-thap-nien-80-mo-man-da-yeu-duong-voi-ga-tho-han-ngo-nguoc",
+        "status": "metadata-only",
+        "chapters": 0,
+        "blocked": 1,
+        "errors": [
+          "chapter 1: ACCESS_BLOCKED: not_login (lock=login)"
+        ],
+        "id": 102
+      }
+    ]
+  },
+  "initialDatabase": {
+    "genres": 15,
+    "authors": 0,
+    "stories": 26,
+    "normal": 5,
+    "vip": 3,
+    "comments": 3,
+    "ratings": 0
+  },
+  "netNew": {
+    "genres": 50,
+    "authors": 66,
+    "stories": 50,
+    "normal": 0,
+    "vip": 0,
+    "comments": 10,
+    "ratings": 10
+  },
+  "verification": {
+    "storyUrls": 50,
+    "stories": 50,
+    "uniqueCovers": 50,
+    "decodedImages": 50,
+    "coverBytes": 11847358,
+    "coverHashesAndMtimesUnchangedOnResume": true,
+    "metadataAndRelationsPresent": true,
+    "chapterNumberDuplicates": 0,
+    "chapterSlugDuplicates": 0,
+    "idempotencyDelta": {
+      "genres": 0,
+      "authors": 0,
+      "stories": 0,
+      "normal": 0,
+      "vip": 0,
+      "comments": 0,
+      "ratings": 0
+    },
+    "sourceStatuses": {
+      "completed": 24,
+      "ongoing": 26
+    }
+  },
+  "manifest": {
+    "version": 1,
+    "createdAt": "2026-11-21T13:30:01.040Z",
+    "stories": [
+      {
+        "slug": "khung-bo-phuc-to-ly-hon-roi-toi-khong-ganh-hoa-thay-co-ta-nua",
+        "url": "https://lacatruyen.email/story/khung-bo-phuc-to-ly-hon-roi-toi-khong-ganh-hoa-thay-co-ta-nua",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "van-co-than-de",
+        "url": "https://lacatruyen.email/story/van-co-than-de",
+        "sourceList": "free"
+      },
+      {
+        "slug": "vu-than-ky",
+        "url": "https://lacatruyen.email/story/vu-than-ky",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "cho-nguoi-tu-tien-khong-phai-de-nguoi-pha-nat-tu-tien-gioi",
+        "url": "https://lacatruyen.email/story/cho-nguoi-tu-tien-khong-phai-de-nguoi-pha-nat-tu-tien-gioi",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "thanh-son",
+        "url": "https://lacatruyen.email/story/thanh-son",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "tro-choi-xam-lan-ta-boc-lot-van-vat-nguoi-voi-gi",
+        "url": "https://lacatruyen.email/story/tro-choi-xam-lan-ta-boc-lot-van-vat-nguoi-voi-gi",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "thu-nu-huu-doc",
+        "url": "https://lacatruyen.email/story/thu-nu-huu-doc",
+        "sourceList": "free"
+      },
+      {
+        "slug": "vo-han-khung-bo",
+        "url": "https://lacatruyen.email/story/vo-han-khung-bo",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "dai-thua-ky-moi-co-nghich-tap-he-thong",
+        "url": "https://lacatruyen.email/story/dai-thua-ky-moi-co-nghich-tap-he-thong",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "game-nay-bat-thuong-toi-nho-dao-mo-ma-thanh-than",
+        "url": "https://lacatruyen.email/story/game-nay-bat-thuong-toi-nho-dao-mo-ma-thanh-than",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "phan-phai-quay-nguoc-thoi-gian-mang-mot-chut-thi-sao",
+        "url": "https://lacatruyen.email/story/phan-phai-quay-nguoc-thoi-gian-mang-mot-chut-thi-sao",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "thanh-khu",
+        "url": "https://lacatruyen.email/story/thanh-khu",
+        "sourceList": "free"
+      },
+      {
+        "slug": "tro-tan-bien-sau",
+        "url": "https://lacatruyen.email/story/tro-tan-bien-sau",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "canh-bao-ta-than-quyen-thuoc-dang-sat-nhap-quy-di-pho-ban",
+        "url": "https://lacatruyen.email/story/canh-bao-ta-than-quyen-thuoc-dang-sat-nhap-quy-di-pho-ban",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "tu-mon-phai-vo-lam-den-truong-sinh-tien-mon",
+        "url": "https://lacatruyen.email/story/tu-mon-phai-vo-lam-den-truong-sinh-tien-mon",
+        "sourceList": "top-view-months"
+      },
+      {
+        "slug": "do-thi-tu-da-tien",
+        "url": "https://lacatruyen.email/story/do-thi-tu-da-tien",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "nguoi-choi-hung-manh",
+        "url": "https://lacatruyen.email/story/nguoi-choi-hung-manh",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "hay-goi-ta-la-quy-sai-dai-nhan",
+        "url": "https://lacatruyen.email/story/hay-goi-ta-la-quy-sai-dai-nhan",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "kinh-tieu",
+        "url": "https://lacatruyen.email/story/kinh-tieu",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "tien-am-nong-truong",
+        "url": "https://lacatruyen.email/story/tien-am-nong-truong",
+        "sourceList": "free"
+      },
+      {
+        "slug": "thien-gioi-chi-ton",
+        "url": "https://lacatruyen.email/story/thien-gioi-chi-ton",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "he-thong-troi-nham-nam-phu-bi-ep-phai-dong-vai-chinh",
+        "url": "https://lacatruyen.email/story/he-thong-troi-nham-nam-phu-bi-ep-phai-dong-vai-chinh",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "nguyen-thuy-phap-tac",
+        "url": "https://lacatruyen.email/story/nguyen-thuy-phap-tac",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "tran-van-truong-sinh",
+        "url": "https://lacatruyen.email/story/tran-van-truong-sinh",
+        "sourceList": "top-view-months"
+      },
+      {
+        "slug": "mao-hiem-ngu-thu-ho-tro-hoang-da-lai-khong-lam-nguoi-nua-roi",
+        "url": "https://lacatruyen.email/story/mao-hiem-ngu-thu-ho-tro-hoang-da-lai-khong-lam-nguoi-nua-roi",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "su-huynh-cua-ta-qua-manh-2",
+        "url": "https://lacatruyen.email/story/su-huynh-cua-ta-qua-manh-2",
+        "sourceList": "free"
+      },
+      {
+        "slug": "ta-o-di-gioi-cay-kinh-nghiem",
+        "url": "https://lacatruyen.email/story/ta-o-di-gioi-cay-kinh-nghiem",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "thanh-bach-vuong-mien",
+        "url": "https://lacatruyen.email/story/thanh-bach-vuong-mien",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "minecraft-bat-dau-cuop-doat-tu-phong-sau",
+        "url": "https://lacatruyen.email/story/minecraft-bat-dau-cuop-doat-tu-phong-sau",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "trach-thien-ky",
+        "url": "https://lacatruyen.email/story/trach-thien-ky",
+        "sourceList": "free"
+      },
+      {
+        "slug": "lam-nung-trong-long-anh",
+        "url": "https://lacatruyen.email/story/lam-nung-trong-long-anh",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "showbiz-cho-nguoi-nam-thang-sao-thanh-dinh-luu-roi",
+        "url": "https://lacatruyen.email/story/showbiz-cho-nguoi-nam-thang-sao-thanh-dinh-luu-roi",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "co-chan-nhan",
+        "url": "https://lacatruyen.email/story/co-chan-nhan",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "toi-khong-phai-than-hao-toi-chi-la-may-thu-hoach-my-nu",
+        "url": "https://lacatruyen.email/story/toi-khong-phai-than-hao-toi-chi-la-may-thu-hoach-my-nu",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "vo-dao-tong-su",
+        "url": "https://lacatruyen.email/story/vo-dao-tong-su",
+        "sourceList": "free"
+      },
+      {
+        "slug": "kiem-than-trung-sinh",
+        "url": "https://lacatruyen.email/story/kiem-than-trung-sinh",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "tren-ca-tien-nhan",
+        "url": "https://lacatruyen.email/story/tren-ca-tien-nhan",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "xich-tam-tuan-thien",
+        "url": "https://lacatruyen.email/story/xich-tam-tuan-thien",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "cam-y-da-hanh-chin-van-dam",
+        "url": "https://lacatruyen.email/story/cam-y-da-hanh-chin-van-dam",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "thien-vuc-thuong-khung",
+        "url": "https://lacatruyen.email/story/thien-vuc-thuong-khung",
+        "sourceList": "free"
+      },
+      {
+        "slug": "con-duong-mo-phong-truong-sinh-cua-ta",
+        "url": "https://lacatruyen.email/story/con-duong-mo-phong-truong-sinh-cua-ta",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "chan-nuoi-toan-nhan-loai",
+        "url": "https://lacatruyen.email/story/chan-nuoi-toan-nhan-loai",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "khong-co-tien-tu-cai-gi-tien",
+        "url": "https://lacatruyen.email/story/khong-co-tien-tu-cai-gi-tien",
+        "sourceList": "top-view-weeks"
+      },
+      {
+        "slug": "vot-thi-nhan",
+        "url": "https://lacatruyen.email/story/vot-thi-nhan",
+        "sourceList": "top-view-months"
+      },
+      {
+        "slug": "he-thong-hoc-ba-manh-nhat",
+        "url": "https://lacatruyen.email/story/he-thong-hoc-ba-manh-nhat",
+        "sourceList": "new-updates"
+      },
+      {
+        "slug": "mat-the-toi-co-nhieu-hon-nguoi-khac-mot-tu-khoa",
+        "url": "https://lacatruyen.email/story/mat-the-toi-co-nhieu-hon-nguoi-khac-mot-tu-khoa",
+        "sourceList": "free"
+      },
+      {
+        "slug": "vu-mo",
+        "url": "https://lacatruyen.email/story/vu-mo",
+        "sourceList": "hidden-gems?tier=editor"
+      },
+      {
+        "slug": "cu-song-tu-la-manh-len-kho-tu-sao-suong-bang-song-tu",
+        "url": "https://lacatruyen.email/story/cu-song-tu-la-manh-len-kho-tu-sao-suong-bang-song-tu",
+        "sourceList": "hidden-gems?tier=gems"
+      },
+      {
+        "slug": "dao-quan",
+        "url": "https://lacatruyen.email/story/dao-quan",
+        "sourceList": "top-view-months"
+      },
+      {
+        "slug": "xuyen-sach-thap-nien-80-mo-man-da-yeu-duong-voi-ga-tho-han-ngo-nguoc",
+        "url": "https://lacatruyen.email/story/xuyen-sach-thap-nien-80-mo-man-da-yeu-duong-voi-ga-tho-han-ngo-nguoc",
+        "sourceList": "new-updates"
+      }
+    ]
+  }
+}

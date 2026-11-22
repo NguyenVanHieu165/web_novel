@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
+import ChapterPreview from "@/components/chapters/ChapterPreview";
+import ChapterPriceSheet from "@/components/chapters/ChapterPriceSheet";
 import ChapterFilter from "@/components/chapters/ChapterFilter";
 import ChapterForm from "@/components/chapters/ChapterForm";
 import ChapterTable, { Chapter } from "@/components/chapters/ChapterTable";
@@ -37,8 +39,13 @@ type ApiErrorResponse = {
 };
 
 export default function ChaptersPage() {
+  return <Suspense fallback={<p className="p-6" role="status">Đang tải quản lý chương…</p>}><ChaptersContent /></Suspense>;
+}
+
+function ChaptersContent() {
   const {
     chapters,
+    listKey,
     stories,
     query,
     setQuery,
@@ -50,6 +57,8 @@ export default function ChaptersPage() {
     limit,
     setLimit,
   } = useChapters();
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [autoVip, setAutoVip] = useState(false);
   const [selected, setSelected] = useState<Chapter | null>(null);
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -156,7 +165,7 @@ export default function ChaptersPage() {
   };
 
   return (
-    <div className="min-h-screen space-y-4 bg-white p-6">
+    <div className="min-h-screen space-y-4 bg-background text-foreground p-3 sm:p-6">
       <input
         ref={fileInputRef}
         type="file"
@@ -165,9 +174,9 @@ export default function ChaptersPage() {
         onChange={handleImport}
       />
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 className="text-2xl font-bold">
             Quản lý chương truyện
           </h1>
           <p className="text-sm text-slate-500">
@@ -187,7 +196,7 @@ export default function ChaptersPage() {
         </Button>
       </div>
 
-      <ChapterFilter query={query} stories={stories} setQuery={setQuery} />
+      <ChapterFilter query={query} stories={stories} setQuery={setQuery} onAutoVip={() => setAutoVip(true)} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-slate-500">
@@ -202,7 +211,8 @@ export default function ChaptersPage() {
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <span>Hiển thị</span>
             <select
-              className="h-9 rounded-md border px-3 text-sm outline-none"
+              aria-label="Số chương mỗi trang"
+              className="h-9 rounded-md border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
             >
@@ -227,21 +237,31 @@ export default function ChaptersPage() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-lg border bg-white py-10 text-center text-slate-500">
-          Đang tải dữ liệu...
+        <div className="rounded-lg border bg-card py-10 text-center text-slate-500">
+          Đang tải dữ liệu…
         </div>
       ) : (
         <ChapterTable
+          key={listKey}
+          query={query}
+          onSort={(sortBy) => setQuery({ ...query, sortBy, sortOrder: query.sortBy === sortBy && query.sortOrder === "asc" ? "desc" : "asc", page: 1 })}
+          onPreview={setPreviewId}
           data={chapters}
-          onEdit={(item) => {
-            setSelected(item);
-            setOpen(true);
+          onEdit={async (item) => {
+            try {
+              const response = await api.get<{ data: Chapter }>(`/admin/chapter/${item.idChuong}`);
+              setSelected(response.data.data);
+              setOpen(true);
+            } catch {
+              setSelected(null);
+              toast.error("Không thể tải nội dung chương");
+            }
           }}
           refresh={fetchChapters}
         />
@@ -251,7 +271,7 @@ export default function ChaptersPage() {
         <Button
           variant="outline"
           size="sm"
-          disabled={query.page === 1}
+          disabled={loading || query.page === 1}
           onClick={() => setPage(query.page - 1)}
         >
           Trước
@@ -264,25 +284,28 @@ export default function ChaptersPage() {
         <Button
           variant="outline"
           size="sm"
-          disabled={query.page >= meta.totalPage}
+          disabled={loading || query.page >= meta.totalPage}
           onClick={() => setPage(query.page + 1)}
         >
           Sau
         </Button>
       </div>
 
+      <ChapterPriceSheet target={autoVip && query.storyId ? { kind: "story", storyId: query.storyId } : null} onClose={() => setAutoVip(false)} onSuccess={fetchChapters} />
+      <ChapterPreview id={previewId} onClose={() => setPreviewId(null)} onEdit={(chapter) => { setSelected(chapter); setOpen(true); }} onSuccess={fetchChapters} />
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="!w-full !max-w-[720px]">
           <SheetHeader className="border-b pb-4">
             <SheetTitle className="text-xl font-semibold">
               {selected ? "Chỉnh sửa chương" : "Thêm chương mới"}
             </SheetTitle>
-            <SheetDescription />
+            <SheetDescription>Chỉnh sửa thông tin và toàn bộ nội dung chương.</SheetDescription>
           </SheetHeader>
 
           {open && (
             <ChapterForm
               data={selected}
+              storyId={query.storyId}
               stories={stories}
               onClose={() => setOpen(false)}
               onSuccess={fetchChapters}

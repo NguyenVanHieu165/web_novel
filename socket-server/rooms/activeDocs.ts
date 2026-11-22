@@ -2,8 +2,9 @@ import * as Y from "yjs";
 
 export interface CollaborativeRoom {
   doc: Y.Doc;
-  users: Set<string>; // Set of user identifiers (e.g. username or socket.id)
+  users: Map<string, Set<string>>;
   lastActive: Date;
+  gcTimeout?: ReturnType<typeof setTimeout>;
 }
 
 // Maps chapterId (number) -> CollaborativeRoom

@@ -21,8 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
+import type { Genre } from "@/components/genres/GenreTable";
+
 type Props = {
-  data?: any;
+  data?: Pick<Genre, "idTheLoai" | "tenTheLoai" | "moTa"> | null;
   onClose: () => void;
   onSuccess: () => void;
 };

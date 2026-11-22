@@ -23,6 +23,7 @@ export type Story = {
   luotXem: number;
   theLoaiIds?: unknown[];
   soChuong?: number;
+  moTa?: string | null;
   truyenTheLoai?: StoryGenreRelation[];
 };
 

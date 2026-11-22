@@ -1,56 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { getFullStatistics } from "@/services/statisticsService";
+import { statisticsFilters } from "@/lib/admin-statistics";
+import { requireAdmin } from "@/lib/server/auth-session";
+import { getStatisticsReport } from "@/services/statisticsService";
 
-export async function GET() {
-    try {
-        const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const privateHeaders = { "Cache-Control": "private, no-store" };
 
-        const results = await Promise.all(
-            months.map((month) =>
-                getFullStatistics(month, 2026)
-            )
-        );
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await requireAdmin(request);
+    if (!auth.authorized) return auth.response;
 
-        const chartData = results.map((data, index) => ({
-            name: `T${index + 1}`,
-
-            totalRevenue: Number(
-                data.finance._sum?.soTienVnd || 0
-            ),
-
-            billCount: Number(
-                data.finance._count || 0
-            ),
-
-            newUserCount: Number(
-                data.userCount || 0
-            ),
-
-            newStoryCount: Number(
-                data.storyCount || 0
-            ),
-
-            viewCount: Number(
-                data.ranking?.[0]?.luotXem || 0
-            ),
-        }));
-
-        console.log(chartData);
-
-        return NextResponse.json({
-            chartData,
-        });
-    } catch (error: any) {
-        console.error(error);
-
-        return NextResponse.json(
-            {
-                message: "Lỗi server",
-            },
-            {
-                status: 500,
-            }
-        );
+    const filters = statisticsFilters.safeParse(Object.fromEntries(request.nextUrl.searchParams));
+    if (!filters.success) {
+      return NextResponse.json(
+        { message: filters.error.issues[0]?.code === "custom" ? filters.error.issues[0].message : "Bộ lọc thống kê không hợp lệ." },
+        { status: 400, headers: privateHeaders },
+      );
     }
+
+    return NextResponse.json(await getStatisticsReport(filters.data), { headers: privateHeaders });
+  } catch (error) {
+    console.error("Admin statistics failed", error);
+    return NextResponse.json({ message: "Không tải được thống kê." }, { status: 500, headers: privateHeaders });
+  }
 }

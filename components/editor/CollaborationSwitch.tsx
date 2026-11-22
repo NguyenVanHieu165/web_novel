@@ -1,12 +1,13 @@
 "use client";
 
-import { Users, Wifi, WifiOff } from "lucide-react";
+import { Users } from "lucide-react";
 
 interface CollaborationSwitchProps {
   enabled: boolean;
   onToggle: (val: boolean) => void;
   isConnected: boolean;
   onlineUsers: string[];
+  saveStatus?: "saved" | "saving";
   disabled: boolean;
 }
 
@@ -15,6 +16,7 @@ export default function CollaborationSwitch({
   onToggle,
   isConnected,
   onlineUsers,
+  saveStatus = "saved",
   disabled,
 }: CollaborationSwitchProps) {
   return (
@@ -101,6 +103,11 @@ export default function CollaborationSwitch({
             </div>
           </div>
         </div>
+      )}
+      {enabled && isConnected && (
+        <p className="text-xs text-slate-500" aria-live="polite">
+          {saveStatus === "saved" ? "Đã đồng bộ trong phiên" : "Đang đồng bộ..."}
+        </p>
       )}
     </div>
   );

@@ -3,15 +3,20 @@ import express, { Request, Response } from "express";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
+import { authenticateSocket, confirmSocketAdministrator, monitorSocketAdministrator, type SocketSession } from "./auth/socketAuth";
 
 dotenv.config();
+dotenv.config({ path: "../.env" });
 
 const app = express();
 
 // Cấu hình các cổng và nguồn đáng tin cậy
 const PORT: number = Number(process.env.PORT) || 3001;
 const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGINS || "http://localhost:3000").split(",");
-const SECRET_TOKEN: string = process.env.INTERNAL_SECRET_TOKEN || "super-secret-token";
+const SECRET_TOKEN = process.env.INTERNAL_SECRET_TOKEN;
+if (!SECRET_TOKEN) {
+    throw new Error("INTERNAL_SECRET_TOKEN is required");
+}
 app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true
@@ -19,40 +24,42 @@ app.use(cors({
 app.use(express.json());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
+    maxHttpBufferSize: 256 * 1024,
     cors: {
         origin: ALLOWED_ORIGINS,
         methods: ["GET", "POST"],
         credentials: true
     }
 });
-// Định nghĩa kiểu dữ liệu cho thông báo gửi đến từ Next.js
-interface NotificationPayload {
-    type: string;
-    category?: string;
-    priority?: "urgent" | "warning" | "success" | "normal";
-    title?: string;
-    message: string;
-    data?: Record<string, any>;
-}
 
+io.use(async (socket, next) => {
+    try {
+        const session = await authenticateSocket(socket);
+        if (session.roles.includes("admin") && !await confirmSocketAdministrator(socket, session)) {
+            return next(new Error("Unauthorized"));
+        }
+        socket.data.session = session;
+        next();
+    } catch {
+        next(new Error("Unauthorized"));
+    }
+});
+import { dispatchInternalNotification } from "./handlers/notificationDispatch";
 import { registerNotificationHandlers } from "./handlers/notification";
 import { registerCollaborativeHandlers } from "./handlers/collaborative";
 
 // Quản lý các kết nối Socket.IO
 io.on("connection", (socket: Socket) => {
-    console.log(`[Socket] Client connected: ${socket.id}`);
+    monitorSocketAdministrator(socket, socket.data.session as SocketSession);
 
     // Đăng ký các Handler
     registerNotificationHandlers(io, socket);
     registerCollaborativeHandlers(io, socket);
 
-    socket.on("disconnect", (reason: string) => {
-        console.log(`[Socket] Client disconnected: ${socket.id} (Reason: ${reason})`);
-    });
 });
 
 // Endpoint HTTP để Next.js API gửi tin nhắn kích hoạt thông báo
-app.post("/api/trigger-notification", (req: Request<{}, {}, NotificationPayload>, res: Response) => {
+app.post("/api/trigger-notification", (req: Request<Record<string, never>, unknown, unknown>, res: Response) => {
     const authHeader = req.headers["authorization"];
 
     // Kiểm tra Secret Token bảo mật tránh spam thông báo
@@ -61,30 +68,13 @@ app.post("/api/trigger-notification", (req: Request<{}, {}, NotificationPayload>
         return res.status(401).json({ success: false, message: "Unauthorized token" });
     }
 
-    const { type, category, priority, title, message, data } = req.body;
-
-    if (!type || !message) {
-        return res.status(400).json({ success: false, message: "Missing type or message" });
+    if (!dispatchInternalNotification(io, req.body)) {
+        return res.status(400).json({ success: false, message: "Invalid notification payload" });
     }
-
-    console.log(`[Notification] Triggering '${type}' [Category: ${category}] [Priority: ${priority}]: ${message}`);
-
-    // Phát tín hiệu WebSocket cho tất cả admin đã join room
-    io.to("admins").emit("notification", {
-        type,
-        category: category || "follow",
-        priority: priority || "normal",
-        title: title || "Thông báo mới",
-        message,
-        data: data || {},
-        timestamp: new Date()
-    });
 
     return res.json({ success: true, message: "Notification broadcasted successfully" });
 });
 
 // Khởi chạy server
 httpServer.listen(PORT, () => {
-    console.log(`[Server] Socket.IO Server is running on TS on port ${PORT}`);
-    console.log(`[Server] Allowed origins: ${ALLOWED_ORIGINS.join(", ")}`);
 });

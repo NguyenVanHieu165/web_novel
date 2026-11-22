@@ -1,0 +1,86 @@
+{
+  "database": "web_truyen",
+  "finishedAt": "2026-11-21T14:50:26.205Z",
+  "before": {
+    "stories": 28,
+    "chapters": 354,
+    "nonNfcFields": 0,
+    "repairableFields": 0,
+    "detachedMarkFields": 0
+  },
+  "changed": {
+    "stories": 0,
+    "chapterTitles": 0,
+    "chapterBodies": 0
+  },
+  "after": {
+    "stories": 28,
+    "chapters": 354,
+    "nonNfcFields": 0,
+    "repairableFields": 0,
+    "detachedMarkFields": 0
+  },
+  "sampleCodePoints": {
+    "idChuong": 11,
+    "idNoiDungChuong": 9,
+    "words": [
+      {
+        "word": "thiết",
+        "codePoints": [
+          "U+0074",
+          "U+0068",
+          "U+0069",
+          "U+1EBF",
+          "U+0074"
+        ]
+      },
+      {
+        "word": "luồng",
+        "codePoints": [
+          "U+006C",
+          "U+0075",
+          "U+1ED3",
+          "U+006E",
+          "U+0067"
+        ]
+      },
+      {
+        "word": "Hắn",
+        "codePoints": [
+          "U+0048",
+          "U+1EAF",
+          "U+006E"
+        ]
+      }
+    ]
+  },
+  "schemaUnchanged": true,
+  "chapterIdsAndPricesPreserved": true,
+  "backup": "D:\\nextjs\\web_novel\\node_modules\\.cache\\normalize-vietnamese\\before-2026-11-21T14-50-24-013Z.json",
+  "sqlVerification": {
+    "content": 0,
+    "chapterTitles": 0,
+    "stories": 0
+  },
+  "browserVerification": {
+    "reloaded": true,
+    "readerFontSans": "Inter",
+    "readerFontSerif": "Noto Serif",
+    "detachedMarks": 0,
+    "words": [
+      "thiết",
+      "luồng",
+      "Hắn"
+    ],
+    "screenshots": [
+      "node_modules/.cache/normalize-vietnamese/reader-inter.jpg",
+      "node_modules/.cache/normalize-vietnamese/reader-thiet.jpg"
+    ]
+  },
+  "checks": {
+    "lint": "Passed: npm run lint",
+    "typescript": "Passed: npx tsc --noEmit",
+    "tests": "Passed: 35/35 (crawler 16/16)",
+    "build": "Not run"
+  }
+}

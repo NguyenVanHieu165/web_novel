@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Bell, Search, UserCircle } from "lucide-react";
+import { Bell, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { AdminNotificationResponse } from "@/lib/admin-notification-types";
 
 const Navbar = () => {
   const router = useRouter();
@@ -9,13 +10,15 @@ const Navbar = () => {
 
   // Lắng nghe sự kiện để đồng bộ hóa số lượng thông báo chưa xem từ DB
   useEffect(() => {
+    const controller = new AbortController();
+    let version = 0;
     const updateUnreadCount = async () => {
+      const current = ++version;
       try {
-        const response = await fetch("/api/admin/notifications");
-        const resData = await response.json();
+        const response = await fetch("/api/admin/notifications?limit=1", { signal: controller.signal, cache: "no-store" });
+        const resData: AdminNotificationResponse = await response.json();
         if (resData.success) {
-          const unread = resData.data.filter((item: any) => !item.daDoc).length;
-          setUnreadCount(unread);
+          if (!controller.signal.aborted && current === version) setUnreadCount(resData.unreadCount);
         }
       } catch (e) {
         console.error("Lỗi lấy thông báo chưa xem trên Navbar:", e);
@@ -26,7 +29,10 @@ const Navbar = () => {
     window.addEventListener("notifications-updated", updateUnreadCount);
     window.addEventListener("new-follow-event", updateUnreadCount);
 
+    window.addEventListener("focus", updateUnreadCount);
     return () => {
+      controller.abort();
+      window.removeEventListener("focus", updateUnreadCount);
       window.removeEventListener("notifications-updated", updateUnreadCount);
       window.removeEventListener("new-follow-event", updateUnreadCount);
     };

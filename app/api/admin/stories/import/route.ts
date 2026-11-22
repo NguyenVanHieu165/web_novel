@@ -4,6 +4,9 @@ import * as z from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getRequestId, resSuccess } from "@/lib/api";
+import { requireAdmin } from "@/lib/server/auth-session";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "@/lib/server/spreadsheet-upload";
+import { MAX_SPREADSHEET_REQUEST_BYTES, rejectOversizeUpload } from "@/lib/server/upload-size";
 function chunkArray<T>(array: T[], size: number) {
     const result: T[][] = [];
     for (let i = 0; i < array.length; i += size) {
@@ -21,6 +24,11 @@ const storyImportSchema = z.object({
     moTa: z.string().trim().optional().or(z.literal("")),
 });
 export async function POST(req: NextRequest) {
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+    const tooLarge = rejectOversizeUpload(req, MAX_SPREADSHEET_REQUEST_BYTES);
+    if (tooLarge) return tooLarge;
+
     const requestId = getRequestId();
     try {
         const formData = await req.formData();
@@ -37,6 +45,15 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
+
+        const fileError = validateSpreadsheetFile(file);
+        if (fileError) {
+            return NextResponse.json(
+                { success: false, message: fileError, requestId },
+                { status: 400 },
+            );
+        }
+
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const workbook = XLSX.read(buffer, {
@@ -47,7 +64,15 @@ export async function POST(req: NextRequest) {
 
         const sheet = workbook.Sheets[sheetName];
 
-        const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+        const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet);
+
+        const rowError = validateSpreadsheetRows(rows.length);
+        if (rowError) {
+            return NextResponse.json(
+                { success: false, message: rowError, requestId },
+                { status: 400 },
+            );
+        }
 
         if (!rows.length) {
             return NextResponse.json(
@@ -76,7 +101,7 @@ export async function POST(req: NextRequest) {
             row: number;
             field?: string;
             message: string;
-            data?: any;
+            data?: Record<string, unknown>;
         }[] = [];
 
         const seenSlugs = new Set<string>();

@@ -1,0 +1,839 @@
+{
+  "date": "2026-11-21",
+  "database": "web_truyen",
+  "outcome": "partial: source redirected chapters to /banned; network collection stopped",
+  "pilot": {
+    "stories": 2,
+    "chapters": 30,
+    "normal": 24,
+    "vip": 6
+  },
+  "added": {
+    "chapters": 346,
+    "normal": 316,
+    "vip": 30
+  },
+  "coverage": {
+    "stories": 50,
+    "withAtLeast10": 23,
+    "partial": 1,
+    "empty": 26,
+    "vipStories": 10
+  },
+  "verification": {
+    "preservedStoryMetadata": true,
+    "sourceViewCountersMayChangeDuringReading": [
+      {
+        "slug": "van-co-than-de",
+        "before": 335955,
+        "after": 335956
+      },
+      {
+        "slug": "thanh-son",
+        "before": 1002200,
+        "after": 1002201
+      }
+    ],
+    "commentsAndReviewsPreserved": true,
+    "coverHashesAndMtimesPreserved": true,
+    "schemaHashPreserved": true,
+    "duplicateChapterNumbers": 0,
+    "duplicateChapterSlugs": 0,
+    "contiguousNumbersForDownloadedChapters": true,
+    "contentLength": {
+      "min": 6328,
+      "max": 33754
+    },
+    "readerHttp": {
+      "freeChapter200AndContainsBody": true,
+      "guestVipChapter200WithoutBody": true
+    },
+    "lint": "Passed",
+    "typescript": "Passed",
+    "crawlerTests": 11,
+    "readerAndPaywallTests": 24,
+    "build": "Not run",
+    "localResumeDelta": {
+      "genres": 0,
+      "authors": 0,
+      "stories": 0,
+      "normal": 0,
+      "vip": 0,
+      "comments": 0,
+      "ratings": 0
+    },
+    "chapterIdsAndBodiesPreservedOnResume": true
+  },
+  "results": [
+    {
+      "id": 54,
+      "slug": "van-co-than-de",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 55,
+      "slug": "khung-bo-phuc-to-ly-hon-roi-toi-khong-ganh-hoa-thay-co-ta-nua",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 56,
+      "slug": "vu-than-ky",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 57,
+      "slug": "thanh-son",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 58,
+      "slug": "cho-nguoi-tu-tien-khong-phai-de-nguoi-pha-nat-tu-tien-gioi",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 59,
+      "slug": "tro-choi-xam-lan-ta-boc-lot-van-vat-nguoi-voi-gi",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 60,
+      "slug": "thu-nu-huu-doc",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 61,
+      "slug": "vo-han-khung-bo",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 62,
+      "slug": "dai-thua-ky-moi-co-nghich-tap-he-thong",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 63,
+      "slug": "game-nay-bat-thuong-toi-nho-dao-mo-ma-thanh-than",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 64,
+      "slug": "phan-phai-quay-nguoc-thoi-gian-mang-mot-chut-thi-sao",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 12,
+      "vip": 3
+    },
+    {
+      "id": 65,
+      "slug": "thanh-khu",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 66,
+      "slug": "tro-tan-bien-sau",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 67,
+      "slug": "canh-bao-ta-than-quyen-thuoc-dang-sat-nhap-quy-di-pho-ban",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 68,
+      "slug": "tu-mon-phai-vo-lam-den-truong-sinh-tien-mon",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 69,
+      "slug": "nguoi-choi-hung-manh",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 70,
+      "slug": "do-thi-tu-da-tien",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 71,
+      "slug": "hay-goi-ta-la-quy-sai-dai-nhan",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 72,
+      "slug": "kinh-tieu",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 73,
+      "slug": "tien-am-nong-truong",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 74,
+      "slug": "thien-gioi-chi-ton",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 75,
+      "slug": "he-thong-troi-nham-nam-phu-bi-ep-phai-dong-vai-chinh",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 76,
+      "slug": "nguyen-thuy-phap-tac",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 77,
+      "slug": "tran-van-truong-sinh",
+      "chapters": 15,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "normal": 15,
+      "vip": 0
+    },
+    {
+      "id": 78,
+      "slug": "mao-hiem-ngu-thu-ho-tro-hoang-da-lai-khong-lam-nguoi-nua-roi",
+      "chapters": 14,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "normal": 14,
+      "vip": 0
+    },
+    {
+      "id": 79,
+      "slug": "su-huynh-cua-ta-qua-manh-2",
+      "chapters": 13,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "normal": 13,
+      "vip": 0
+    },
+    {
+      "id": 80,
+      "slug": "ta-o-di-gioi-cay-kinh-nghiem",
+      "chapters": 4,
+      "numbers": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "normal": 4,
+      "vip": 0
+    },
+    {
+      "id": 81,
+      "slug": "thanh-bach-vuong-mien",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 82,
+      "slug": "minecraft-bat-dau-cuop-doat-tu-phong-sau",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 83,
+      "slug": "trach-thien-ky",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 84,
+      "slug": "lam-nung-trong-long-anh",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 85,
+      "slug": "showbiz-cho-nguoi-nam-thang-sao-thanh-dinh-luu-roi",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 86,
+      "slug": "co-chan-nhan",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 87,
+      "slug": "toi-khong-phai-than-hao-toi-chi-la-may-thu-hoach-my-nu",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 88,
+      "slug": "vo-dao-tong-su",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 89,
+      "slug": "kiem-than-trung-sinh",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 90,
+      "slug": "tren-ca-tien-nhan",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 91,
+      "slug": "xich-tam-tuan-thien",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 92,
+      "slug": "cam-y-da-hanh-chin-van-dam",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 93,
+      "slug": "thien-vuc-thuong-khung",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 94,
+      "slug": "chan-nuoi-toan-nhan-loai",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 95,
+      "slug": "khong-co-tien-tu-cai-gi-tien",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 96,
+      "slug": "vot-thi-nhan",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 97,
+      "slug": "he-thong-hoc-ba-manh-nhat",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 98,
+      "slug": "mat-the-toi-co-nhieu-hon-nguoi-khac-mot-tu-khoa",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 99,
+      "slug": "vu-mo",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 100,
+      "slug": "cu-song-tu-la-manh-len-kho-tu-sao-suong-bang-song-tu",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 101,
+      "slug": "dao-quan",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 102,
+      "slug": "xuyen-sach-thap-nien-80-mo-man-da-yeu-duong-voi-ga-tho-han-ngo-nguoc",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    },
+    {
+      "id": 103,
+      "slug": "con-duong-mo-phong-truong-sinh-cua-ta",
+      "chapters": 0,
+      "numbers": [],
+      "normal": 0,
+      "vip": 0
+    }
+  ]
+}

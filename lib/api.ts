@@ -1,8 +1,8 @@
 
 export type ApiError = {
-    field?: string
+    field?: string | string[]
     message?: string
-    details?: any
+    details?: unknown
 }
 
 export type ApiResponse<T> = {
@@ -11,7 +11,7 @@ export type ApiResponse<T> = {
     message?: string
     data?: T
     error?: ApiError
-    meta?: any
+    meta?: unknown
     requestId?: string
     timestamp: string
 }
@@ -25,7 +25,7 @@ export const resSuccess = <T>(
     options?: {
         code?: string
         message?: string
-        meta?: any
+        meta?: unknown
         requestId?: string
     }
 ): ApiResponse<T> => {
@@ -34,7 +34,7 @@ export const resSuccess = <T>(
         code: options?.code || "OK",
         ...(options?.message && { message: options.message }),
         data,
-        ...(options?.meta && { meta: options.meta }),
+        ...(options?.meta ? { meta: options.meta } : {}),
         ...(options?.requestId && { requestId: options.requestId }),
         timestamp: new Date().toISOString()
     }
@@ -64,21 +64,30 @@ export const resError = (
 // ======================
 // GLOBAL ERROR HANDLER
 // ======================
-export const handleError = (err: any, requestId?: string) => {
+export const handleError = (err: unknown, requestId?: string) => {
     console.error("API ERROR:", err)
+    const error = typeof err === "object" && err !== null ? err : undefined
 
     // Prisma duplicate
-    if (err.code === "P2002") {
+    if (error && "code" in error && error.code === "P2002") {
+        const meta = "meta" in error ? error.meta : undefined
+        const target = typeof meta === "object" && meta !== null && "target" in meta
+            ? meta.target
+            : undefined
+        const field = typeof target === "string" ||
+            (Array.isArray(target) && target.every((part: unknown) => typeof part === "string"))
+            ? target
+            : undefined
         return resError({
             code: "DUPLICATE",
             message: "Dữ liệu đã tồn tại",
-            error: { field: err.meta?.target },
+            error: { field },
             requestId
         })
     }
 
     // Not found custom
-    if (err.name === "NotFoundError") {
+    if (error && "name" in error && error.name === "NotFoundError") {
         return resError({
             code: "NOT_FOUND",
             message: "Không tìm thấy dữ liệu",
@@ -90,7 +99,7 @@ export const handleError = (err: any, requestId?: string) => {
     return resError({
         code: "SERVER_ERROR",
         message: "Lỗi hệ thống",
-        error: { details: err.message },
+        error: { details: error && "message" in error ? error.message : undefined },
         requestId
     })
 }

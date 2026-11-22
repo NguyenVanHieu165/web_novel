@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse, NextRequest } from "next/server";
+import { requireAdmin } from "@/lib/server/auth-session";
+
+const demoUnavailable = () =>
+    NextResponse.json(
+        { success: false, message: "Demo không khả dụng trên production" },
+        { status: 404 },
+    );
 
 function serialize(data: unknown) {
     return JSON.parse(
@@ -10,7 +17,11 @@ function serialize(data: unknown) {
 }
 
 // GET: Lấy danh sách truyện và tài khoản để chạy demo
-export async function GET() {
+export async function GET(req: NextRequest) {
+    if (process.env.NODE_ENV === "production") return demoUnavailable();
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const [stories, users] = await Promise.all([
             prisma.truyen.findMany({
@@ -37,12 +48,22 @@ export async function GET() {
 
 // POST: Thực hiện theo dõi hoặc giả lập các loại thông báo khác và lưu vào Database thực tế
 export async function POST(req: NextRequest) {
+    if (process.env.NODE_ENV === "production") return demoUnavailable();
+    const auth = await requireAdmin(req);
+    if (!auth.authorized) return auth.response;
+
     try {
         const body = await req.json();
         const category = body.category || "follow";
         const priority = body.priority || "normal";
         const socketServerUrl = process.env.SOCKET_SERVER_URL || "http://localhost:3001";
-        const secretToken = process.env.INTERNAL_SECRET_TOKEN || "super-secret-token";
+        const secretToken = process.env.INTERNAL_SECRET_TOKEN;
+        if (!secretToken) {
+            return NextResponse.json(
+                { success: false, message: "INTERNAL_SECRET_TOKEN chưa được cấu hình" },
+                { status: 500 },
+            );
+        }
 
         // Tìm một tài khoản Admin/User ngẫu nhiên làm người nhận thông báo để tránh lỗi khóa ngoại (Foreign Key)
         const firstUser = await prisma.taiKhoan.findFirst({ select: { idTaiKhoan: true } });
@@ -206,7 +227,11 @@ export async function POST(req: NextRequest) {
 }
 
 // Hàm phụ trợ gửi request sang Socket Server độc lập
-function triggerSocketNotification(serverUrl: string, token: string, payload: any) {
+function triggerSocketNotification(
+    serverUrl: string,
+    token: string,
+    payload: Record<string, unknown>,
+) {
     fetch(`${serverUrl}/api/trigger-notification`, {
         method: "POST",
         headers: {

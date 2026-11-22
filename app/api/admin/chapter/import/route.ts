@@ -4,6 +4,9 @@ import * as z from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getRequestId, resSuccess } from "@/lib/api";
+import { requireAdmin } from "@/lib/server/auth-session";
+import { validateSpreadsheetFile, validateSpreadsheetRows } from "@/lib/server/spreadsheet-upload";
+import { MAX_SPREADSHEET_REQUEST_BYTES, rejectOversizeUpload } from "@/lib/server/upload-size";
 
 const chapterImportSchema = z.object({
   idTruyen: z.coerce.number().int().positive("Vui lòng nhập ID truyện"),
@@ -49,6 +52,11 @@ function normalizeBoolean(value: unknown) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.authorized) return auth.response;
+  const tooLarge = rejectOversizeUpload(req, MAX_SPREADSHEET_REQUEST_BYTES);
+  if (tooLarge) return tooLarge;
+
   const requestId = getRequestId();
 
   try {
@@ -66,12 +74,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const fileError = validateSpreadsheetFile(file);
+    if (fileError) {
+      return NextResponse.json({ success: false, message: fileError, requestId }, { status: 400 });
+    }
+
     const bytes = await file.arrayBuffer();
     const workbook = XLSX.read(Buffer.from(bytes), {
       type: "buffer",
     });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet);
+
+    const rowError = validateSpreadsheetRows(rows.length);
+    if (rowError) {
+      return NextResponse.json({ success: false, message: rowError, requestId }, { status: 400 });
+    }
 
     if (!rows.length) {
       return NextResponse.json(
@@ -163,6 +181,7 @@ export async function POST(req: NextRequest) {
         return storyExisted;
       })
       .map((item) => ({
+        excelRow: item.excelRow,
         idTruyen: item.idTruyen,
         chuongSo: item.chuongSo,
         tieuDeChuong: item.tieuDeChuong,
@@ -172,34 +191,50 @@ export async function POST(req: NextRequest) {
         noiDung: item.noiDung || "",
       }));
 
+    const existingChapters = await prisma.chuong.findMany({
+      where: {
+        OR: insertData.map(({ idTruyen, chuongSo }) => ({ idTruyen, chuongSo })),
+      },
+      select: { idTruyen: true, chuongSo: true },
+    });
+    const existingKeys = new Set(existingChapters.map(({ idTruyen, chuongSo }) => `${idTruyen}:${chuongSo}`));
+    const newRows = insertData.filter((item) => {
+      if (!existingKeys.has(`${item.idTruyen}:${item.chuongSo}`)) return true;
+      errors.push({ row: item.excelRow, field: "chuongSo", message: "Chương đã tồn tại trong hệ thống" });
+      return false;
+    });
+
     let insertedRows = 0;
 
     await prisma.$transaction(async (tx) => {
-      for (const item of insertData) {
-        await tx.chuong.create({
-          data: {
-            idTruyen: item.idTruyen,
-            chuongSo: item.chuongSo,
-            tieuDeChuong: item.tieuDeChuong,
-            slug: item.slug,
-            isFree: item.isFree,
-            giaXu: item.giaXu,
-            noiDungChuong: item.noiDung
-              ? {
-                  create: {
-                    noiDung: item.noiDung,
-                    contentType: "db",
-                  },
-                }
-              : undefined,
-          },
+      for (let offset = 0; offset < newRows.length; offset += 500) {
+        const batch = newRows.slice(offset, offset + 500);
+        await tx.chuong.createMany({
+          data: batch.map(({ idTruyen, chuongSo, tieuDeChuong, slug, isFree, giaXu }) => ({
+            idTruyen, chuongSo, tieuDeChuong, slug, isFree, giaXu,
+          })),
         });
-        insertedRows += 1;
+        insertedRows += batch.length;
       }
 
       const insertedStoryIds = Array.from(
-        new Set(insertData.map((item) => item.idTruyen)),
+        new Set(newRows.map((item) => item.idTruyen)),
       );
+
+      const insertedChapters = newRows.length
+        ? await tx.chuong.findMany({
+            where: { OR: newRows.map(({ idTruyen, chuongSo }) => ({ idTruyen, chuongSo })) },
+            select: { idChuong: true, idTruyen: true, chuongSo: true },
+          })
+        : [];
+      const chapterIds = new Map(insertedChapters.map(({ idTruyen, chuongSo, idChuong }) => [`${idTruyen}:${chuongSo}`, idChuong]));
+      const contentRows = newRows.flatMap((item) => {
+        const idChuong = chapterIds.get(`${item.idTruyen}:${item.chuongSo}`);
+        return idChuong && item.noiDung ? [{ idChuong, noiDung: item.noiDung, contentType: "db" as const }] : [];
+      });
+      for (let offset = 0; offset < contentRows.length; offset += 500) {
+        await tx.noiDungChuong.createMany({ data: contentRows.slice(offset, offset + 500) });
+      }
 
       await Promise.all(
         insertedStoryIds.map(async (idTruyen) => {
