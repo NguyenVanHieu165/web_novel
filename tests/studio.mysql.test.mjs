@@ -75,6 +75,7 @@ test("Studio ownership, drafts, publication and batch rollback with generated Pr
   const realNotifications = load("lib/server/notifications.ts");
   const dispatched = [];
   const writing = load("lib/server/chapter-writing.ts", {
+    "@/app/generated/prisma/client": { Prisma },
     "@/schemas/chapter-writing.schema": writingSchema,
     "@/lib/chapter-document-parser": parser, "@/lib/utils": utils,
     "./studio-ownership": ownership,

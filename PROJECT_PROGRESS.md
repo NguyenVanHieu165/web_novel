@@ -588,7 +588,7 @@ Dry-run liệt kê đầy đủ ID, tiêu đề, slug, ảnh bìa của **48 tru
 
 - Dùng LeanCTX CLI inspect các model Truyen/Chuong/Quyen/BinhLuan/LikeBinhLuan và những quan hệ liên quan. Đối chiếu FK thật bằng information_schema trước khi thực thi.
 - Tái sử dụng Prisma Client của `lib/prisma.ts`; kiểm tra `DATABASE_NAME` và `SELECT DATABASE()` đều phải là `web_truyen` trước khi ghi.
-- Mỗi truyện dùng một `$transaction` Serializable. Khóa hàng cha bằng `SELECT ... FOR UPDATE`, kiểm tra lại `chuong: { none: {} }` sau khi khóa và trên lệnh DELETE cuối. Không có lệnh xóa chương/nội dung chương.
+- Mỗi truyện dùng một `$transaction` Repeatable Read. Khóa hàng cha bằng `SELECT ... FOR UPDATE`, kiểm tra lại `chuong: { none: {} }` sau khi khóa và trên lệnh DELETE cuối. Không có lệnh xóa chương/nội dung chương.
 - Xóa lượt thích trước bình luận, xóa những liên kết/phụ thuộc theo FK trước bản ghi Truyen. Lỗi bất kỳ làm rollback transaction của truyện đó. Từ chối thao tác nếu tập/bình luận của truyện rỗng liên kết nhầm tới chương của truyện khác.
 - Chỉ dọn file tương ứng ảnh bìa/thumbnail của truyện đã xóa thành công, nằm trực tiếp trong `public/uploads/covers/`. Kiểm tra lại cả ảnh bìa và thumbnail của mọi truyện còn lại, bao gồm alias Next Image. Không xóa ảnh dùng chung, ảnh remote, đường dẫn thoát thư mục hoặc symlink.
 - Đã sao lưu dữ liệu ứng viên/phụ thuộc, snapshot đầy đủ dữ liệu cần bảo toàn và 26 file ảnh trước khi xóa. Không sửa schema hoặc tạo migration, không cài dependency mới, không sửa script crawl/manifest.

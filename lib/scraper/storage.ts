@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Prisma, PrismaClient } from "../../app/generated/prisma/client";
+import { Prisma, type PrismaClient } from "../../app/generated/prisma/client";
 import { metadataKey, normalized } from "./normalizer";
 import { ImportSourceError } from "./types";
 import type { ChapterRef, ScrapedStory } from "./types";
@@ -32,7 +32,7 @@ export async function findImportStory(db: PrismaClient, story: ScrapedStory, url
   return matching[0] ?? null;
 }
 export async function createImportStory(db: PrismaClient, story: ScrapedStory, url: string, cover: string) {
-  return db.$transaction(tx => createStoryMetadata(tx, story, url, cover), { timeout: 20000, isolationLevel: "Serializable" });
+  return db.$transaction(tx => createStoryMetadata(tx, story, url, cover), { timeout: 20000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
 /** A first-body failure rolls back the new story, metadata and every join together. */
@@ -42,7 +42,7 @@ export async function createImportStoryWithChapter(db: PrismaClient, story: Scra
     await storeChapterInTransaction(tx, row.idTruyen, ref, content, true);
     await tx.truyen.update({ where: { idTruyen: row.idTruyen }, data: { soChuong: 1 } });
     return row;
-  }, { timeout: 20000, isolationLevel: "Serializable" });
+  }, { timeout: 20000, isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
 async function createStoryMetadata(tx: Prisma.TransactionClient, story: ScrapedStory, url: string, cover: string) {

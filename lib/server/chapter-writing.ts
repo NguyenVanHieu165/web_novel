@@ -1,5 +1,5 @@
 import "server-only";
-import type { PrismaClient, Prisma } from "@/app/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/app/generated/prisma/client";
 import { chapterImportSchema, writingChapterSchema, type WritingChapterInput } from "@/schemas/chapter-writing.schema";
 import { z } from "zod";
 import { cleanWritingText } from "@/lib/chapter-document-parser";
@@ -82,7 +82,7 @@ async function transaction<T>(db: PrismaClient, operation: (tx: Prisma.Transacti
   for (let attempt = 0; ; attempt++) {
     const notifications: NotificationDispatch[] = [];
     try {
-      const result = await db.$transaction((tx) => operation(tx, notifications), { isolationLevel: "Serializable", timeout: 60_000 });
+      const result = await db.$transaction((tx) => operation(tx, notifications), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 60_000 });
       for (const notification of notifications) await dispatchNotification(notification);
       return result;
     } catch (error) {

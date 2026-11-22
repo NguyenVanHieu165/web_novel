@@ -94,7 +94,7 @@ export async function createStudioStory(db: PrismaClient, actor: StudioActor, in
       khoa: storyOwnershipKey(story.idTruyen), giaTri: JSON.stringify({ version: 1, ownerId: actor.idTaiKhoan, authorId }), moTa: "Quyền sở hữu truyện Studio do server quản lý",
     } });
     return story;
-  }, { isolationLevel: "Serializable", timeout: 15000 });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15000 });
 }
 
 export async function updateStudioStory(db: PrismaClient, actor: StudioActor, storyId: number, input: StudioStoryUpdate) {
@@ -102,7 +102,7 @@ export async function updateStudioStory(db: PrismaClient, actor: StudioActor, st
     await ensureStudioDatabase(tx);
     await assertStudioStoryAccess(tx, actor, storyId);
     return tx.truyen.update({ where: { idTruyen: storyId }, data: input, select: storySelect });
-  }, { isolationLevel: "Serializable" });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
 export async function deleteStudioStory(db: PrismaClient, actor: StudioActor, storyId: number) {
@@ -112,7 +112,7 @@ export async function deleteStudioStory(db: PrismaClient, actor: StudioActor, st
     // Keep purchases, wallet history and reader replies intact.
     await tx.truyen.update({ where: { idTruyen: storyId }, data: { isDeleted: true } });
     return { idTruyen: storyId };
-  }, { isolationLevel: "Serializable" });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
 export async function listStudioChapters(db: PrismaClient, actor: StudioActor, storyId: number, page = 1, pageSize = 20) {

@@ -19,6 +19,10 @@ export function getChapterPath(storySlug: string, chapterSlug: string): string {
   return `${getStoryPath(storySlug)}/${encodeURIComponent(chapterSlug)}`;
 }
 
+export function isChapterPath(pathname: string): boolean {
+  return /^\/truyen\/[^/]+\/[^/]+\/?$/.test(pathname);
+}
+
 export function readerKeyboardDirection(input: ReaderKeyboardInput): "previous" | "next" | null {
   if (
     input.blocked || input.interactive || input.defaultPrevented || input.repeat || input.isComposing ||

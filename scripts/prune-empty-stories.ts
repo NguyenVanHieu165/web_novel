@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { copyFile, lstat, mkdir, open, readFile, readdir, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Prisma, PrismaClient } from "../app/generated/prisma/client";
+import { Prisma, type PrismaClient } from "../app/generated/prisma/client";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const CACHE = path.join(ROOT, "node_modules/.cache/prune-empty-stories");
@@ -175,7 +175,7 @@ export async function main() {
     const coverReferences: Array<string | null> = [];
     for (const story of found) {
       try {
-        const result = await db.$transaction(tx => deleteEmptyStory(tx, story.idTruyen), { isolationLevel: "Serializable", timeout: 15000 });
+        const result = await db.$transaction(tx => deleteEmptyStory(tx, story.idTruyen), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15000 });
         results.push({ id: story.idTruyen, status: result.status });
         if (result.status === "deleted") coverReferences.push(result.story.anhBia, result.story.anhThumbnail);
       } catch (error) {

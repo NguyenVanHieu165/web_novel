@@ -1,15 +1,27 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ReadingDock from "@/components/home/ReadingDock";
 import ScrollProgressButton from "@/components/common/ScrollProgressButton";
+import { isChapterPath } from "@/lib/reader-navigation";
 import ChapterChrome from "./ChapterChrome";
 
 export default function ReaderShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isChapter = /^\/truyen\/[^/]+\/[^/]+\/?$/.test(pathname);
+  const previousPathname = useRef(pathname);
+  const isChapter = isChapterPath(pathname);
+
+  useEffect(() => {
+    const previous = previousPathname.current;
+    previousPathname.current = pathname;
+
+    if (previous !== pathname && isChapterPath(previous) && isChapter) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [isChapter, pathname]);
 
   if (isChapter) {
     return <ChapterChrome key={pathname} header={<Header />}>{children}</ChapterChrome>;

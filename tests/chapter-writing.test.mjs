@@ -62,6 +62,7 @@ function harness({ database = "web_truyen", failContent = false } = {}) {
     try { const result = await callback(tx); commits++; return result; } catch (error) { state = before; throw error; } finally { inTransaction = false; }
   } };
   const writing = load("lib/server/chapter-writing.ts", {
+    "@/app/generated/prisma/client": { Prisma: { TransactionIsolationLevel: { RepeatableRead: "RepeatableRead" } } },
     "@/schemas/chapter-writing.schema": schemas, "@/lib/chapter-document-parser": parser, "@/lib/utils": utils,
     "./studio-ownership": ownership,
     "./notifications": {

@@ -6,7 +6,10 @@ import vm from "node:vm";
 import ts from "typescript";
 
 const require = createRequire(import.meta.url);
-const Prisma = { sql: require("@prisma/client/runtime/client").sqltag };
+const Prisma = {
+  sql: require("@prisma/client/runtime/client").sqltag,
+  TransactionIsolationLevel: { RepeatableRead: "RepeatableRead" },
+};
 const sources = new Map();
 for (const path of ["lib/server/studio-ownership.ts", "lib/server/studio.ts", "lib/server/studio-http.ts", "lib/server/chapter-document-http.ts", "schemas/studio.schema.ts", "app/api/studio/stories/route.ts", "app/api/studio/stories/[id]/route.ts", "app/api/studio/stories/[id]/chapters/route.ts", "app/api/studio/stories/[id]/chapters/import-doc/route.ts"]) {
   sources.set(path, ts.transpileModule(await readFile(new URL(`../${path}`, import.meta.url), "utf8"), {
