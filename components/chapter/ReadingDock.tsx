@@ -10,8 +10,9 @@ import { getChapterPath } from "@/lib/reader-navigation";
 import { ReaderNavigationLink } from "./ReaderNavigationProvider";
 import dynamic from "next/dynamic";
 import { hasAudioContinuation } from "@/lib/tts/audio-continuation";
+import { AudioPlayerSkeleton } from "@/components/common/InteractionSkeleton";
 
-const ChapterAudioPlayer = dynamic(() => import("@/components/reading/ChapterAudioPlayer"));
+const ChapterAudioPlayer = dynamic(() => import("@/components/reading/ChapterAudioPlayer"), { ssr: false, loading: AudioPlayerSkeleton });
 
 const control = "grid size-10 shrink-0 place-items-center rounded-full transition-colors hover:bg-[var(--reader-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--reader-accent)] disabled:cursor-not-allowed disabled:opacity-30 md:size-11";
 const surface = "border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-text)] shadow-lg shadow-black/10";

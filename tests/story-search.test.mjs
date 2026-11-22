@@ -17,7 +17,12 @@ function load(file, modules = {}) {
   const loadedModule = { exports: {} };
   vm.runInNewContext(compiled.get(file), {
     module: loadedModule, exports: loadedModule.exports, URLSearchParams, setTimeout, clearTimeout,
-    require: (name) => name in modules ? modules[name] : require(name),
+    require: (name) => {
+      if (name in modules) return modules[name];
+      if (name === "next/cache") return { unstable_cache: (callback) => callback };
+      if (name === "@/lib/server/public-cache") return { publicCacheTags: { storyList: "public-story-list", genres: "public-genres" } };
+      return require(name);
+    },
   });
   return loadedModule.exports;
 }

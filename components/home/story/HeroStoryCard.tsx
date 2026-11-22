@@ -18,6 +18,7 @@ interface HeroStoryCardProps {
   story: HeroStoryData;
   position: "left" | "center" | "right" | "hidden";
   onClick?: () => void;
+  eager?: boolean;
 }
 
 const FALLBACK_COVER =
@@ -27,6 +28,7 @@ export default function HeroStoryCard({
   story,
   position,
   onClick,
+  eager = false,
 }: HeroStoryCardProps) {
   const rating = story.diemDanhGiaTrungBinh
     ? parseFloat(story.diemDanhGiaTrungBinh.toString()).toFixed(1)
@@ -53,7 +55,9 @@ export default function HeroStoryCard({
         alt={story.tenTruyen}
         className="h-full w-full object-cover select-none pointer-events-none transition-transform duration-700 rounded-2xl"
         style={{ borderRadius: "1rem" }}
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={isCenter ? "high" : "auto"}
       />
 
       {/* 2. Lớp phủ Gradient: Card bên hông mờ nhẹ, card giữa tối dần về đáy để đọc chữ */}

@@ -209,6 +209,9 @@ export default function StoryDetailHeader({ story }: StoryDetailHeaderProps) {
               alt={story.tenTruyen}
               width={290}
               height={435}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
               className="w-full h-full object-cover pointer-events-none rounded-2xl"
               style={{ borderRadius: "1rem" }}
             />

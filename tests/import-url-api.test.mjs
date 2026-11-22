@@ -4,20 +4,24 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import ts from "typescript";
-import { importUrlSchema, ImportSourceError } from "../lib/scraper/types.ts";
-import { importErrorCode, importErrorMessage } from "../lib/scraper/errors.ts";
+import { loadNotificationModule } from "./notification-support.mjs";
+
+const sourceTypes = loadNotificationModule("lib/scraper/types.ts");
+const { importUrlSchema, ImportSourceError } = sourceTypes;
+const { importErrorCode, importErrorMessage } = loadNotificationModule("lib/scraper/errors.ts", { "./types": sourceTypes });
 
 const requireModule = createRequire(import.meta.url);
 const { NextRequest, NextResponse } = requireModule("next/server");
 const files = ["app/api/admin/stories/import-url/route.ts", "app/api/admin/stories/import-url/[jobId]/route.ts"];
 const sources = await Promise.all(files.map(async file => ts.transpileModule(await readFile(file, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText));
 const ID = "00000000-0000-4000-8000-000000000001";
-function fixture({ authorized = true, owner = 7, networkError, resumeError, readError, state = { id: ID }, resumedId = ID } = {}) {
-  const calls = [], deferred = [];
+function fixture({ authorized = true, owner = 7, networkError, resumeError, readError, runError, state = { id: ID }, resumedId = ID } = {}) {
+  const calls = [], deferred = [], invalidations = [];
   const load = code => {
     const record = { exports: {} };
     vm.runInNewContext(code, { exports: record.exports, module: record, require(name) {
       if (name === "next/server") return { NextResponse, after: work => deferred.push(work) };
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStories: (...args) => invalidations.push(args) };
       if (name === "@/lib/server/auth-session") return { requireAdmin: async () => authorized ? { authorized: true, user: { idTaiKhoan: owner } } : { authorized: false, response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }) } };
       if (name === "@/lib/scraper/types") return { importUrlSchema };
       if (name === "@/lib/scraper/errors") return { importErrorCode, importErrorMessage };
@@ -27,18 +31,29 @@ function fixture({ authorized = true, owner = 7, networkError, resumeError, read
         getJob: async (id, actor) => { calls.push(["get", id, actor]); if (readError) throw readError; return state; },
         cancelJob: async (id, actor) => { calls.push(["cancel", id, actor]); return state; },
         resumeJob: async (id, actor) => { calls.push(["resume", id, actor]); if (resumeError) throw resumeError; return resumedId; },
-        runJob: async id => calls.push(["run", id]),
+        runJob: async id => { calls.push(["run", id]); if (runError) throw runError; },
       };
       return requireModule(name);
     } });
     return record.exports;
   };
-  return { create: load(sources[0]), detail: load(sources[1]), calls, deferred };
+  return { create: load(sources[0]), detail: load(sources[1]), calls, deferred, invalidations };
 }
 function request(method, body, origin = "https://app.example") {
   return new NextRequest("https://app.example/api/admin/stories/import-url/" + ID, { method, headers: { Origin: origin, "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
 }
 const context = { params: Promise.resolve({ jobId: ID }) };
+test("URL imports expire public caches after deferred writes, including partial jobs that fail", async () => {
+  for (const runError of [undefined, new Error("Partial import failed")]) {
+    const f = fixture({ runError });
+    assert.equal((await f.create.POST(request("POST", { url: "https://source.example/book" }))).status, 202);
+    assert.equal(f.invalidations.length, 0);
+    if (runError) await assert.rejects(f.deferred[0](), /Partial import failed/);
+    else await f.deferred[0]();
+    assert.equal(f.invalidations.length, 1);
+    assert.equal(f.invalidations[0][1], true);
+  }
+});
 test("all mode omits cap and schedules the asynchronous job only after auth/input/SSRF validation", async () => {
   const f = fixture();
   const response = await f.create.POST(request("POST", { url: "https://source.example/book" }));

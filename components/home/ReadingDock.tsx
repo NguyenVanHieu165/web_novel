@@ -113,6 +113,8 @@ function ReadingDockContent({ story: activeStory }: { story: ReadingStoryItem })
             src={activeStory.anhBia}
             width={36}
             height={48}
+            loading="lazy"
+            decoding="async"
             alt={activeStory.tenTruyen}
             className="w-full h-full object-cover"
           />

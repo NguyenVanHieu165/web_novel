@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { requireUser } from "@/lib/server/auth-session";
 
 const paramsSchema = z.object({ slug: z.string().trim().min(1).max(300) });
@@ -116,6 +117,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (!result) {
       return NextResponse.json({ success: false, message: "Không tìm thấy truyện" }, { status: 404 });
     }
+    revalidatePublicStories([parsedParams.data.slug]);
     return NextResponse.json({ success: true, ...result }, { headers: privateHeaders });
   } catch (error) {
     console.error("UPDATE STORY RATING ERROR:", error);

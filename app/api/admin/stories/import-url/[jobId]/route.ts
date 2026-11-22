@@ -3,9 +3,10 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { cancelJob, getJob, resumeJob, runJob } from "@/lib/scraper/job-manager";
 import { importErrorCode, importErrorMessage } from "@/lib/scraper/errors";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 type Context = { params: Promise<{ jobId: string }> };
 function invalidOrigin(req: NextRequest) {
   return req.headers.get("sec-fetch-site") === "cross-site" || !!req.headers.get("origin") && req.headers.get("origin") !== req.nextUrl.origin;
@@ -29,7 +30,11 @@ export async function POST(req: NextRequest, context: Context) {
   try {
     const jobId = await resumeJob(parsed.data, auth.user.idTaiKhoan);
     if (!jobId) return NextResponse.json({ message: "Không tìm thấy phiên import của bạn." }, { status: 404 });
-    after(() => runJob(jobId));
+    after(async () => {
+      try { await runJob(jobId); }
+      catch (error) { console.error("Import background job failed", importErrorCode(error)); throw error; }
+      finally { revalidatePublicStories(undefined, true); }
+    });
     return NextResponse.json({ jobId }, { status: 202, headers: { "Cache-Control": "no-store" } });
   } catch (error) { const code = importErrorCode(error); return NextResponse.json({ message: importErrorMessage(error), code }, { status: ["JOB_BUSY", "RATE_LIMITED"].includes(code) ? 409 : 500 }); }
 }

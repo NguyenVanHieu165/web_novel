@@ -76,6 +76,7 @@ function UserContinueReading() {
                   height={88}
                   className="w-full h-full object-cover motion-safe:group-hover:scale-105 transition-transform duration-250 motion-reduce:transition-none"
                   loading="lazy"
+                  decoding="async"
                 />
               </div>
             </Link>

@@ -91,8 +91,11 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
                     "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=100&q=60"
                   }
                   alt={item.tenTruyen}
+                  width={40}
+                  height={56}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  decoding="async"
                 />
               </div>
               <div className="min-w-0">
@@ -153,8 +156,11 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
                   "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=100&q=60"
                 }
                 alt={item.tenTruyen}
+                width={56}
+                height={72}
                 className="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">

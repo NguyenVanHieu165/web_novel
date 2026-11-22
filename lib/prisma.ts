@@ -39,8 +39,8 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
             urlSslAccept = parsed.searchParams.get("sslaccept");
             urlSsl = parsed.searchParams.get("ssl");
             urlSslMode = parsed.searchParams.get("sslmode");
-        } catch (err) {
-            console.warn("[lib/prisma] Failed to parse DATABASE_URL:", err);
+        } catch {
+            console.error("[lib/prisma] Failed to parse DATABASE_URL.");
         }
     }
 
@@ -104,26 +104,24 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
     };
 }
 
-const dbConfig = resolveConnectionConfig();
-
-const adapter = new PrismaMariaDb({
-    host: dbConfig.host,
-    port: dbConfig.port,
-    user: dbConfig.user,
-    password: dbConfig.password,
-    database: dbConfig.database,
-    ssl: dbConfig.ssl,
-    connectionLimit: Number(process.env.DATABASE_CONNECTION_LIMIT) || (process.env.VERCEL ? 3 : 10),
-    connectTimeout: Number(process.env.DATABASE_CONNECT_TIMEOUT) || 15000,
-});
-
-export const prisma =
-    globalForPrisma.prisma ??
-    new PrismaClient({
-        adapter,
-        log: ["error", "warn"],
+function createPrismaClient() {
+    const dbConfig = resolveConnectionConfig();
+    const adapter = new PrismaMariaDb({
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        database: dbConfig.database,
+        ssl: dbConfig.ssl,
+        connectionLimit: Number(process.env.DATABASE_CONNECTION_LIMIT) || (process.env.VERCEL ? 3 : 10),
+        connectTimeout: Number(process.env.DATABASE_CONNECT_TIMEOUT) || 15000,
     });
 
-if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prisma;
+    return new PrismaClient({
+        adapter,
+        log: process.env.NODE_ENV === "production" ? ["error"] : ["error", "warn"],
+    });
 }
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+globalForPrisma.prisma = prisma;

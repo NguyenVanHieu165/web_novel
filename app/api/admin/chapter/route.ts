@@ -1,5 +1,6 @@
 import { GET as listChapters } from "../chapters/route";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { getRequestId, resSuccess } from "@/lib/api";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/server/auth-session";
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     const values = writingChapterSchema.parse(await readWritingJson(req));
     if (values.idChuong) return NextResponse.json({ success: false, message: "Dùng endpoint cập nhật để sửa chương đã có." }, { status: 400 });
     const chapter = await saveWritingChapter(prisma, auth.user, values, "admin");
+    revalidatePublicStories();
     return NextResponse.json(resSuccess({ message: "Đã lưu chương", data: chapter, requestId: getRequestId() }), { status: 201 });
   } catch (error) { return writingErrorResponse(error); }
 }

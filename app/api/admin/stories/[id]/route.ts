@@ -1,4 +1,7 @@
+import { ImageUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
+export const maxDuration = 60;
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -183,6 +186,10 @@ export async function PUT(
             );
         }
 
+        const [anhBia, anhThumbnail] = await Promise.all([
+            validateData.anhBia ? uploadImageToCloudinary(validateData.anhBia) : "",
+            validateData.anhThumbnail ? uploadImageToCloudinary(validateData.anhThumbnail) : null,
+        ]);
         // UPDATE
         const updated = await prisma.truyen.update({
             where: {
@@ -193,8 +200,8 @@ export async function PUT(
                 slug: validateData.slug,
                 trang_thai: validateData.trang_thai,
 
-                anhBia: validateData.anhBia ?? "",
-                anhThumbnail: validateData.anhThumbnail || null,
+                anhBia,
+                anhThumbnail,
 
                 truyenTheLoai: {
                     deleteMany: {},
@@ -212,10 +219,12 @@ export async function PUT(
             },
         });
 
+        revalidatePublicStories([existStory.slug, updated.slug], true);
         return NextResponse.json(
             resSuccess(safeJson(updated))
         );
     } catch (error: unknown) {
+        if (error instanceof ImageUploadError) return NextResponse.json({ success: false, message: error.message, code: error.code }, { status: error.status });
         const prismaError = getPrismaLikeError(error);
 
         console.error(
@@ -314,6 +323,7 @@ export async function DELETE(
             },
         });
 
+        revalidatePublicStories(undefined, true);
         return NextResponse.json(
             resSuccess({
                 message: "Đã chuyển truyện vào trạng thái đã xoá",

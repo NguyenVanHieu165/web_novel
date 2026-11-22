@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import * as z from "zod";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { getRequestId, resSuccess } from "@/lib/api";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { validateSpreadsheetFile, validateSpreadsheetRows } from "@/lib/server/spreadsheet-upload";
@@ -159,6 +160,7 @@ export async function POST(req: NextRequest) {
       ? await prisma.theLoai.createMany({ data: insertData, skipDuplicates: true })
       : { count: 0 };
     const insertedCount = result.count;
+    if (insertedCount) revalidatePublicStories(undefined, true);
 
     return NextResponse.json(
       resSuccess(

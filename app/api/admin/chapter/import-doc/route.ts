@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { ensureWritingDatabase, importWritingChapters } from "@/lib/server/chapter-writing";
 import { previewChapterDocument, readWritingJson, writingOriginError, writingErrorResponse } from "@/lib/server/chapter-document-http";
@@ -13,8 +14,10 @@ export async function POST(request: NextRequest) {
   if (originError) return originError;
   try {
     await ensureWritingDatabase(prisma);
-    const data = request.headers.get("content-type")?.startsWith("multipart/form-data") ? await previewChapterDocument(request) :
+    const isPreview = request.headers.get("content-type")?.startsWith("multipart/form-data");
+    const data = isPreview ? await previewChapterDocument(request) :
       await importWritingChapters(prisma, auth.user, await readWritingJson(request), "admin");
+    if (!isPreview) revalidatePublicStories();
     return NextResponse.json({ success: true, data });
   } catch (error) { return writingErrorResponse(error); }
 }

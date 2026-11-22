@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { FileText, List, Star } from "lucide-react";
-import ChapterList from "./ChapterList";
-import StoryReviews from "./StoryReviews";
-import CommentSection from "@/components/comments/CommentSection";
+import dynamic from "next/dynamic";
+import { ChapterListSkeleton, CommentSkeleton } from "@/components/common/InteractionSkeleton";
+import CommentSection from "@/components/comments/LazyCommentSection";
 import { StoryDetailData } from "@/lib/mappers/story-detail.mapper";
 
 interface StoryDetailTabsProps {
   story: StoryDetailData;
 }
+
+const ChapterList = dynamic(() => import("./ChapterList"), { ssr: false, loading: ChapterListSkeleton });
+const StoryReviews = dynamic(() => import("./StoryReviews"), { ssr: false, loading: CommentSkeleton });
 
 export default function StoryDetailTabs({ story }: StoryDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<"synopsis" | "chapters" | "reviews">("synopsis");

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { studioId, studioJson, studioRead, studioSuccess } from "@/lib/server/studio-http";
 import { getStudioChapter, listStudioChapters } from "@/lib/server/studio";
 import { saveWritingChapter } from "@/lib/server/chapter-writing";
@@ -25,7 +26,9 @@ export async function POST(request: NextRequest, context: Context) {
     if (input.idTruyen !== studioId((await context.params).id) || input.idChuong !== undefined) {
       throw new StudioAccessError("Thông tin truyện/chương không khớp.", 400, "INVALID_CHAPTER");
     }
-    return studioSuccess(await saveWritingChapter(prisma, user, input, "studio"), 201);
+    const chapter = await saveWritingChapter(prisma, user, input, "studio");
+    revalidatePublicStories();
+    return studioSuccess(chapter, 201);
   });
 }
 
@@ -34,6 +37,8 @@ export async function PATCH(request: NextRequest, context: Context) {
     if (input.idTruyen !== studioId((await context.params).id) || input.idChuong === undefined) {
       throw new StudioAccessError("Cần chọn đúng chương để chỉnh sửa.", 400, "INVALID_CHAPTER");
     }
-    return studioSuccess(await saveWritingChapter(prisma, user, input, "studio"));
+    const chapter = await saveWritingChapter(prisma, user, input, "studio");
+    revalidatePublicStories();
+    return studioSuccess(chapter);
   });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import {
   BookOpen,
@@ -25,6 +25,7 @@ import { gsap } from "@/lib/gsap";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import AccountThemeToggle from "@/components/account/AccountThemeToggle";
 import ReaderAvatar from "@/components/account/ReaderAvatar";
+import HeaderSearch from "@/components/search/HeaderSearch";
 
 const NAV_LINKS = [
   { label: "Trang chủ", href: "/" },
@@ -49,12 +50,10 @@ export default function Header() {
 }
 
 function HeaderContent() {
-  const router = useRouter();
   const pathname = usePathname();
   const { user, logout, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -62,15 +61,6 @@ function HeaderContent() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  const mobileSearchRef = useRef<HTMLFormElement>(null);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/tim-kiem?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
-    }
-  };
 
   // GSAP animation for user dropdown
   useGSAP(() => {
@@ -119,9 +109,6 @@ function HeaderContent() {
     const handler = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
-      }
-      if (mobileSearchRef.current && !mobileSearchRef.current.contains(e.target as Node)) {
-        setSearchOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -180,19 +167,7 @@ function HeaderContent() {
           {/* ── Right Actions ── */}
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Desktop Search */}
-            <form
-              onSubmit={handleSearchSubmit}
-              className="relative hidden sm:block"
-            >
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm truyện, tác giả..."
-                className="h-9 w-44 rounded-full bg-slate-100 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 xl:w-56 2xl:w-72 dark:bg-zinc-800 dark:text-zinc-200 dark:focus:ring-blue-400/50"
-              />
-              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-            </form>
+            <HeaderSearch />
 
             {/* Mobile Search Button */}
             <button
@@ -311,23 +286,7 @@ function HeaderContent() {
 
         {/* ── Mobile Search Overlay ── */}
         {searchOpen && (
-          <form
-            onSubmit={handleSearchSubmit}
-            className="sm:hidden px-4 pb-4 pt-2 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-950"
-            ref={mobileSearchRef}
-          >
-            <div className="relative">
-              <input
-                type="text"
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm truyện, tác giả..."
-                className="w-full h-10 rounded-full bg-slate-100 dark:bg-zinc-800 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-700 dark:text-zinc-200 placeholder:text-slate-400"
-              />
-              <Search className="absolute left-4 top-3 h-4 w-4 text-slate-400" />
-            </div>
-          </form>
+          <div className="sm:hidden border-t border-slate-100 bg-white px-4 pb-4 pt-2 dark:border-zinc-800 dark:bg-zinc-950"><HeaderSearch mobile onNavigate={() => setSearchOpen(false)} /></div>
         )}
 
         {/* ── Mobile Menu Drawer ── */}

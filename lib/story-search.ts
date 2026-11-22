@@ -1,6 +1,6 @@
 import { parseStoryQueryParams, storySearchMaxLength, type StoryQueryInput } from "@/schemas/story-query.schema";
 
-export const storySearchKeys = ["q", "theLoai", "trangThai", "sapXep", "soChuong", "page", "limit"] as const;
+export const storySearchKeys = ["q", "author", "theLoai", "trangThai", "sapXep", "soChuong", "vip", "page", "limit"] as const;
 export type StorySearchKey = typeof storySearchKeys[number];
 export type StorySearchChanges = Partial<Record<StorySearchKey, string | number | undefined>>;
 export interface StorySearchConfig {

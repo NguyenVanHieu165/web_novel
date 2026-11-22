@@ -89,15 +89,14 @@ export const getChapterDetail = cache(async (storySlug: string, chapterSlug: str
         )
       : false;
     const canRead = isFree || Boolean(account?.isAdmin) || hasPurchased;
-    const content = canRead
-      ? await prisma.noiDungChuong.findUnique({
-          where: { idChuong: currentChapter.idChuong },
-          select: { noiDung: true },
-        })
-      : null;
-
     // 4. Tìm chương trước & chương sau
-    const [prevChapter, nextChapter] = await Promise.all([
+    const [content, prevChapter, nextChapter] = await Promise.all([
+      canRead
+        ? prisma.noiDungChuong.findUnique({
+            where: { idChuong: currentChapter.idChuong },
+            select: { noiDung: true },
+          })
+        : null,
       // Chương trước: số chương nhỏ hơn gần nhất
       prisma.chuong.findFirst({
         where: {

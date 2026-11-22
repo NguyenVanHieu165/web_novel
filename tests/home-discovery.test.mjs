@@ -13,6 +13,7 @@ async function loadModule(path, dependencies = {}) {
   vm.runInNewContext(compiled, {
     module: loadedModule,
     exports: loadedModule.exports,
+    process: { env: {} },
     require(name) {
       if (name in dependencies) return dependencies[name];
       throw new Error(`Unexpected dependency: ${name}`);
@@ -36,7 +37,7 @@ function story(id, overrides = {}) {
     trang_thai: "dang_tien_hanh",
     isDeleted: false,
     createdAt: id,
-    updatedAt: id,
+    updatedAt: new Date(id * 1000),
     truyenTheLoai: [],
     ...overrides,
   };
@@ -64,7 +65,11 @@ async function queryHarness(stories, { fail = false } = {}) {
       },
     },
   };
-  const queryModule = await loadModule("../lib/queries/home.query.ts", { "@/lib/prisma": { prisma } });
+  const queryModule = await loadModule("../lib/queries/home.query.ts", {
+    "@/lib/prisma": { prisma },
+    "next/cache": { unstable_cache: (callback) => callback },
+    "@/lib/server/public-cache": { publicCacheTags: { home: "public-home" } },
+  });
   return { ...queryModule, calls };
 }
 

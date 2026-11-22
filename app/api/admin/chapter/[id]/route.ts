@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { getRequestId, resSuccess } from "@/lib/api";
 import { writingChapterSchema } from "@/schemas/chapter-writing.schema";
 import { ensureWritingDatabase, saveWritingChapter } from "@/lib/server/chapter-writing";
@@ -71,6 +72,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<Params
     const body = await readWritingJson(req);
     const values = writingChapterSchema.parse({ ...(typeof body === "object" && body !== null ? body : {}), idChuong: chapterId });
     const chapter = await saveWritingChapter(prisma, auth.user, values, "admin");
+    revalidatePublicStories();
     return NextResponse.json(resSuccess({ message: "Cập nhật chương thành công", data: chapter, requestId: getRequestId() }));
   } catch (error) { return writingErrorResponse(error); }
 }
@@ -147,6 +149,7 @@ export async function DELETE(
       return chapter;
     });
 
+    revalidatePublicStories();
     return NextResponse.json(
       resSuccess({
         success: true,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { NextRequest, NextResponse } from "next/server";
 import { resSuccess } from "@/lib/api";
 import * as z from "zod";
@@ -59,6 +60,7 @@ export async function PUT(
             },
         });
 
+        revalidatePublicStories(undefined, true);
         return NextResponse.json(
             resSuccess({
                 success: true,
@@ -115,6 +117,7 @@ export async function DELETE(req: NextRequest,
             },
         });
 
+        revalidatePublicStories(undefined, true);
         return NextResponse.json(
             resSuccess({
                 success: true,

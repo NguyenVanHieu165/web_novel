@@ -6,7 +6,7 @@ import vm from "node:vm";
 import ts from "typescript";
 
 const require = createRequire(import.meta.url);
-const { Prisma } = await import("../app/generated/prisma/client.ts");
+const Prisma = { sql: require("@prisma/client/runtime/client").sqltag };
 const sources = new Map();
 for (const path of ["lib/server/studio-ownership.ts", "lib/server/studio.ts", "lib/server/studio-http.ts", "lib/server/chapter-document-http.ts", "schemas/studio.schema.ts", "app/api/studio/stories/route.ts", "app/api/studio/stories/[id]/route.ts", "app/api/studio/stories/[id]/chapters/route.ts", "app/api/studio/stories/[id]/chapters/import-doc/route.ts"]) {
   sources.set(path, ts.transpileModule(await readFile(new URL(`../${path}`, import.meta.url), "utf8"), {
@@ -19,6 +19,7 @@ function load(path, overrides = {}) {
     require(name) {
       if (name in overrides) return overrides[name];
       if (name === "server-only") return {};
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStories() {} };
       if (name === "@/app/generated/prisma/client") return { Prisma };
       if (name === "@/lib/utils") return { normalizeVietnameseText: (text) => text.normalize("NFC"), slugify: (text) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]+/g, "-") };
       return require(name);

@@ -18,6 +18,9 @@ const chapterCounts = [
   { label: "Tất cả", value: "all" }, { label: "< 100", value: "duoi-100" },
   { label: "100–500", value: "100-500" }, { label: "> 500", value: "tren-500" },
 ] as const;
+const vipOptions = [
+  { label: "Tất cả", value: "tat_ca" }, { label: "Miễn phí", value: "mien_phi" }, { label: "VIP", value: "vip" },
+] as const;
 const optionClass = (active: boolean) => `rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${active
   ? "border-blue-600 bg-blue-600 text-white"
   : "border-slate-200 bg-white text-slate-600 hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-600"}`;
@@ -35,7 +38,7 @@ export default function StoryListFilter({ fixedStatus }: { fixedStatus?: "hoan_t
           </button>)}
         </div>
       </fieldset>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         {fixedStatus ? <p className="self-center text-sm text-slate-600 dark:text-zinc-300">Trạng thái: <strong>Đã hoàn thành</strong></p> : (
           <fieldset className="space-y-2">
             <legend className="mb-2 text-xs font-medium text-slate-500 dark:text-zinc-400">Trạng thái</legend>
@@ -47,6 +50,11 @@ export default function StoryListFilter({ fixedStatus }: { fixedStatus?: "hoan_t
           <legend className="mb-2 text-xs font-medium text-slate-500 dark:text-zinc-400">Số chương</legend>
           <div className="flex flex-wrap gap-2">{chapterCounts.map(({ value, label }) => <button key={value} type="button" aria-pressed={query.soChuong === value}
             onClick={() => controller.update({ soChuong: value })} className={optionClass(query.soChuong === value)}>{label}</button>)}</div>
+        </fieldset>
+        <fieldset className="space-y-2">
+          <legend className="mb-2 text-xs font-medium text-slate-500 dark:text-zinc-400">Loại truyện</legend>
+          <div className="flex flex-wrap gap-2">{vipOptions.map(({ value, label }) => <button key={value} type="button" aria-pressed={query.vip === value}
+            onClick={() => controller.update({ vip: value })} className={optionClass(query.vip === value)}>{label}</button>)}</div>
         </fieldset>
       </div>
     </div>

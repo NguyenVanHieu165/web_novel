@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { resSuccess, getRequestId } from "@/lib/api";
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
             },
         });
 
+        revalidatePublicStories(undefined, true);
         return NextResponse.json(
             resSuccess({
                 message: "Thêm thể loại thành công",

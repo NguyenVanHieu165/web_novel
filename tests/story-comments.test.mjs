@@ -72,6 +72,7 @@ function harness({ authorized = true, available = true, failRead = false, failCr
     console: { error() {} },
     require(name) {
       if (name === "@/lib/prisma") return { prisma };
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStoryDetails() {} };
       if (name === "@/lib/server/studio-ownership") return { getStoryOwner: async (_tx, id) => { assert.equal(id, 5); return ownerId ? { ownerId, authorId: 2 } : null; } };
       if (name === "@/lib/server/auth-session") return {
         async requireUser() {

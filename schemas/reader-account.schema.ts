@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { strongPasswordSchema } from "./auth.schema";
 
-export const avatarUrlSchema = z.url({
+const httpsAvatarUrlSchema = z.url({
   protocol: /^https$/,
   error: "Nhập đường dẫn ảnh HTTPS hợp lệ",
 }).refine((value) => {
@@ -12,6 +12,11 @@ export const avatarUrlSchema = z.url({
     return false;
   }
 }, "Đường dẫn ảnh không được chứa thông tin đăng nhập");
+
+export const avatarUrlSchema = z.union([
+  httpsAvatarUrlSchema,
+  z.string().regex(/^\/uploads\/avatars\/[a-f0-9]{64}\.webp$/, "Nhập đường dẫn ảnh HTTPS hợp lệ"),
+]);
 
 export const readerProfileSchema = z.strictObject({
   displayName: z.string().trim().min(1, "Nhập tên hiển thị").max(255, "Tên tối đa 255 ký tự"),

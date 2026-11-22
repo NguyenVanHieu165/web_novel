@@ -70,11 +70,12 @@ test("ordinary list pages select IDs without scanning content, then count only t
   assert.equal(result.meta.total, 2508);
 });
 
-test("API rejects unauthorized and malformed bulk requests before mutations", async () => {
-  let authorized = false, calls = 0;
+test("API validates bulk requests and expires caches only after a successful mutation", async () => {
+  let authorized = false, calls = 0, invalidations = 0;
   const s = service({});
   const route = load("app/api/admin/chapters/bulk/route.ts", {
     "@/schemas/admin-chapters.schema": schema, "@/lib/server/admin-chapters": { ...s, mutateChapters: async () => { calls++; return { count: 1 }; } },
+    "@/lib/server/public-cache": { revalidatePublicStories: () => { assert.equal(calls, 1); invalidations++; } },
     "@/lib/server/auth-session": { requireAdmin: async () => authorized ? { authorized: true } : { authorized: false, response: NextResponse.json({}, { status: 403 }) } },
   });
   const req = (body, origin = "http://local.test") => new NextRequest("http://local.test/api/admin/chapters/bulk", { method: "POST", headers: { "content-type": "application/json", origin }, body });
@@ -82,4 +83,8 @@ test("API rejects unauthorized and malformed bulk requests before mutations", as
   for (const body of ["{", '{}', '{"action":"set-vip","chapterIds":[1],"giaXu":0}']) assert.equal((await route.POST(req(body))).status, 400);
   assert.equal((await route.POST(req('{"action":"delete","chapterIds":[1]}', "http://evil.test"))).status, 403);
   assert.equal(calls, 0);
+  assert.equal(invalidations, 0);
+  assert.equal((await route.POST(req('{"action":"set-free","chapterIds":[1]}'))).status, 200);
+  assert.equal(calls, 1);
+  assert.equal(invalidations, 1);
 });

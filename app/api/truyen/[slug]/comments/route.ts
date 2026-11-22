@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStoryDetails } from "@/lib/server/public-cache";
 import { authenticateUser, requireUser } from "@/lib/server/auth-session";
 import { getStoryOwner } from "@/lib/server/studio-ownership";
 import { checkRateLimit, requestIp } from "@/lib/server/rate-limit";
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     if (chapterId && !await prisma.chuong.findFirst({ where: { idChuong: chapterId, idTruyen: story.idTruyen, isDeleted: false }, select: { idChuong: true } })) return NextResponse.json({ success: false, message: "Không tìm thấy chương." }, { status: 404 });
     if (replyTo && !await prisma.binhLuan.findFirst({ where: { idBinhLuan: replyTo, idTRUYEN: story.idTruyen, ...(chapterId ? { idChuong: chapterId } : {}), idBinhLuanCha: null, ...active }, select: { idBinhLuan: true } })) return NextResponse.json({ success: false, message: "Không tìm thấy bình luận gốc." }, { status: 404 });
     const [owner, item] = await Promise.all([getStoryOwner(prisma, story.idTruyen), prisma.binhLuan.create({ data: { idTaiKhoan: auth.user.idTaiKhoan, idTRUYEN: story.idTruyen, idChuong: chapterId ?? null, idBinhLuanCha: replyTo ?? null, noiDung }, select })]);
+    revalidatePublicStoryDetails([parsedParams.data.slug]);
     return NextResponse.json({ success: true, data: map(item, owner?.ownerId, new Set(), auth.user.idTaiKhoan) }, { status: 201 });
   } catch { return NextResponse.json({ success: false, message: "Không thể đăng bình luận." }, { status: 500 }); }
 }

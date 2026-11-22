@@ -19,6 +19,7 @@ function harness({ authorized = true, available = true, failCounter = false } = 
   ];
   let counter = { average: 4, total: 1 };
   let writes = 0;
+  const invalidations = [];
   let authCalls = 0;
   let pendingTransaction = Promise.resolve();
   const queryOwnRating = ({ where }) => {
@@ -69,6 +70,7 @@ function harness({ authorized = true, available = true, failCounter = false } = 
     module: routeModule, exports: routeModule.exports, console: { error() {} },
     require(name) {
       if (name === "@/lib/prisma") return { prisma };
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStories: (slugs) => invalidations.push(Array.from(slugs)) };
       if (name === "@/lib/server/auth-session") return {
         async requireUser() {
           authCalls += 1;
@@ -83,6 +85,7 @@ function harness({ authorized = true, available = true, failCounter = false } = 
   return {
     get rows() { return rows; },
     get writes() { return writes; },
+    get invalidations() { return invalidations; },
     get authCalls() { return authCalls; },
     get counter() { return counter; },
     async request({ method = "GET", body = { stars: 5, content: " My review " }, rawBody, slug = "sample-story", headers = {} } = {}) {
@@ -96,6 +99,17 @@ function harness({ authorized = true, available = true, failCounter = false } = 
     },
   };
 }
+
+test("rating mutations expire shared catalog data only after the transaction commits", async () => {
+  const successful = harness();
+  assert.equal((await successful.request({ method: "PUT" })).status, 200);
+  assert.deepEqual(successful.invalidations, [["sample-story"]]);
+  for (const options of [{ authorized: false }, { available: false }, { failCounter: true }]) {
+    const failed = harness(options);
+    assert.notEqual((await failed.request({ method: "PUT" })).status, 200);
+    assert.equal(failed.invalidations.length, 0);
+  }
+});
 
 test("rating summary is public, excludes deleted reviews and never exposes another user's review", async () => {
   const app = harness({ authorized: false });

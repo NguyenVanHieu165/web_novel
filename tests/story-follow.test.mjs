@@ -74,6 +74,7 @@ function harness({ authorized = true, available = true, failCounter = false } = 
     require(name) {
       if (name === "@/lib/server/notifications") return { ...notifications, dispatchNotification: async (event) => { if (event) events.push(event); } };
       if (name === "@/lib/prisma") return { prisma };
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStoryDetails() {} };
       if (name === "@/lib/server/auth-session") return {
         requireUser: async () => authorized
           ? { authorized: true, user: { idTaiKhoan: 7, roles: ["user"] } }

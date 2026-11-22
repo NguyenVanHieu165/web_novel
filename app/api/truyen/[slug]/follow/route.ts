@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStoryDetails } from "@/lib/server/public-cache";
 import { requireUser } from "@/lib/server/auth-session";
 
 import { createFollowNotifications, dispatchNotification } from "@/lib/server/notifications";
@@ -98,6 +99,7 @@ export async function PUT(
     if (!result) {
       return NextResponse.json({ success: false, message: "Không tìm thấy truyện" }, { status: 404 });
     }
+    revalidatePublicStoryDetails([parsedParams.data.slug]);
     await dispatchNotification(result.notification);
     return NextResponse.json({ success: true, following: result.following, total: result.total }, { headers: privateHeaders });
   } catch (error) {

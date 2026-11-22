@@ -11,7 +11,7 @@ const stateSchema = z.object({
   skippedChapters: z.number(), lockedChapters: z.number(), failedChapters: z.number(), downloadedImages: z.number(),
   logs: z.array(z.string()).max(150),
 }).passthrough();
-const schema = z.object({ version: z.literal(1), owner: z.number().int(), state: stateSchema, options: importUrlSchema, updated: z.number() });
+export const checkpointSchema = z.object({ version: z.literal(1), owner: z.number().int(), state: stateSchema, options: importUrlSchema, updated: z.number() });
 const MAX_CHECKPOINT_BYTES = 1024 * 1024;
 
 /** Local, private checkpoints; never write source content or credentials here. */
@@ -53,7 +53,7 @@ export function checkpointStore(directory = path.join(process.cwd(), ".data/stor
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw new ImportSourceError("Không đọc được checkpoint; hãy tạo phiên import mới và bật bỏ qua chương đã tồn tại.", "CHECKPOINT_INVALID");
       }
-      const parsed = schema.safeParse(data);
+      const parsed = checkpointSchema.safeParse(data);
       if (!parsed.success) throw new ImportSourceError("Checkpoint không đúng cấu trúc hoặc phiên bản; hãy tạo phiên import mới và bỏ qua chương đã tồn tại.", "CHECKPOINT_INVALID");
       const result = parsed.data;
       if (result.owner !== owner || result.state.id !== id) return null;

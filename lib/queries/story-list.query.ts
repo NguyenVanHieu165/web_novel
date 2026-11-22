@@ -4,6 +4,8 @@ import { parseStoryQueryParams, type StoryQueryInput } from "@/schemas/story-que
 import { mapStory } from "@/lib/mappers/story.mapper";
 import type { StoryCardData } from "@/components/story/StoryCard";
 import { getGenreBySlug } from "./genre.query";
+import { unstable_cache } from "next/cache";
+import { publicCacheTags } from "@/lib/server/public-cache";
 
 export interface StoryListResult {
   items: StoryCardData[];
@@ -19,6 +21,10 @@ export async function getStoryList(
   input: Partial<StoryQueryInput>
 ): Promise<StoryListResult> {
   const query = parseStoryQueryParams(input);
+  return getCachedStoryList(query);
+}
+
+const getCachedStoryList = unstable_cache(async (query: StoryQueryInput): Promise<StoryListResult> => {
   let { page } = query;
   const { limit } = query;
 
@@ -28,11 +34,9 @@ export async function getStoryList(
 
   // Keyword search
   if (query.q) {
-    const keyword = query.q;
+    const keyword = query.q.normalize("NFC");
     where.OR = [
       { tenTruyen: { contains: keyword } },
-      { moTa: { contains: keyword } },
-      { tag: { contains: keyword } },
       {
         truyen_tac_gia_dich: {
           some: {
@@ -43,6 +47,10 @@ export async function getStoryList(
         },
       },
     ];
+  }
+
+  if (query.author) {
+    where.truyen_tac_gia_dich = { some: { tac_gia_dich: { ten: { contains: query.author.normalize("NFC") } } } };
   }
 
   // Genre filter
@@ -66,6 +74,11 @@ export async function getStoryList(
     } else if (query.soChuong === "tren-500") {
       where.soChuong = { gt: 500 };
     }
+  }
+
+  if (query.vip !== "tat_ca") {
+    const paidChapter = { isDeleted: false, OR: [{ isFree: false }, { giaXu: { gt: 0 } }] };
+    where.chuong = query.vip === "vip" ? { some: paidChapter } : { none: paidChapter };
   }
 
   // Sorting
@@ -107,4 +120,4 @@ export async function getStoryList(
       totalPages,
     },
   };
-}
+}, ["public-story-list-v1"], { revalidate: 120, tags: [publicCacheTags.storyList, publicCacheTags.genres] });

@@ -1,4 +1,7 @@
+import { ImageUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
+export const maxDuration = 60;
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { NextResponse, NextRequest } from "next/server";
 import { resSuccess, getRequestId } from "@/lib/api";
 import * as z from "zod";
@@ -74,13 +77,17 @@ export async function POST(req: NextRequest) {
                 )
             )
         );
+        const [anhBia, anhThumbnail] = await Promise.all([
+            validateData.anhBia ? uploadImageToCloudinary(validateData.anhBia) : "",
+            validateData.anhThumbnail ? uploadImageToCloudinary(validateData.anhThumbnail) : null,
+        ]);
         const newStory = await prisma.truyen.create({
             data: {
                 tenTruyen: validateData.tenTruyen,
                 slug: validateData.slug,
 
-                anhBia: validateData.anhBia || "",
-                anhThumbnail: validateData.anhThumbnail || null,
+                anhBia,
+                anhThumbnail,
 
                 trang_thai: validateData.trang_thai,
 
@@ -98,10 +105,12 @@ export async function POST(req: NextRequest) {
                 },
             },
         });
+        revalidatePublicStories([newStory.slug], true);
         const safeData = serialize(newStory);
         return NextResponse.json(resSuccess(safeData));
     }
     catch (error) {
+        if (error instanceof ImageUploadError) return NextResponse.json({ success: false, message: error.message, code: error.code }, { status: error.status });
         if (error instanceof z.ZodError) {
             return NextResponse.json({
                 message: "Validation error",

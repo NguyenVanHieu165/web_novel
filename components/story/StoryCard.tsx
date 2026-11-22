@@ -105,13 +105,16 @@ export default function StoryCard({ story }: StoryCardProps) {
       />
 
       {/* Cover */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
           alt={story.tenTruyen}
+          width={300}
+          height={400}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 select-none"
           loading="lazy"
+          decoding="async"
           onError={() => setImageSrc(FALLBACK_COVER)}
         />
 

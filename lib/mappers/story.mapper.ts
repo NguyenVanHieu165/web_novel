@@ -6,8 +6,11 @@ type StoryIdentity = Pick<Truyen, "idTruyen" | "tenTruyen" | "slug" | "anhBia"> 
   truyenTheLoai?: { theLoai?: Pick<TheLoai, "tenTheLoai"> | null }[];
 };
 type StoryCardSource = StoryIdentity &
-  Pick<Truyen, "soChuong" | "luotXem" | "diemDanhGiaTrungBinh" | "trang_thai">;
-type RecentlyUpdatedSource = StoryIdentity & Pick<Truyen, "updatedAt"> & {
+  Pick<Truyen, "soChuong" | "luotXem" | "trang_thai"> & {
+    diemDanhGiaTrungBinh: Truyen["diemDanhGiaTrungBinh"] | string;
+  };
+type RecentlyUpdatedSource = StoryIdentity & {
+  updatedAt: Truyen["updatedAt"] | string;
   chuong?: Pick<Chuong, "tieuDeChuong" | "slug">[];
 };
 

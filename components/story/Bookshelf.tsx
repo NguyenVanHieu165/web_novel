@@ -113,7 +113,7 @@ export default function Bookshelf() {
                   {story.cover ? (
                     // Covers use existing external URLs, which are not restricted to Next image hosts.
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={story.cover} alt={story.tenTruyen} width={96} height={144} loading="lazy" className="h-full w-full object-cover" />
+                    <img src={story.cover} alt={story.tenTruyen} width={96} height={144} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : <BookOpen className="m-auto h-full w-8 text-slate-400" aria-hidden="true" />}
                 </div>
                 <div className="min-w-0 space-y-2">

@@ -7,7 +7,7 @@ import { getChapterDetail } from "@/lib/queries/chapter.query";
 import { mapChapterDetail } from "@/lib/mappers/chapter.mapper";
 import ReaderView from "@/components/chapter/ReaderView";
 import { normalizeVietnameseText } from "@/lib/vietnamese-text";
-import CommentSection from "@/components/comments/CommentSection";
+import CommentSection from "@/components/comments/LazyCommentSection";
 
 interface PageProps {
   params: Promise<{

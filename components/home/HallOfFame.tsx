@@ -183,8 +183,11 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                     <img
                       src={story.anhBia}
                       alt={story.tenTruyen}
+                      width={112}
+                      height={168}
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                   </Link>
 

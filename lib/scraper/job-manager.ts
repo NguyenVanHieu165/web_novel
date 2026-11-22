@@ -7,23 +7,24 @@ import { importErrorCode, importErrorMessage } from "./errors";
 import { downloadImage, optionalImage } from "./media";
 import { createImportStoryWithChapter, ensureImportDatabase, existingImportChapterNumbers, findImportStory, storeImportChapter } from "./storage";
 import { checkpointStore } from "./checkpoints";
+import { databaseCheckpointStore } from "./database-checkpoints";
 import { ImportSourceError, SourceBlockedError, SourceLockedError, SourceRateLimitError, terminal, type ImportJob, type ImportOptions } from "./types";
 
-type Store = ReturnType<typeof checkpointStore>;
+type Store = ReturnType<typeof checkpointStore> & { shared?: boolean };
 type InternalJob = { state: ImportJob; owner: number; options: ImportOptions; controller: AbortController; updated: number; store: Store; running?: boolean };
 const globalJobs = globalThis as unknown as { novelImportJobs?: Map<string, InternalJob> };
 const jobs = globalJobs.novelImportJobs ??= new Map();
-const disk = checkpointStore();
+const disk: Store = process.env.VERCEL ? databaseCheckpointStore(prisma) : checkpointStore();
 function log(job: InternalJob, message: string) {
   job.state.logs.push(message.slice(0, 1200)); if (job.state.logs.length > 150) job.state.logs.shift(); job.updated = Date.now();
 }
 async function persist(job: InternalJob) {
   try { await (job.store ?? disk).write({ version: 1, owner: job.owner, options: job.options, state: job.state, updated: Date.now() }); }
-  catch { throw new ImportSourceError("Không ghi được checkpoint. Kiểm tra quyền ghi thư mục .data/story-imports rồi tiếp tục từ các chương đã lưu.", "CHECKPOINT_FAILED"); }
+  catch { throw new ImportSourceError("Không lưu được tiến độ import. Kiểm tra kết nối database hoặc quyền ghi checkpoint local rồi tiếp tục từ các chương đã lưu.", "CHECKPOINT_FAILED"); }
 }
 async function owned(id: string, owner: number) {
   const current = jobs.get(id);
-  if (current) {
+  if (current && (current.running || !disk.shared)) {
     if (current.owner !== owner) return null;
     // Existing dev jobs can predate this module version after HMR.
     current.state.options ??= current.options;
@@ -38,6 +39,9 @@ async function owned(id: string, owner: number) {
   jobs.set(id, job); return job;
 }
 export async function createJob(owner: number, options: ImportOptions, store = disk) {
+  if (store.shared) {
+    for (const job of jobs.values()) if (!job.running && !terminal(job.state.status)) await owned(job.state.id, job.owner);
+  }
   for (const [id, job] of jobs) if (terminal(job.state.status) && Date.now() - job.updated > 6 * 3600000) jobs.delete(id);
   if ([...jobs.values()].some(j => j.running || !terminal(j.state.status))) throw new ImportSourceError("Đang có phiên import chạy. Hãy chờ hoặc dừng phiên hiện tại.", "JOB_BUSY");
   if (jobs.size >= 30) { const oldest = [...jobs.values()].filter(j => terminal(j.state.status)).sort((a, b) => a.updated - b.updated)[0]; if (oldest) jobs.delete(oldest.state.id); }
@@ -92,8 +96,22 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
     },
     resumed() { if (state.phase === "waiting") { state.phase = workingPhase; state.retryAt = undefined; log(job, "Đã hết thời gian chờ, đang tiếp tục."); } },
   });
-  const services = { db: prisma, scrapeStory, scrapeChapter, createStory: createImportStoryWithChapter, storeChapter: storeImportChapter, findStory: findImportStory, budgetMs: 240000, ...overrides, client };
+  const services = { db: prisma, scrapeStory, scrapeChapter, createStory: createImportStoryWithChapter, storeChapter: storeImportChapter, findStory: findImportStory, budgetMs: process.env.VERCEL ? 40_000 : 240_000, ...overrides, client };
   const db = services.db;
+  let heartbeatWork = Promise.resolve();
+  const heartbeat = job.store.shared ? setInterval(() => {
+    heartbeatWork = heartbeatWork.then(async () => {
+      if (terminal(state.status)) return;
+      const saved = await job.store.read(id, job.owner);
+      if (terminal(state.status)) return;
+      if (saved?.state.status === "cancelling" && !controller.signal.aborted) {
+        state.status = "cancelling"; controller.abort(new Error("Admin hủy import."));
+      }
+      if (!controller.signal.aborted) await persist(job);
+    }).catch(error => {
+      state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); controller.abort(error);
+    });
+  }, 2000) : undefined;
   const budget = setTimeout(() => {
     state.errorCode = "TIME_BUDGET"; state.error = "Đã lưu tiến độ trước giới hạn thời gian chạy. Bấm tiếp tục để lấy các chương còn thiếu.";
     controller.abort(new Error("TIME_BUDGET"));
@@ -128,7 +146,7 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
         if (!url) return null;
         return `<img src="${url}" alt="${alt.replace(/[<>"&]/g, "")}" />`;
       });
-      if (content.length < 50 && !content.includes('<img src="/uploads/chapters/')) throw new ImportSourceError("Nội dung quá ngắn hoặc không nhận diện được toàn văn; không lưu bản xem thử.", "INCOMPLETE_CONTENT");
+      if (content.length < 50 && !content.includes('<img src="')) throw new ImportSourceError("Nội dung quá ngắn hoặc không nhận diện được toàn văn; không lưu bản xem thử.", "INCOMPLETE_CONTENT");
       return content;
     }
     async function failed(error: unknown, number: number) {
@@ -187,7 +205,7 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
     if (state.status === "failed") { state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); if (error instanceof SourceRateLimitError) state.retryAt = Math.max(state.retryAt ?? 0, error.retryAt); updateIssue(error); }
     if (state.storyTitle === "Đang nhận diện truyện…") state.storyTitle = `Nguồn: ${new URL(options.url).hostname}`;
   } finally {
-    clearTimeout(budget); state.phase = "finished";
+    clearTimeout(budget); clearInterval(heartbeat); await heartbeatWork; state.phase = "finished";
     if (storyId) {
       try { const count = await db.chuong.count({ where: { idTruyen: storyId } }); await db.truyen.update({ where: { idTruyen: storyId }, data: { soChuong: count } }); }
       catch { state.status = "partial"; state.errorCode = "STATISTICS_FAILED"; state.error = "Chương đã lưu nhưng chưa cập nhật được thống kê truyện."; }

@@ -170,6 +170,10 @@ export default function UniverseShowcase({ story }: UniverseShowcaseProps) {
               <img
                 src={showcaseStory.anhBia}
                 alt={showcaseStory.tenTruyen}
+                width={288}
+                height={432}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
               />
               <div className="absolute top-3 right-3">

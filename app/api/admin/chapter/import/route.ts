@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import * as z from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { getRequestId, resSuccess } from "@/lib/api";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { validateSpreadsheetFile, validateSpreadsheetRows } from "@/lib/server/spreadsheet-upload";
@@ -257,6 +258,7 @@ export async function POST(req: NextRequest) {
       );
     });
 
+    if (insertedRows) revalidatePublicStories();
     return NextResponse.json(
       resSuccess({
         message: "Import chương hoàn tất",

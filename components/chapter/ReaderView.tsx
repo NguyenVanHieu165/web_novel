@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { ReaderPanelSkeleton } from "@/components/common/InteractionSkeleton";
 import { ChevronLeft, List } from "lucide-react";
 import { getChapterPath, getStoryPath } from "@/lib/reader-navigation";
 import type { ChapterDetailData } from "@/lib/mappers/chapter.mapper";
 import { ChapterText } from "./ChapterText";
-import ChapterDrawer from "./ChapterDrawer";
 import ReadingProgress from "./ReadingProgress";
 import ChapterUnlockCard from "./ChapterUnlockCard";
-import ReaderSettingsPanel from "./ReaderSettingsPanel";
 import ChapterNavigation from "./ChapterNavigation";
 import ReadingDock from "./ReadingDock";
 import ReaderNavigationProvider, { ReaderNavigationLink } from "./ReaderNavigationProvider";
@@ -19,11 +19,22 @@ interface ReaderViewProps {
   data: ChapterDetailData;
 }
 
+const ChapterDrawer = dynamic(() => import("./ChapterDrawer"), { ssr: false, loading: ReaderPanelSkeleton });
+const ReaderSettingsPanel = dynamic(() => import("./ReaderSettingsPanel"), { ssr: false, loading: ReaderPanelSkeleton });
+type ReaderPanel = "contents" | "settings" | "speech" | null;
+
 export default function ReaderView({ data }: ReaderViewProps) {
   const { story, chapter, prevChapter, nextChapter, access } = data;
   const { settings, updateSettings } = useReaderPreferences();
   const onSettingsChange = useReaderTypographyAnchor(settings, updateSettings);
-  const [panel, setPanel] = useState<"contents" | "settings" | "speech" | null>(null);
+  const [panel, setPanel] = useState<ReaderPanel>(null);
+  const [loadedPanels, setLoadedPanels] = useState({ contents: false, settings: false });
+  const onPanelChange = useCallback((nextPanel: ReaderPanel) => {
+    if (nextPanel === "contents" || nextPanel === "settings") {
+      setLoadedPanels((loaded) => loaded[nextPanel] ? loaded : { ...loaded, [nextPanel]: true });
+    }
+    setPanel(nextPanel);
+  }, []);
   const showSettings = panel === "settings";
   const showDrawer = panel === "contents";
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
@@ -39,7 +50,7 @@ export default function ReaderView({ data }: ReaderViewProps) {
           <span aria-hidden="true">/</span><span className="shrink-0" aria-current="page">Chương {chapter.chuongSo}</span>
         </nav>
         <main id="reader-main" tabIndex={-1} className="px-3 pb-36 pt-2 outline-none scroll-mt-28 sm:px-6 md:pr-24 xl:px-24">
-          <ReadingDock data={data} panel={panel} onPanelChange={setPanel} drawerTriggerRef={drawerTriggerRef} settingsTriggerRef={settingsTriggerRef} />
+          <ReadingDock data={data} panel={panel} onPanelChange={onPanelChange} drawerTriggerRef={drawerTriggerRef} settingsTriggerRef={settingsTriggerRef} />
           <div className="mx-auto max-w-[var(--reader-width)] rounded-xl border border-[var(--reader-border)] bg-[var(--reader-paper)] px-5 py-8 shadow-[0_8px_40px_-12px_rgb(0_0_0/.14)] sm:px-10 sm:py-12">
           {access.canRead && <ReadingProgress key={chapter.idChuong} chapterId={chapter.idChuong} />}
           <div className="mb-10 space-y-2 border-b border-[var(--reader-border)] pb-6 text-center">
@@ -78,7 +89,7 @@ export default function ReaderView({ data }: ReaderViewProps) {
               type="button"
               onClick={(event) => {
                 drawerTriggerRef.current = event.currentTarget;
-                setPanel("contents");
+                onPanelChange("contents");
               }}
               aria-expanded={showDrawer}
               aria-haspopup="dialog"
@@ -91,22 +102,22 @@ export default function ReaderView({ data }: ReaderViewProps) {
           </div>
         </main>
 
-        <ReaderSettingsPanel
+        {loadedPanels.settings && <ReaderSettingsPanel
           open={showSettings}
-          onOpenChange={(open) => setPanel(open ? "settings" : null)}
+          onOpenChange={(open) => onPanelChange(open ? "settings" : null)}
           triggerRef={settingsTriggerRef}
           settings={settings}
           onSettingsChange={onSettingsChange}
-        />
-        <ChapterDrawer
+        />}
+        {loadedPanels.contents && <ChapterDrawer
           key={chapter.idChuong}
           open={showDrawer}
-          onOpenChange={(open) => setPanel(open ? "contents" : null)}
+          onOpenChange={(open) => onPanelChange(open ? "contents" : null)}
           storySlug={story.slug}
           storyTitle={story.tenTruyen}
           chapterId={chapter.idChuong}
           triggerRef={drawerTriggerRef}
-        />
+        />}
       </div>
     </ReaderNavigationProvider>
   );

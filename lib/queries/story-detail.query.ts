@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
 import { getStoryOwner } from "@/lib/server/studio-ownership";
+import { unstable_cache } from "next/cache";
+import { publicCacheTags, publicStoryTag } from "@/lib/server/public-cache";
+import { mapStoryDetail, type StoryDetailData } from "@/lib/mappers/story-detail.mapper";
 
 export const getStoryDetailBySlug = cache(async (slug: string) => {
   try {
@@ -104,6 +107,32 @@ export const getStoryDetailBySlug = cache(async (slug: string) => {
     })), chuong: latestChapters, firstChapter };
   } catch (error) {
     console.error(`[StoryDetail Query] Error fetching story with slug "${slug}":`, error);
+    throw error;
+  }
+});
+
+interface StoryDetailPageData {
+  metadata: { tenTruyen: string; moTa: string | null; anhBia: string | null };
+  story: StoryDetailData;
+}
+
+class StoryNotFoundError extends Error {}
+
+// Cache the public DTO, after Date/Decimal formatting, and deduplicate SEO/page reads.
+export const getStoryDetailPageBySlug = cache(async (slug: string): Promise<StoryDetailPageData | null> => {
+  try {
+    return await unstable_cache(async (): Promise<StoryDetailPageData> => {
+      const raw = await getStoryDetailBySlug(slug);
+      const story = mapStoryDetail(raw);
+      if (!raw || !story) throw new StoryNotFoundError();
+      return { metadata: { tenTruyen: raw.tenTruyen, moTa: raw.moTa, anhBia: raw.anhBia }, story };
+    }, ["public-story-detail-v1", slug], {
+      revalidate: 60,
+      tags: [publicCacheTags.storyDetails, publicStoryTag(slug)],
+    })();
+  } catch (error) {
+    // Missing stories and database failures must never become shared cached results.
+    if (error instanceof StoryNotFoundError) return null;
     throw error;
   }
 });

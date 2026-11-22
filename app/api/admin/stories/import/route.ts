@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import * as z from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicStories } from "@/lib/server/public-cache";
 import { getRequestId, resSuccess } from "@/lib/api";
 import { requireAdmin } from "@/lib/server/auth-session";
 import { validateSpreadsheetFile, validateSpreadsheetRows } from "@/lib/server/spreadsheet-upload";
@@ -220,6 +221,7 @@ export async function POST(req: NextRequest) {
             });
 
             insertedRows += result.count;
+            if (result.count) revalidatePublicStories(chunk.map((story) => story.slug));
         }
 
         return NextResponse.json(

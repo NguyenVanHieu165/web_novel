@@ -390,6 +390,7 @@ export default function Ultimate3DCoverFlow({
                 <HeroStoryCard
                   story={story}
                   position={isCenter ? "center" : "hidden"}
+                  eager={index < 5}
                 />
 
                 {/* Vệt phản quang Holo Glare */}

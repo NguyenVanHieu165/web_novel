@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma/client";
+import { unstable_cache } from "next/cache";
+import { publicCacheTags } from "@/lib/server/public-cache";
 
 const CARD_SELECT = {
   idTruyen: true,
@@ -26,11 +28,11 @@ const emptyHomeData = () => ({
   completed: [],
 });
 
-export async function getHomeData() {
-  // Vercel may evaluate route modules while collecting build metadata. Home data
-  // is intentionally request-time only, so never open a database connection here.
-  if (process.env.NEXT_PHASE === "phase-production-build") return emptyHomeData();
-  try {
+function serializeHomeStory<T extends { diemDanhGiaTrungBinh: { toString(): string } | null }>(story: T) {
+  return { ...story, diemDanhGiaTrungBinh: story.diemDanhGiaTrungBinh?.toString() ?? null };
+}
+
+const getCachedHomeData = unstable_cache(async () => {
     // Each tab is ranked across the catalog on the server, not within the latest 12.
     // Keep five bounded parallel queries; the popular list also supplies the hero.
     const [latest, updated, popular, rated, completed] = await Promise.all([
@@ -75,7 +77,21 @@ export async function getHomeData() {
       }),
     ]);
 
-    return { featured: popular[0] ?? null, latest, updated, popular, rated, completed };
+    return {
+      featured: popular[0] ? serializeHomeStory(popular[0]) : null,
+      latest: latest.map(serializeHomeStory),
+      updated: updated.map((story) => ({ ...serializeHomeStory(story), updatedAt: story.updatedAt?.toISOString() ?? null })),
+      popular: popular.map(serializeHomeStory),
+      rated: rated.map(serializeHomeStory),
+      completed: completed.map(serializeHomeStory),
+    };
+}, ["public-home-v1"], { revalidate: 60, tags: [publicCacheTags.home] });
+
+export async function getHomeData() {
+  // Hosting adapters may evaluate modules at build time; defer database reads.
+  if (process.env.NEXT_PHASE === "phase-production-build") return emptyHomeData();
+  try {
+    return await getCachedHomeData();
   } catch (error) {
     console.error("[getHomeData] Error fetching home data:", error);
     return emptyHomeData();

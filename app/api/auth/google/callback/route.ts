@@ -1,3 +1,5 @@
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
+export const maxDuration = 60;
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -30,17 +32,18 @@ export async function GET(request: NextRequest) {
     const token = tokenSchema.safeParse(await tokenResponse.json()); if (!tokenResponse.ok || !token.success) return clearState(failed(request, "oauth_failed"));
     const userResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: `Bearer ${token.data.access_token}` }, cache: "no-store" });
     const googleUser = googleUserSchema.safeParse(await userResponse.json()); if (!userResponse.ok || !googleUser.success || !googleUser.data.email_verified) return clearState(failed(request, "email_not_verified"));
+    const picture = googleUser.data.picture ? await uploadImageToCloudinary(googleUser.data.picture, "web-novel/avatars") : undefined;
     const email = googleUser.data.email.toLowerCase();
     const account = await prisma.$transaction(async tx => {
       const existing = await tx.taiKhoan.findUnique({ where: { email }, include: { hoSoCaNhan: true, vaiTroNguoiDung: { include: { vaiTro: true } } } });
       if (existing) {
         if (existing.trangThai !== "active" || existing.isDeleted) return null;
-        if (googleUser.data.picture && !existing.hoSoCaNhan?.anh) await tx.hoSoCaNhan.upsert({ where: { idTaiKhoan: existing.idTaiKhoan }, create: { idTaiKhoan: existing.idTaiKhoan, ho_ten: googleUser.data.name || existing.tenTaiKhoan, anh: googleUser.data.picture }, update: { anh: googleUser.data.picture } });
+        if (googleUser.data.picture && !existing.hoSoCaNhan?.anh) await tx.hoSoCaNhan.upsert({ where: { idTaiKhoan: existing.idTaiKhoan }, create: { idTaiKhoan: existing.idTaiKhoan, ho_ten: googleUser.data.name || existing.tenTaiKhoan, anh: picture }, update: { anh: picture } });
         return { ...existing, roles: existing.vaiTroNguoiDung.map(item => item.vaiTro.tenVaiTro) };
       }
       const role = await resolveAccountRole(tx);
       const created = await tx.taiKhoan.create({ data: { tenTaiKhoan: usernameFrom(email), email, matKhau: await hashPassword(randomBytes(32).toString("base64url")), emailXacThuc: true, trangThai: "active" }, select: { idTaiKhoan: true, tenTaiKhoan: true, email: true, matKhau: true } });
-      await Promise.all([tx.hoSoCaNhan.create({ data: { idTaiKhoan: created.idTaiKhoan, ho_ten: googleUser.data.name || created.tenTaiKhoan, anh: googleUser.data.picture } }), tx.viTien.create({ data: { idTaiKhoan: created.idTaiKhoan, soDuXu: 0, tongNapXu: 0 } }), tx.vaiTroNguoiDung.create({ data: { idTaiKhoan: created.idTaiKhoan, idVaiTro: role.idVaiTro } })]);
+      await Promise.all([tx.hoSoCaNhan.create({ data: { idTaiKhoan: created.idTaiKhoan, ho_ten: googleUser.data.name || created.tenTaiKhoan, anh: picture } }), tx.viTien.create({ data: { idTaiKhoan: created.idTaiKhoan, soDuXu: 0, tongNapXu: 0 } }), tx.vaiTroNguoiDung.create({ data: { idTaiKhoan: created.idTaiKhoan, idVaiTro: role.idVaiTro } })]);
       return { ...created, roles: [role.tenVaiTro] };
     });
     if (!account) return clearState(failed(request, "account_locked"));
