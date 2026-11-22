@@ -15,7 +15,7 @@ import { mapStory, mapRecentlyUpdated } from "@/lib/mappers/story.mapper";
 import { getHomeGenres, mergeUniqueStories } from "@/lib/home-discovery";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 60;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "WebNovel – Nền Tảng Đọc Truyện Chữ Đỉnh Cao",

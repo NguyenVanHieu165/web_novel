@@ -17,7 +17,19 @@ const CARD_SELECT = {
   },
 } satisfies Prisma.TruyenSelect;
 
+const emptyHomeData = () => ({
+  featured: null,
+  latest: [],
+  updated: [],
+  popular: [],
+  rated: [],
+  completed: [],
+});
+
 export async function getHomeData() {
+  // Vercel may evaluate route modules while collecting build metadata. Home data
+  // is intentionally request-time only, so never open a database connection here.
+  if (process.env.NEXT_PHASE === "phase-production-build") return emptyHomeData();
   try {
     // Each tab is ranked across the catalog on the server, not within the latest 12.
     // Keep five bounded parallel queries; the popular list also supplies the hero.
@@ -66,13 +78,6 @@ export async function getHomeData() {
     return { featured: popular[0] ?? null, latest, updated, popular, rated, completed };
   } catch (error) {
     console.error("[getHomeData] Error fetching home data:", error);
-    return {
-      featured: null,
-      latest: [],
-      updated: [],
-      popular: [],
-      rated: [],
-      completed: [],
-    };
+    return emptyHomeData();
   }
 }

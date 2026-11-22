@@ -79,9 +79,11 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
 
     let ssl: DatabaseConnectionConfig["ssl"] = undefined;
     if (isSslRequired) {
-        const rejectUnauthorized =
-            urlSslAccept !== "accept_invalid_certs" &&
-            process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false";
+        // TiDB Cloud requires a verified TLS connection; never allow its
+        // certificate validation to be downgraded through environment flags.
+        const rejectUnauthorized = host.includes("tidbcloud.com") ||
+            (urlSslAccept !== "accept_invalid_certs" &&
+                process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false");
 
         ssl = {
             rejectUnauthorized,
