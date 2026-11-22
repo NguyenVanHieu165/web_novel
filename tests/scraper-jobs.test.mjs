@@ -22,16 +22,25 @@ async function fixture(t, count = 24, complete = true) {
   t.after(() => { if (before == null) delete process.env.DATABASE_NAME; else process.env.DATABASE_NAME = before; });
   return { store, saved, services };
 }
-test("all mode processes beyond 15, bounds workers to four, and resumes without duplicate writes", async t => {
+test("all mode processes beyond 15, bounds workers to three, and resumes without duplicate writes", async t => {
   const f = await fixture(t); let active = 0, peak = 0;
   f.services.scrapeChapter = async () => { active++; peak = Math.max(peak, active); await new Promise(r => setTimeout(r, 2)); active--; return "Full public content ".repeat(10); };
   const id = await createJob(44, options, f.store);
   assert.equal(await getJob(id, 99), null);
   await runJob(id, f.services); const result = await getJob(id, 44);
-  assert.equal(result.status, "completed"); assert.equal(result.savedChapters, 24); assert.equal(result.processedChapters, 24); assert.ok(peak <= 4);
+  assert.equal(result.status, "completed"); assert.equal(result.savedChapters, 24); assert.equal(result.processedChapters, 24); assert.equal(peak, 3);
   assert.equal(result.options.maxChapters, undefined);
   const resumed = await resumeJob(id, 44); await runJob(resumed, f.services);
   const repeated = await getJob(resumed, 44); assert.equal(repeated.savedChapters, 0); assert.equal(repeated.skippedChapters, 24);
+});
+test("chapter failures log the index and expose safe database diagnostics", async t => {
+  const f = await fixture(t, 2); const errors = [];
+  t.mock.method(console, "error", (...args) => errors.push(args));
+  f.services.storeChapter = async () => { throw Object.assign(new Error("database detail remains server-side"), { code: "P2022" }); };
+  const id = await createJob(44, options, f.store); await runJob(id, f.services);
+  const result = await getJob(id, 44);
+  assert.equal(result.failedChapters, 2); assert.ok(result.issues.every(issue => issue.code === "P2022" && /database.*P2022/i.test(issue.reason)));
+  assert.deepEqual(errors.map(args => args.slice(0, 2)), [["[import-chapter-error]", 0], ["[import-chapter-error]", 1]]);
 });
 test("uncertain full catalogue yields partial, locks are distinct from errors, and cancellation stops a running job", async t => {
   const f = await fixture(t, 5, false);

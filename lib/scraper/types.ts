@@ -31,7 +31,9 @@ export class ImportSourceError extends Error {
   constructor(message: string, readonly code = "SOURCE_ERROR") { super(message); }
 }
 export class SourceLockedError extends Error { constructor() { super("Chương bị khóa, VIP, yêu cầu đăng nhập hoặc chỉ có bản xem thử."); } }
-export class SourceBlockedError extends Error { constructor() { super("Nguồn chặn truy cập hoặc yêu cầu kiểm tra bảo mật. Đã dừng import."); } }
+export class SourceBlockedError extends Error {
+  constructor(message = "Nguồn chặn truy cập hoặc yêu cầu kiểm tra bảo mật. Đã dừng import.") { super(message); }
+}
 export class SourceRateLimitError extends SourceBlockedError {
   readonly retryAt: number;
   constructor(status: number, retryAfter?: string, bodySeconds?: number, now = Date.now()) {

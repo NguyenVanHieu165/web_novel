@@ -37,7 +37,7 @@ export const pause = (ms: number, signal: AbortSignal) => new Promise<void>((res
 });
 
 /** Pin the validated address on the socket. Each redirect is independently checked. */
-export async function safeRequest(raw: string, signal: AbortSignal, body?: string, redirects = 0): Promise<{ bytes: Buffer; type: string; url: string }> {
+export async function safeRequest(raw: string, signal: AbortSignal, body?: string, redirects = 0, referer?: string): Promise<{ bytes: Buffer; type: string; url: string }> {
   signal.throwIfAborted();
   if (redirects > 4) throw new ImportSourceError("Nguồn chuyển hướng quá nhiều lần.");
   const { url, address, hostname } = await publicTarget(raw, signal);
@@ -47,7 +47,15 @@ export async function safeRequest(raw: string, signal: AbortSignal, body?: strin
     const request = (url.protocol === "https:" ? https : http).request({
       protocol: url.protocol, hostname: address, servername: hostname, port: url.port || undefined,
       path: url.pathname + url.search, method: body ? "POST" : "GET", signal: controller,
-      headers: { Host: url.host, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/142.0.0.0 Safari/537.36", Accept: "text/html,application/json,image/*", "Accept-Encoding": "identity", ...(body ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } : {}) },
+      headers: {
+        Host: url.host,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "identity",
+        ...(referer ? { Referer: referer } : {}),
+        ...(body ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } : {}),
+      },
     }, res => {
       const chunks: Buffer[] = []; let size = 0;
       res.on("data", (chunk: Buffer) => { size += chunk.length; if (size > 16 * 1024 * 1024) request.destroy(new ImportSourceError("Phản hồi nguồn vượt 16 MB.")); else chunks.push(chunk); });
@@ -60,10 +68,10 @@ export async function safeRequest(raw: string, signal: AbortSignal, body?: strin
     const next = new URL(response.headers.location, url);
     if (/banned|security-check|captcha|challenge|bi-khoa/i.test(next.pathname)) throw new SourceBlockedError();
     if (/login|dang-nhap|pricing/i.test(next.pathname)) throw new SourceLockedError();
-    return safeRequest(next.href, signal, undefined, redirects + 1);
+    return safeRequest(next.href, signal, undefined, redirects + 1, referer);
   }
   if ([401, 402].includes(response.status)) throw new SourceLockedError();
-  if (response.status === 403) throw new SourceBlockedError();
+  if (response.status === 403) throw new SourceBlockedError("Nguồn chặn truy cập (HTTP 403) hoặc yêu cầu kiểm tra bảo mật. Đã dừng import.");
   if (response.status === 429 || response.status === 503) {
     const seconds = response.headers["retry-after"];
     let bodySeconds: number | undefined;
@@ -86,7 +94,7 @@ export async function safeRequest(raw: string, signal: AbortSignal, body?: strin
 export type SourceClient = ReturnType<typeof sourceClient>;
 type NetworkEvents = { waiting?: (retryAt: number, reason: string) => void; resumed?: () => void };
 type NetworkRuntime = { request: typeof safeRequest; sleep: typeof pause; now: () => number };
-export function sourceClient(signal: AbortSignal, events: NetworkEvents = {}, runtime: NetworkRuntime = { request: safeRequest, sleep: pause, now: Date.now }) {
+export function sourceClient(signal: AbortSignal, events: NetworkEvents = {}, runtime: NetworkRuntime = { request: safeRequest, sleep: pause, now: Date.now }, referer?: string) {
   let cooldown = 0, interval = 250, nextStart = 0;
   async function schedule() {
     await runtime.sleep(200 + Math.floor(Math.random() * 201), signal);
@@ -100,7 +108,7 @@ export function sourceClient(signal: AbortSignal, events: NetworkEvents = {}, ru
     for (let attempt = 0; ; attempt++) {
       signal.throwIfAborted(); await schedule();
       try {
-        const result = await runtime.request(url, signal, body === undefined ? undefined : JSON.stringify(body));
+        const result = await runtime.request(url, signal, body === undefined ? undefined : JSON.stringify(body), 0, referer);
         if (runtime.now() >= cooldown) events.resumed?.();
         return result;
       } catch (error) {

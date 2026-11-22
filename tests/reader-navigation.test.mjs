@@ -38,6 +38,14 @@ test("all reader destinations encode route segments consistently", () => {
   assert.equal(getChapterPath("sample-story", "chuong-1"), "/truyen/sample-story/chuong-1");
 });
 
+test("chapter reader paths are distinguished from story and non-reader pages", () => {
+  const { isChapterPath } = harness();
+  assert.equal(isChapterPath("/truyen/sample-story/chuong-1"), true);
+  assert.equal(isChapterPath("/truyen/sample-story/chuong-1/"), true);
+  assert.equal(isChapterPath("/truyen/sample-story"), false);
+  assert.equal(isChapterPath("/tim-kiem"), false);
+});
+
 test("typing, dialogs, modifiers, key repeat and composition never trigger navigation", () => {
   const { readerKeyboardDirection } = harness();
   for (const property of ["interactive", "blocked", "defaultPrevented", "repeat", "isComposing", "altKey", "ctrlKey", "metaKey", "shiftKey"]) {

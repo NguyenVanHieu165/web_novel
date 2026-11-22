@@ -12,6 +12,7 @@ import { ImportSourceError, SourceBlockedError, SourceLockedError, SourceRateLim
 
 type Store = ReturnType<typeof checkpointStore> & { shared?: boolean };
 type InternalJob = { state: ImportJob; owner: number; options: ImportOptions; controller: AbortController; updated: number; store: Store; running?: boolean };
+const CHAPTER_CONCURRENCY = 3;
 const globalJobs = globalThis as unknown as { novelImportJobs?: Map<string, InternalJob> };
 const jobs = globalJobs.novelImportJobs ??= new Map();
 const disk: Store = process.env.VERCEL ? databaseCheckpointStore(prisma) : checkpointStore();
@@ -95,7 +96,7 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
       void persist(job).catch(error => { state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); controller.abort(error); });
     },
     resumed() { if (state.phase === "waiting") { state.phase = workingPhase; state.retryAt = undefined; log(job, "Đã hết thời gian chờ, đang tiếp tục."); } },
-  });
+  }, undefined, options.url);
   const services = { db: prisma, scrapeStory, scrapeChapter, createStory: createImportStoryWithChapter, storeChapter: storeImportChapter, findStory: findImportStory, budgetMs: process.env.VERCEL ? 40_000 : 240_000, ...overrides, client };
   const db = services.db;
   let heartbeatWork = Promise.resolve();
@@ -149,8 +150,9 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
       if (content.length < 50 && !content.includes('<img src="')) throw new ImportSourceError("Nội dung quá ngắn hoặc không nhận diện được toàn văn; không lưu bản xem thử.", "INCOMPLETE_CONTENT");
       return content;
     }
-    async function failed(error: unknown, number: number) {
+    async function failed(error: unknown, number: number, chapterIndex: number) {
       if (controller.signal.aborted) return;
+      console.error("[import-chapter-error]", chapterIndex, error);
       updateIssue(error, number);
       if (error instanceof SourceBlockedError) {
         state.error = importErrorMessage(error); state.errorCode = importErrorCode(error);
@@ -169,13 +171,13 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
         local = await services.createStory(db, story, options.url, cover || "", ref, content);
         state.cover = cover || undefined; storyId = local.idTruyen; state.storyId = storyId; state.storySlug = local.slug; state.savedChapters++;
         log(job, `Đã lưu chương ${ref.number}.`);
-      } catch (error) { await failed(error, ref.number); }
+      } catch (error) { await failed(error, ref.number, index); }
       finally { state.processedChapters++; await persist(job); }
     }
     if (local && !controller.signal.aborted) {
       const target = local;
       log(job, `${story.title}: ${state.totalChapters} chương trong phạm vi import${options.maxChapters ? ` (giới hạn ${options.maxChapters})` : " (toàn bộ mục lục tìm thấy)"}.`);
-      const workers = await Promise.allSettled(Array.from({ length: 4 }, async () => {
+      const workers = await Promise.allSettled(Array.from({ length: CHAPTER_CONCURRENCY }, async () => {
         try {
         while (cursor < story.chapters.length && !controller.signal.aborted) {
           const index = cursor++, ref = story.chapters[index];
@@ -185,7 +187,7 @@ export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
               if (await services.storeChapter(db, target.idTruyen, ref, content, options.skipExisting)) { state.savedChapters++; log(job, `Đã lưu chương ${ref.number}.`); }
               else state.skippedChapters++;
             }
-          } catch (error) { await failed(error, ref.number); }
+          } catch (error) { await failed(error, ref.number, index); }
           finally { state.processedChapters++; await persist(job); }
         }
         } catch (error) {

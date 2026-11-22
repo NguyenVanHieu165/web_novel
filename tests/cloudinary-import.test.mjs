@@ -63,6 +63,12 @@ test("Vercel missing configuration or failed network returns the original URL wi
   }
 });
 
+test("scraper remote fallback never normalizes bytes or writes to local disk", async () => {
+  const app = uploader({});
+  assert.equal(await app.uploadImageToCloudinary(sourceUrl, "web-novel/chapters/story", undefined, { remoteSourceFallback: true }), sourceUrl);
+  assert.equal(app.disk.length, 0);
+});
+
 test("Vercel Buffer failures are safe application errors and never write files", async () => {
   for (const app of [uploader({ VERCEL: "1" }), uploader(configured, async () => Response.json({ error: "test-secret" }, { status: 500 }))]) {
     await assert.rejects(app.uploadImageToCloudinary(png), error => error instanceof app.ImageUploadError && error.status === 503 && !error.message.includes("test-secret"));

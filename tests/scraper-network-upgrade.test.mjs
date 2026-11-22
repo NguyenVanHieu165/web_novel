@@ -98,6 +98,8 @@ test("socket requests keep credentials absent, validate redirect targets and pre
   t.mock.method(http, "request", (input, callback) => {
     options.push(input);
     assert.equal(input.headers.Cookie, undefined); assert.equal(input.headers.Authorization, undefined);
+    assert.match(input.headers["User-Agent"], /^Mozilla\//); assert.match(input.headers.Accept, /text\/html/);
+    assert.match(input.headers["Accept-Language"], /^vi-VN/); assert.equal(input.headers.Referer, "http://8.8.8.8/book");
     const req = new EventEmitter();
     req.end = () => {
       const res = Readable.from(options.length === 1 ? [] : [Buffer.from("<p>Final</p>")]);
@@ -107,7 +109,7 @@ test("socket requests keep credentials absent, validate redirect targets and pre
     };
     return req;
   });
-  const result = await safeRequest("http://8.8.8.8/story", AbortSignal.timeout(1000));
+  const result = await safeRequest("http://8.8.8.8/story", AbortSignal.timeout(1000), undefined, 0, "http://8.8.8.8/book");
   assert.equal(result.url, "http://8.8.8.8/canonical/"); assert.equal(options.length, 2);
   await assert.rejects(safeRequest("http://user:secret@8.8.8.8/story", AbortSignal.timeout(1000)));
   assert.equal(options.length, 2, "Credentials-bearing URLs are rejected before the socket opens");

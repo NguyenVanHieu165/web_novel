@@ -10,7 +10,7 @@ export async function downloadImage(raw: string, base: string, folder: string, c
   if (!image.type.startsWith("image/") || /svg/i.test(image.type)) throw new Error("Ảnh nguồn không hợp lệ.");
   client.signal.throwIfAborted();
   try {
-    const result = await uploadImageToCloudinary(image.bytes, "web-novel/" + folder, client.signal);
+    const result = await uploadImageToCloudinary(image.url, "web-novel/" + folder, client.signal, { remoteSourceFallback: true });
     counted();
     return result;
   } catch (error) {

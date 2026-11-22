@@ -6,6 +6,7 @@ import path from "node:path";
 import { publicTarget, safeRequest } from "./scraper/network";
 
 type CloudinaryConfig = { cloudName: string; apiKey: string; apiSecret: string };
+type ImageUploadOptions = { remoteSourceFallback?: boolean };
 const maxImageBytes = 16 * 1024 * 1024;
 
 export class ImageUploadError extends Error {
@@ -45,7 +46,7 @@ async function normalizedImage(input: Buffer): Promise<Buffer> {
 }
 
 /** Server-only upload; credentials and upstream diagnostics never reach clients. */
-export async function uploadImageToCloudinary(input: Buffer | string, folder = "web-novel/covers", signal?: AbortSignal): Promise<string> {
+export async function uploadImageToCloudinary(input: Buffer | string, folder = "web-novel/covers", signal?: AbortSignal, options: ImageUploadOptions = {}): Promise<string> {
   if (folder.length > 255 || !/^[a-z0-9_-]+(?:\/[a-z0-9_-]+)*$/i.test(folder)) {
     throw new ImageUploadError("Thư mục ảnh không hợp lệ.", "INVALID_IMAGE_FOLDER", 400);
   }
@@ -64,7 +65,7 @@ export async function uploadImageToCloudinary(input: Buffer | string, folder = "
   }
   const config = configuration();
   if (!config) {
-    if (process.env.VERCEL) {
+    if (process.env.VERCEL || options.remoteSourceFallback) {
       if (source) return source;
       throw new ImageUploadError("Chưa cấu hình dịch vụ lưu ảnh. Vui lòng thử lại sau.", "IMAGE_CONFIGURATION_MISSING");
     }
@@ -109,7 +110,7 @@ export async function uploadImageToCloudinary(input: Buffer | string, folder = "
     return url.href;
   } catch {
     signal?.throwIfAborted();
-    if (process.env.VERCEL && source) return source;
+    if ((process.env.VERCEL || options.remoteSourceFallback) && source) return source;
     throw new ImageUploadError("Không thể lưu ảnh lên Cloudinary. Vui lòng thử lại.", "IMAGE_UPLOAD_FAILED");
   }
 }

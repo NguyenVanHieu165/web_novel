@@ -8,7 +8,7 @@ import { genericLinks, genericMetadata, scrapeStory, scrapeChapter } from "../li
 import { publicTarget, isPublicAddress, selectPublicAddress, pause, safeRequest } from "../lib/scraper/network.ts";
 import { storeImportChapter, ensureImportDatabase } from "../lib/scraper/storage.ts";
 import { importUrlSchema, ImportSourceError, SourceBlockedError, SourceLockedError, SourceRateLimitError } from "../lib/scraper/types.ts";
-import { importErrorMessage } from "../lib/scraper/errors.ts";
+import { importErrorCode, importErrorMessage } from "../lib/scraper/errors.ts";
 
 test("SSRF blocks private, mapped, loopback, metadata, reserved IPs and non-HTTP URLs", async () => {
   for (const ip of ["127.0.0.1", "10.2.3.4", "172.16.0.1", "192.168.1.1", "169.254.169.254", "0.0.0.0", "::1", "fc00::1", "fe80::1", "::ffff:127.0.0.1", "192.0.2.1", "224.0.0.1"]) assert.equal(isPublicAddress(ip), false, ip);
@@ -107,6 +107,11 @@ test("LoHi verifies identity, preserves public text and images, and rejects gate
 test("diagnostics explain known failures and redact unknown source/database errors", async (t) => {
   assert.match(importErrorMessage(new ImportSourceError("Không tìm thấy mục lục.")), /Không tìm thấy/);
   assert.match(importErrorMessage(Object.assign(Error("credential=secret"), { code: "ECONNRESET" })), /ECONNRESET/);
+  const database = Object.assign(Error("SELECT secret FROM private_table"), { code: "P2022" });
+  assert.equal(importErrorCode(database), "P2022"); assert.match(importErrorMessage(database), /database.*P2022/i); assert.ok(!importErrorMessage(database).includes("secret"));
+  const filesystem = Object.assign(Error("private path"), { code: "EROFS" });
+  assert.equal(importErrorCode(filesystem), "EROFS"); assert.match(importErrorMessage(filesystem), /filesystem.*EROFS/i);
+  assert.match(importErrorMessage(Error("Không tìm thấy selector #chapter-content")), /selector #chapter-content/);
   assert.ok(!importErrorMessage(Error("SELECT secret FROM private_table token=abc")).includes("secret"));
   assert.match(importErrorMessage(SyntaxError("secret response")), /cấu trúc/);
   const limited = new SourceRateLimitError(429, "30");
