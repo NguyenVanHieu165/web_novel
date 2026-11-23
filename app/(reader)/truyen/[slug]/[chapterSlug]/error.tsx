@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { BookOpen, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ChapterError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [pending, startTransition] = useTransition();
@@ -19,15 +21,15 @@ export default function ChapterError({ reset }: { error: Error & { digest?: stri
       <div className="max-w-md space-y-4 text-center">
         <BookOpen className="mx-auto h-10 w-10 text-blue-500" aria-hidden="true" />
         <h1 className="text-xl font-bold">Chưa thể tải chương</h1>
-        <p className="text-sm leading-6 opacity-75" role="alert">Kết nối có thể đang gián đoạn. Bạn có thể thử lại hoặc quay về trang truyện.</p>
+        <Alert role="alert" className="border-[var(--reader-border)] bg-[var(--reader-surface)] text-left text-[var(--reader-text)]"><AlertDescription>Kết nối có thể đang gián đoạn. Bạn có thể thử lại hoặc quay về trang truyện.</AlertDescription></Alert>
         <div className="flex flex-wrap justify-center gap-3">
-          <button
+          <Button
             type="button" onClick={() => startTransition(() => { router.refresh(); reset(); })} disabled={pending}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
+            className="rounded-xl bg-[var(--reader-accent,#2563eb)] px-5 text-sm font-bold text-white hover:bg-[var(--reader-accent,#2563eb)] hover:opacity-90 focus-visible:border-[var(--reader-accent,#2563eb)] focus-visible:ring-[var(--reader-accent,#2563eb)]/40 disabled:cursor-wait disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${pending ? "motion-safe:animate-spin" : ""}`} aria-hidden="true" />{pending ? "Đang tải lại…" : "Thử lại"}
-          </button>
-          <Link href={storyPath} prefetch={false} className="rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-blue-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Về trang truyện</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-xl border-[var(--reader-border)] bg-transparent px-5 text-sm font-semibold text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent,#2563eb)] focus-visible:ring-[var(--reader-accent,#2563eb)]/40"><Link href={storyPath} prefetch={false}>Về trang truyện</Link></Button>
         </div>
       </div>
     </section>

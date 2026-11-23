@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { shouldHandleReaderClick, waitForReaderLeave } from "@/lib/reader-navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ReaderNavigationContextValue {
   navigate: (href: string) => void;
@@ -46,7 +47,7 @@ export default function ReaderNavigationProvider({ chapterId, children }: { chap
     <ReaderNavigationContext value={{ navigate, pending, error }}>
       {pending && <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-1 bg-blue-500 motion-safe:animate-pulse" />}
       <div className="sr-only" role="status" aria-live="polite">{pending ? "Đang chuyển trang đọc…" : ""}</div>
-      {error && <p role="alert" className="fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{error}</p>}
+      {error && <Alert variant="destructive" role="alert" className="fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md border-[var(--reader-error)]/30 bg-[var(--reader-surface)] text-[var(--reader-error)] shadow-lg"><AlertDescription className="text-center">{error}</AlertDescription></Alert>}
       {children}
     </ReaderNavigationContext>
   );

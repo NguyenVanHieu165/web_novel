@@ -9,6 +9,12 @@ import { getChapterPath } from "@/lib/reader-navigation";
 import { LockKeyhole, LockKeyholeOpen, LocateFixed, X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { normalizeVietnameseText } from "@/lib/vietnamese-text";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ChapterDrawerProps {
   open: boolean;
@@ -33,6 +39,7 @@ export default function ChapterDrawer({ open, onOpenChange, storySlug, storyTitl
   const titleRef = useRef<HTMLHeadingElement>(null);
   const currentPage = result?.meta.page ?? page ?? 1;
   const totalPage = result?.meta.totalPage ?? 1;
+  const readerStyle = getReaderStyleVariables(settings);
 
   const goToCurrentChapter = () => {
     setSearch("");
@@ -80,43 +87,53 @@ export default function ChapterDrawer({ open, onOpenChange, storySlug, storyTitl
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         showCloseButton={false}
-        style={getReaderStyleVariables(settings)}
+        style={readerStyle}
         data-reader-theme={settings.theme}
         className="!w-full !max-w-md gap-0 overscroll-contain border-[var(--reader-border)] bg-[var(--reader-bg)] text-[var(--reader-text)] motion-reduce:animate-none motion-reduce:transition-none"
         onOpenAutoFocus={(event) => { event.preventDefault(); titleRef.current?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); triggerRef.current?.focus(); }}
       >
         <SheetClose asChild>
-          <button type="button" aria-label="Đóng mục lục" className="absolute right-2 top-2 grid size-11 place-items-center rounded-full hover:bg-[var(--reader-surface)] focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)]">
+          <Button type="button" variant="ghost" size="icon" aria-label="Đóng mục lục" className="absolute right-2 top-2 size-11 rounded-full text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">
             <X className="size-5" aria-hidden="true" />
-          </button>
+          </Button>
         </SheetClose>
         <SheetHeader className="border-b border-[var(--reader-border)] pr-12">
           <SheetTitle ref={titleRef} tabIndex={-1} className="text-[var(--reader-text)] outline-none">Danh sách chương</SheetTitle>
           <SheetDescription className="text-[var(--reader-text)] opacity-70">{result?.meta.total ?? 0} chương · {storyTitle}</SheetDescription>
         </SheetHeader>
         <div className="space-y-3 border-b border-[var(--reader-border)] p-3">
-          <input
+          <Input
             type="search" name="reader-chapter-search" aria-label="Tìm số chương hoặc tiêu đề" maxLength={100}
             placeholder="Tìm số chương hoặc tiêu đề…" value={search}
             onChange={(event) => { setSearch(event.target.value); setPage(1); setLoading(true); }}
-            className="h-10 w-full rounded-lg bg-[var(--reader-surface)] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)]"
+            className="h-10 border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-text)] placeholder:text-[var(--reader-text)]/55 focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40"
           />
           <div className="flex items-center justify-between gap-2 text-xs">
-            <button type="button" onClick={goToCurrentChapter} disabled={loading || pending}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 font-semibold hover:bg-[var(--reader-surface)] focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)] disabled:opacity-40">
+            <Button type="button" variant="ghost" onClick={goToCurrentChapter} disabled={loading || pending}
+              className="min-h-10 px-2 text-xs font-semibold text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40 disabled:opacity-40">
               <LocateFixed className="h-4 w-4" aria-hidden="true" />Chương đang đọc
-            </button>
-            <select name="chapter-order" aria-label="Sắp xếp mục lục" value={order}
-              onChange={(event) => { setOrder(event.target.value as "asc" | "desc"); setPage(search.trim() ? 1 : null); setLoading(true); }}
-              className="min-h-10 max-w-40 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-bg)] px-2 text-[var(--reader-text)] focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)]">
-              <option value="asc">Cũ nhất trước</option><option value="desc">Mới nhất trước</option>
-            </select>
+            </Button>
+            <Select value={order} onValueChange={(value) => {
+              if (value !== "asc" && value !== "desc") return;
+              setOrder(value); setPage(search.trim() ? 1 : null); setLoading(true);
+            }}>
+              <SelectTrigger aria-label="Sắp xếp mục lục" className="min-h-10 max-w-40 border-[var(--reader-border)] bg-[var(--reader-bg)] text-[var(--reader-text)] hover:bg-[var(--reader-surface)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="end" style={readerStyle} data-reader-theme={settings.theme} className="border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-text)]">
+                <SelectItem value="asc" className="focus:bg-[var(--reader-bg)] focus:text-[var(--reader-text)]">Cũ nhất trước</SelectItem>
+                <SelectItem value="desc" className="focus:bg-[var(--reader-bg)] focus:text-[var(--reader-text)]">Mới nhất trước</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3" aria-busy={loading}>
           {loading ? <p role="status" className="p-5 text-center text-sm">Đang tải mục lục…</p> : error ? (
-            <div className="p-5 text-center text-sm"><p role="alert">{error}</p><button type="button" onClick={() => { setLoading(true); setRetry((value) => value + 1); }} className="mt-3 rounded-lg border px-4 py-2 focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)]">Thử lại</button></div>
+            <Alert variant="destructive" role="alert" className="border-[var(--reader-error)]/30 bg-transparent text-[var(--reader-error)]">
+              <AlertDescription>{error}</AlertDescription>
+              <Button type="button" variant="outline" onClick={() => { setLoading(true); setRetry((value) => value + 1); }} className="col-start-2 mt-2 w-fit border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Thử lại</Button>
+            </Alert>
           ) : result?.data.length ? result.data.map((chapter) => (
             <ReaderNavigationLink key={chapter.idChuong} href={getChapterPath(storySlug, chapter.slug)}
               ref={chapter.idChuong === chapterId ? currentLinkRef : undefined}
@@ -129,24 +146,26 @@ export default function ChapterDrawer({ open, onOpenChange, storySlug, storyTitl
               className={`flex items-center justify-between gap-3 rounded-lg p-3 text-sm focus-visible:ring-2 focus-visible:ring-blue-500 ${chapter.idChuong === chapterId ? "bg-blue-600 text-white" : "hover:bg-[var(--reader-surface)]"}`}>
               <span className="truncate" title={normalizeVietnameseText(chapter.tieuDeChuong)}>{normalizeVietnameseText(chapter.tieuDeChuong || `Chương ${chapter.chuongSo}`)}</span>
               {chapter.isFree === false && (
-                <span className="flex shrink-0 items-center gap-1 text-xs">
+                <Badge variant="outline" className="shrink-0 border-current bg-transparent text-current">
                   {chapter.canRead ? <LockKeyholeOpen className="size-3.5" aria-hidden="true" /> : <LockKeyhole className="size-3.5" aria-hidden="true" />}
                   {chapter.canRead ? "VIP · Đã mở" : `VIP · Khóa · ${chapter.giaXu ?? 0} xu`}
-                </span>
+                </Badge>
               )}
             </ReaderNavigationLink>
           )) : <p className="p-5 text-center text-sm">Không tìm thấy chương phù hợp.</p>}
         </div>
-        <nav aria-label="Phân trang mục lục" className="flex items-center justify-between gap-3 border-t border-[var(--reader-border)] p-4 text-sm">
-          <button type="button" disabled={currentPage <= 1 || loading || pending} onClick={() => { setPage(currentPage - 1); setLoading(true); }} className="min-h-10 rounded-lg border px-3 py-2 focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)] disabled:opacity-40">Trước</button>
-          <span className="tabular-nums" aria-live="polite">Trang {currentPage} / {totalPage}</span>
-          <button type="button" disabled={!result || currentPage >= totalPage || loading || pending} onClick={() => { setPage(currentPage + 1); setLoading(true); }} className="min-h-10 rounded-lg border px-3 py-2 focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)] disabled:opacity-40">Sau</button>
-        </nav>
+        <Pagination aria-label="Phân trang mục lục" className="border-t border-[var(--reader-border)] p-4 text-sm">
+          <PaginationContent className="w-full justify-between gap-3">
+            <PaginationItem><Button type="button" variant="outline" disabled={currentPage <= 1 || loading || pending} onClick={() => { setPage(currentPage - 1); setLoading(true); }} className="min-h-10 border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Trước</Button></PaginationItem>
+            <PaginationItem><span className="tabular-nums" aria-live="polite">Trang {currentPage} / {totalPage}</span></PaginationItem>
+            <PaginationItem><Button type="button" variant="outline" disabled={!result || currentPage >= totalPage || loading || pending} onClick={() => { setPage(currentPage + 1); setLoading(true); }} className="min-h-10 border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Sau</Button></PaginationItem>
+          </PaginationContent>
+        </Pagination>
         {totalPage > 1 && <form onSubmit={jumpToPage} className="flex items-center justify-center gap-2 px-4 pb-4 text-xs">
           <label htmlFor="reader-chapter-page">Tới trang</label>
-          <input key={currentPage} id="reader-chapter-page" name="page" type="number" inputMode="numeric" min={1} max={totalPage} defaultValue={currentPage}
-            className="h-10 w-20 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-bg)] px-2 text-[var(--reader-text)] focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)]" />
-          <button type="submit" disabled={loading || pending} className="min-h-10 rounded-lg border px-3 font-semibold focus-visible:outline-2 focus-visible:outline-[var(--reader-accent)] disabled:opacity-40">Đi</button>
+          <Input key={currentPage} id="reader-chapter-page" name="page" type="number" inputMode="numeric" min={1} max={totalPage} defaultValue={currentPage}
+            className="h-10 w-20 border-[var(--reader-border)] bg-[var(--reader-bg)] text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40" />
+          <Button type="submit" variant="outline" disabled={loading || pending} className="min-h-10 border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Đi</Button>
         </form>}
       </SheetContent>
     </Sheet>

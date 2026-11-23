@@ -9,6 +9,8 @@ import {
   readLocalProgress, resumeScrollPosition, selectResumeProgress, writeLocalProgress,
   type ProgressPoint,
 } from "@/lib/reader-progress-state";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ReaderLeavingDetail { chapterId?: number; waitUntil?: (promise: Promise<void>) => void }
 interface ProgressActions { resume: (point: ProgressPoint) => void; restart: () => void; retry: () => void }
@@ -256,18 +258,17 @@ function ChapterProgress({
       <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 bg-blue-100/30">
         <div ref={barRef} className="h-full origin-left bg-blue-500" style={{ transform: "scaleX(0)" }} />
       </div>
-      {resume && <aside className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-400/30 bg-blue-500/5 p-3 text-sm">
-        <span>Lần trước bạn đã đọc {Math.round(resume.percent)}% chương này.</span>
+      {resume && <Alert variant="info" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-[var(--reader-accent)]/30 bg-[var(--reader-surface)] p-3 text-[var(--reader-text)]">
+        <AlertDescription>Lần trước bạn đã đọc {Math.round(resume.percent)}% chương này.</AlertDescription>
         <div className="flex gap-3">
-          <button type="button" onClick={() => actionsRef.current?.resume(resume)} style={{ color: "var(--reader-accent, currentColor)" }} className="rounded-md px-2 py-1 font-semibold focus-visible:outline-none focus-visible:ring-2">Đọc tiếp</button>
-          <button type="button" onClick={() => actionsRef.current?.restart()} className="rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2">Đọc từ đầu</button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => actionsRef.current?.resume(resume)} className="text-[var(--reader-accent)] hover:bg-[var(--reader-bg)] hover:text-[var(--reader-accent)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Đọc tiếp</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => actionsRef.current?.restart()} className="text-[var(--reader-text)] hover:bg-[var(--reader-bg)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Đọc từ đầu</Button>
         </div>
-      </aside>}
-      {error && <div className="mb-3 flex items-center gap-3 text-xs">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
-        <p role="status">{error}</p>
-        <button type="button" onClick={() => actionsRef.current?.retry()} className="shrink-0 rounded border px-2 py-1 focus-visible:ring-2">Thử lại</button>
-      </div>}
+      </Alert>}
+      {error && <Alert variant="warning" role="status" className="mb-3 flex items-center gap-3 border-[var(--reader-border)] bg-[var(--reader-surface)] p-3 text-xs text-[var(--reader-text)]">
+        <AlertDescription>{error}</AlertDescription>
+        <Button type="button" variant="outline" size="sm" onClick={() => actionsRef.current?.retry()} className="shrink-0 border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-bg)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40">Thử lại</Button>
+      </Alert>}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type { NavChapterItem } from "@/lib/mappers/chapter.mapper";
 import { getChapterPath, readerKeyboardDirection } from "@/lib/reader-navigation";
 import { ReaderNavigationLink, useReaderNavigation } from "./ReaderNavigationProvider";
+import { Button } from "@/components/ui/button";
 
 interface ChapterNavigationProps {
   storySlug: string;
@@ -15,7 +16,7 @@ interface ChapterNavigationProps {
   children?: ReactNode;
 }
 
-const linkStyles = "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors hover:bg-blue-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:px-4 sm:text-sm";
+const linkStyles = "min-h-11 rounded-xl border-[var(--reader-border)] bg-transparent px-3 py-2.5 text-xs font-bold text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40 sm:px-4 sm:text-sm";
 
 export default function ChapterNavigation({ storySlug, prevChapter, nextChapter, disableShortcut = false, children }: ChapterNavigationProps) {
   const { navigate, pending } = useReaderNavigation();
@@ -44,25 +45,29 @@ export default function ChapterNavigation({ storySlug, prevChapter, nextChapter,
     <div className="mt-12 space-y-3 border-t pt-6" style={{ borderColor: "var(--reader-border)" }}>
       <nav aria-label="Điều hướng chương" aria-busy={pending} className="flex flex-wrap items-center justify-between gap-3">
         {prevChapter ? (
-          <ReaderNavigationLink
-            href={getChapterPath(storySlug, prevChapter.slug)}
-            title={prevChapter.tieuDeChuong}
-            aria-keyshortcuts="ArrowLeft"
-            className={`${linkStyles} ${pending ? "cursor-wait opacity-50" : ""}`}
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />Chương trước
-          </ReaderNavigationLink>
+          <Button asChild variant="outline" className={`${linkStyles} ${pending ? "cursor-wait opacity-50" : ""}`}>
+            <ReaderNavigationLink
+              href={getChapterPath(storySlug, prevChapter.slug)}
+              title={prevChapter.tieuDeChuong}
+              aria-label={`Chương trước: ${prevChapter.tieuDeChuong}`}
+              aria-keyshortcuts="ArrowLeft"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />Chương trước
+            </ReaderNavigationLink>
+          </Button>
         ) : <span className="px-3 py-2.5 text-xs font-semibold opacity-50 sm:text-sm">Chương đầu</span>}
         {children}
         {nextChapter ? (
-          <ReaderNavigationLink
-            href={getChapterPath(storySlug, nextChapter.slug)}
-            title={nextChapter.tieuDeChuong}
-            aria-keyshortcuts="ArrowRight"
-            className={`${linkStyles} border-blue-600 bg-blue-600 text-white hover:bg-blue-700 ${pending ? "cursor-wait opacity-50" : ""}`}
-          >
-            Chương sau<ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </ReaderNavigationLink>
+          <Button asChild className={`${linkStyles} border-[var(--reader-accent)] bg-[var(--reader-accent)] text-[var(--reader-surface)] hover:bg-[var(--reader-accent)] hover:text-[var(--reader-surface)] hover:opacity-90 ${pending ? "cursor-wait opacity-50" : ""}`}>
+            <ReaderNavigationLink
+              href={getChapterPath(storySlug, nextChapter.slug)}
+              title={nextChapter.tieuDeChuong}
+              aria-label={`Chương sau: ${nextChapter.tieuDeChuong}`}
+              aria-keyshortcuts="ArrowRight"
+            >
+              Chương sau<ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </ReaderNavigationLink>
+          </Button>
         ) : <span className="px-3 py-2.5 text-xs font-semibold opacity-50 sm:text-sm">Chương mới nhất</span>}
       </nav>
       <div className="min-h-5 text-center text-xs opacity-70" aria-hidden={pending ? "true" : undefined}>

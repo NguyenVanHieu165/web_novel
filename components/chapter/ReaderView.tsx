@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { memo, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ReaderPanelSkeleton } from "@/components/common/InteractionSkeleton";
 import { ChevronLeft, List } from "lucide-react";
@@ -14,6 +14,7 @@ import ReadingDock from "./ReadingDock";
 import ReaderNavigationProvider, { ReaderNavigationLink } from "./ReaderNavigationProvider";
 import { useReaderPreferences } from "./ReaderAppearance";
 import { useReaderTypographyAnchor } from "@/hooks/useReaderTypographyAnchor";
+import { Button } from "@/components/ui/button";
 
 interface ReaderViewProps {
   data: ChapterDetailData;
@@ -22,6 +23,25 @@ interface ReaderViewProps {
 const ChapterDrawer = dynamic(() => import("./ChapterDrawer"), { ssr: false, loading: ReaderPanelSkeleton });
 const ReaderSettingsPanel = dynamic(() => import("./ReaderSettingsPanel"), { ssr: false, loading: ReaderPanelSkeleton });
 type ReaderPanel = "contents" | "settings" | "speech" | null;
+
+// Reader typography is applied through inherited CSS variables. Keeping this
+// subtree memoized prevents rebuilding the chapter text when settings change.
+const ReaderChapterContent = memo(function ReaderChapterContent({ content }: { content: string }) {
+  return (
+    <article
+      id="reader-content"
+      className="space-y-6 [&>p]:scroll-mt-28 [&>p[data-speaking=true]]:rounded-md [&>p[data-speaking=true]]:bg-[var(--reader-surface)] [&>p[data-speaking=true]]:outline-2 [&>p[data-speaking=true]]:outline-[var(--reader-accent)]"
+      style={{
+        color: "var(--reader-content-text)",
+        fontSize: "var(--reader-font-size)",
+        fontFamily: "var(--reader-font-family)",
+        lineHeight: "var(--reader-line-height)",
+      }}
+    >
+      <ChapterText content={content} />
+    </article>
+  );
+});
 
 export default function ReaderView({ data }: ReaderViewProps) {
   const { story, chapter, prevChapter, nextChapter, access } = data;
@@ -73,20 +93,7 @@ export default function ReaderView({ data }: ReaderViewProps) {
               access={access}
               returnPath={getChapterPath(story.slug, chapter.slug)}
             />
-          ) : (
-            <article
-              id="reader-content"
-              className="space-y-6 [&>p]:scroll-mt-28 [&>p[data-speaking=true]]:rounded-md [&>p[data-speaking=true]]:bg-[var(--reader-surface)] [&>p[data-speaking=true]]:outline-2 [&>p[data-speaking=true]]:outline-[var(--reader-accent)]"
-              style={{
-                color: "var(--reader-content-text)",
-                fontSize: "var(--reader-font-size)",
-                fontFamily: "var(--reader-font-family)",
-                lineHeight: "var(--reader-line-height)",
-              }}
-            >
-              <ChapterText content={chapter.noiDung} />
-            </article>
-          )}
+          ) : <ReaderChapterContent content={chapter.noiDung} />}
 
           <div id="reader-end" className="scroll-mt-28" />
           <ChapterNavigation
@@ -95,19 +102,20 @@ export default function ReaderView({ data }: ReaderViewProps) {
             nextChapter={nextChapter}
             disableShortcut={panel !== null}
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={(event) => {
                 drawerTriggerRef.current = event.currentTarget;
                 onPanelChange("contents");
               }}
               aria-expanded={showDrawer}
               aria-haspopup="dialog"
-              className="flex items-center gap-1 rounded-xl px-3 py-2.5 text-xs font-bold transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+              className="rounded-xl text-xs font-bold text-[var(--reader-text)] hover:bg-[var(--reader-surface)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40"
             >
               <List className="h-4 w-4" aria-hidden="true" />
               <span>Mục lục</span>
-            </button>
+            </Button>
           </ChapterNavigation>
           </div>
         </main>

@@ -20,6 +20,8 @@ import {
   readerThemeTokens,
   type ReaderSettings,
 } from "@/lib/reader-settings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export interface ReaderSettingsPanelProps {
   open: boolean;
@@ -42,7 +44,7 @@ const widthOptions = [
   { value: "wide", label: "Rộng" },
 ] as const;
 
-const controlStyles = "min-h-11 rounded-xl border border-[var(--reader-border)] px-3 py-2 text-sm font-semibold hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--reader-surface)] disabled:cursor-not-allowed disabled:opacity-40";
+const controlStyles = "min-h-11 rounded-xl border-[var(--reader-border)] bg-transparent px-3 py-2 text-sm font-semibold text-[var(--reader-text)] hover:bg-[var(--reader-bg)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40 disabled:opacity-40";
 
 export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, settings, onSettingsChange }: ReaderSettingsPanelProps) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -75,9 +77,9 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
         </SheetHeader>
 
         <SheetClose asChild>
-          <button ref={closeRef} type="button" aria-label="Đóng cài đặt đọc" className={`absolute right-3 top-3 p-2 ${controlStyles}`}>
+          <Button ref={closeRef} type="button" variant="outline" size="icon" aria-label="Đóng cài đặt đọc" className={`absolute right-3 top-3 ${controlStyles}`}>
             <X className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </Button>
         </SheetClose>
 
         <div className="space-y-7 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
@@ -85,16 +87,17 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
             <legend className="mb-3 text-sm font-bold">Màu trang</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {themeOptions.map((option) => (
-                <button
+                <Button
                   key={option.value}
                   type="button"
+                  variant="outline"
                   aria-pressed={settings.theme === option.value}
                   onClick={() => onSettingsChange({ theme: option.value })}
                   style={{ backgroundColor: readerThemeTokens[option.value].paper, color: readerThemeTokens[option.value].text }}
                   className={`${controlStyles} ${settings.theme === option.value ? "ring-2 ring-[var(--reader-accent)] ring-offset-2 ring-offset-[var(--reader-surface)]" : ""}`}
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </fieldset>
@@ -102,23 +105,23 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
           <fieldset className="space-y-3">
             <legend className="mb-3 text-sm font-bold">Cỡ chữ</legend>
             <div className="flex items-center gap-3">
-              <button type="button" aria-label="Giảm cỡ chữ" disabled={settings.fontSize <= readerFontSizeMin} onClick={() => onSettingsChange({ fontSize: settings.fontSize - 1 })} className={controlStyles}>
+              <Button type="button" variant="outline" size="icon" aria-label="Giảm cỡ chữ" disabled={settings.fontSize <= readerFontSizeMin} onClick={() => onSettingsChange({ fontSize: settings.fontSize - 1 })} className={controlStyles}>
                 <Minus className="h-4 w-4" aria-hidden="true" />
-              </button>
+              </Button>
               <output className="min-w-14 text-center text-sm font-bold tabular-nums" aria-live="polite" aria-label="Cỡ chữ hiện tại">{settings.fontSize} px</output>
-              <button type="button" aria-label="Tăng cỡ chữ" disabled={settings.fontSize >= readerFontSizeMax} onClick={() => onSettingsChange({ fontSize: settings.fontSize + 1 })} className={controlStyles}>
+              <Button type="button" variant="outline" size="icon" aria-label="Tăng cỡ chữ" disabled={settings.fontSize >= readerFontSizeMax} onClick={() => onSettingsChange({ fontSize: settings.fontSize + 1 })} className={controlStyles}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
-              </button>
+              </Button>
             </div>
             <label className="sr-only" htmlFor="reader-font-size-range">Cỡ chữ từ {readerFontSizeMin} đến {readerFontSizeMax} px</label>
-            <input id="reader-font-size-range" type="range" min={readerFontSizeMin} max={readerFontSizeMax} step={1} value={settings.fontSize} onChange={(event) => onSettingsChange({ fontSize: Number(event.target.value) })} className="h-11 w-full cursor-pointer accent-[var(--reader-accent)]" />
+            <Input id="reader-font-size-range" name="reader-font-size" type="range" min={readerFontSizeMin} max={readerFontSizeMax} step={1} value={settings.fontSize} onChange={(event) => onSettingsChange({ fontSize: Number(event.target.value) })} className="h-11 cursor-pointer border-0 bg-transparent px-0 py-0 accent-[var(--reader-accent)] focus-visible:border-transparent focus-visible:ring-[var(--reader-accent)]/40" />
           </fieldset>
 
           <fieldset className="space-y-3">
             <legend className="mb-3 text-sm font-bold">Kiểu chữ</legend>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" aria-pressed={settings.fontFamily === "sans"} onClick={() => onSettingsChange({ fontFamily: "sans" })} className={`font-(family-name:--font-reader-sans) ${controlStyles} ${settings.fontFamily === "sans" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>Không chân</button>
-              <button type="button" aria-pressed={settings.fontFamily === "serif"} onClick={() => onSettingsChange({ fontFamily: "serif" })} className={`font-(family-name:--font-reader-serif) ${controlStyles} ${settings.fontFamily === "serif" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>Có chân</button>
+              <Button type="button" variant="outline" aria-pressed={settings.fontFamily === "sans"} onClick={() => onSettingsChange({ fontFamily: "sans" })} className={`font-(family-name:--font-reader-sans) ${controlStyles} ${settings.fontFamily === "sans" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>Không chân</Button>
+              <Button type="button" variant="outline" aria-pressed={settings.fontFamily === "serif"} onClick={() => onSettingsChange({ fontFamily: "serif" })} className={`font-(family-name:--font-reader-serif) ${controlStyles} ${settings.fontFamily === "serif" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>Có chân</Button>
             </div>
           </fieldset>
 
@@ -127,18 +130,18 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
             <div className="flex items-center gap-3">
               <label htmlFor="reader-text-color" className={`flex flex-1 items-center justify-between gap-3 ${controlStyles}`}>
                 <span>Tùy chọn</span>
-                <input
+                <Input
                   id="reader-text-color"
                   name="reader-text-color"
                   type="color"
                   value={activeTextColor}
                   onChange={(event) => onSettingsChange({ textColor: event.target.value as ReaderSettings["textColor"] })}
-                  className="h-8 w-12 cursor-pointer rounded border border-[var(--reader-border)] bg-transparent p-0.5"
+                  className="h-8 w-12 cursor-pointer rounded border-[var(--reader-border)] bg-transparent p-0.5 focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40"
                 />
               </label>
-              <button type="button" aria-pressed={settings.textColor === "auto"} onClick={() => onSettingsChange({ textColor: "auto" })} className={`${controlStyles} ${settings.textColor === "auto" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>
+              <Button type="button" variant="outline" aria-pressed={settings.textColor === "auto"} onClick={() => onSettingsChange({ textColor: "auto" })} className={`${controlStyles} ${settings.textColor === "auto" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>
                 Theo giao diện
-              </button>
+              </Button>
             </div>
           </fieldset>
 
@@ -146,7 +149,7 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
             <legend className="mb-3 text-sm font-bold">Giãn dòng</legend>
             <div className="grid grid-cols-4 gap-2">
               {readerLineHeights.map((height) => (
-                <button key={height} type="button" aria-label={`Giãn dòng ${height}`} aria-pressed={settings.lineHeight === height} onClick={() => onSettingsChange({ lineHeight: height })} className={`tabular-nums ${controlStyles} ${settings.lineHeight === height ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>{height}</button>
+                <Button key={height} type="button" variant="outline" aria-label={`Giãn dòng ${height}`} aria-pressed={settings.lineHeight === height} onClick={() => onSettingsChange({ lineHeight: height })} className={`tabular-nums ${controlStyles} ${settings.lineHeight === height ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>{height}</Button>
               ))}
             </div>
           </fieldset>
@@ -155,7 +158,7 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
             <legend className="mb-3 text-sm font-bold">Độ rộng khung đọc</legend>
             <div className="grid grid-cols-3 gap-2">
               {widthOptions.map(({ value, label }) => (
-                <button key={value} type="button" aria-pressed={settings.width === value} onClick={() => onSettingsChange({ width: value })} className={`${controlStyles} ${settings.width === value ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>{label}</button>
+                <Button key={value} type="button" variant="outline" aria-pressed={settings.width === value} onClick={() => onSettingsChange({ width: value })} className={`${controlStyles} ${settings.width === value ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>{label}</Button>
               ))}
             </div>
           </fieldset>
@@ -167,10 +170,10 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
             </p>
           </section>
 
-          <button type="button" onClick={() => onSettingsChange(defaultReaderSettings)} className={`flex w-full items-center justify-center gap-2 ${controlStyles}`}>
+          <Button type="button" variant="outline" onClick={() => onSettingsChange(defaultReaderSettings)} className={`w-full ${controlStyles}`}>
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             Khôi phục mặc định
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

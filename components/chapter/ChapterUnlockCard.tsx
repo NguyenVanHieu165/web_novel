@@ -8,6 +8,8 @@ import { z } from "zod";
 
 import { useAuth } from "@/context/AuthContext";
 import type { ChapterDetailData } from "@/lib/mappers/chapter.mapper";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ChapterUnlockCardProps {
   chapter: Pick<ChapterDetailData["chapter"], "idChuong" | "giaXu">;
@@ -24,7 +26,7 @@ const purchaseResponseSchema = z.object({
 });
 
 const numberFormat = new Intl.NumberFormat("vi-VN");
-const buttonStyles = "rounded-md px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+const buttonStyles = "min-h-11 rounded-lg px-4 text-sm font-semibold focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40";
 
 export default function ChapterUnlockCard({ chapter, access, returnPath }: ChapterUnlockCardProps) {
   const router = useRouter();
@@ -101,15 +103,12 @@ export default function ChapterUnlockCard({ chapter, access, returnPath }: Chapt
           ? "Đăng nhập để mở khóa chương trong tài khoản của bạn."
           : "Chương này chưa được mở khóa trong tài khoản của bạn."}
       </p>
-      {purchaseError && <p className="mt-3 text-sm text-[var(--reader-error)]" role="alert">{purchaseError}</p>}
+      {purchaseError && <Alert variant="destructive" role="alert" className="mt-3 border-[var(--reader-error)]/30 bg-transparent text-left text-[var(--reader-error)]"><AlertDescription>{purchaseError}</AlertDescription></Alert>}
 
       {requiresLogin ? (
-        <Link
-          href={`/dang-nhap?redirect=${encodeURIComponent(returnPath)}`}
-          className={`mt-5 inline-flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 ${buttonStyles}`}
-        >
-          Đăng nhập để mở khóa
-        </Link>
+        <Button asChild className={`mt-5 bg-[var(--reader-accent)] text-[var(--reader-surface)] hover:bg-[var(--reader-accent)] hover:opacity-90 ${buttonStyles}`}>
+          <Link href={`/dang-nhap?redirect=${encodeURIComponent(returnPath)}`}>Đăng nhập để mở khóa</Link>
+        </Button>
       ) : (
         <div className="mt-5 space-y-3">
           <p className="text-sm font-semibold tabular-nums" aria-live="polite">
@@ -120,12 +119,10 @@ export default function ChapterUnlockCard({ chapter, access, returnPath }: Chapt
 
           {purchaseComplete ? (
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-[var(--reader-success)]" role="status">
-                Đã mở khóa chương. {refreshPending ? "Đang tải nội dung…" : "Bạn có thể tải lại để đọc."}
-              </p>
-              <button type="button" onClick={refreshContent} disabled={refreshPending} className={`bg-blue-600 text-white hover:bg-blue-700 ${buttonStyles}`}>
+              <Alert variant="success" role="status" className="border-[var(--reader-success)]/30 bg-transparent text-left text-[var(--reader-success)]"><AlertDescription>Đã mở khóa chương. {refreshPending ? "Đang tải nội dung…" : "Bạn có thể tải lại để đọc."}</AlertDescription></Alert>
+              <Button type="button" onClick={refreshContent} disabled={refreshPending} className={`bg-[var(--reader-accent)] text-[var(--reader-surface)] hover:bg-[var(--reader-accent)] hover:opacity-90 ${buttonStyles}`}>
                 Tải lại nội dung
-              </button>
+              </Button>
             </div>
           ) : !validPrice ? (
             <p className="text-sm" role="status">Giá chương đang được cập nhật. Vui lòng quay lại sau.</p>
@@ -137,27 +134,27 @@ export default function ChapterUnlockCard({ chapter, access, returnPath }: Chapt
                 {hasEnoughCoins && <> Số dư sau giao dịch: {numberFormat.format(balance - price)} xu.</>}
               </p>
               <div className="flex flex-wrap justify-center gap-2">
-                <button type="button" onClick={() => setConfirmedPrice(null)} className={`border border-[var(--reader-border)] hover:opacity-75 ${buttonStyles}`}>
+                <Button type="button" variant="outline" onClick={() => setConfirmedPrice(null)} className={`border-[var(--reader-border)] bg-transparent text-[var(--reader-text)] hover:bg-[var(--reader-surface)] hover:text-[var(--reader-text)] ${buttonStyles}`}>
                   Hủy
-                </button>
-                <button type="button" onClick={handlePurchase} disabled={!hasEnoughCoins} className={`bg-blue-600 text-white hover:bg-blue-700 ${buttonStyles}`}>
+                </Button>
+                <Button type="button" onClick={handlePurchase} disabled={!hasEnoughCoins} className={`bg-[var(--reader-accent)] text-[var(--reader-surface)] hover:bg-[var(--reader-accent)] hover:opacity-90 ${buttonStyles}`}>
                   {purchasePending ? "Đang mở khóa…" : "Xác nhận mở khóa"}
-                </button>
+                </Button>
               </div>
             </fieldset>
           ) : (
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setPurchaseError(null);
                 setConfirmedPrice(price);
               }}
               disabled={!hasEnoughCoins || purchasePending || refreshPending}
-              className={`inline-flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 ${buttonStyles}`}
+              className={`bg-[var(--reader-accent)] text-[var(--reader-surface)] hover:bg-[var(--reader-accent)] hover:opacity-90 ${buttonStyles}`}
             >
               <Coins className="h-4 w-4" aria-hidden="true" />
               Mở khóa với {numberFormat.format(price)} xu
-            </button>
+            </Button>
           )}
           {!purchaseComplete && validPrice && !hasEnoughCoins && (
             <p className="text-sm" role="status">Ví chưa đủ xu để mở khóa chương này.</p>
