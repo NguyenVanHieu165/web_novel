@@ -5,6 +5,10 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import {
+  createTopUpRequestNotifications,
+  createTopUpSuccessNotification,
+} from "@/lib/server/notifications";
+import {
   topUpCodeSchema,
   topUpPackages,
   type SepayWebhookInput,
@@ -94,27 +98,36 @@ export async function createTopUpOrder(idTaiKhoan: number, packageId: TopUpPacka
   for (let attempt = 0; attempt < referenceAttempts; attempt += 1) {
     const referenceCode = generateReferenceCode();
     try {
-      const order = await prisma.hoaDonNap.create({
-        data: {
-          idTaiKhoan,
-          maGiaoDich: referenceCode,
-          so_xu_nap: selectedPackage.totalCoins,
-          soTienVnd: selectedPackage.amountVnd,
-          trang_thai: "pending",
-          phuongThuc: "bank",
-          ghiChu: `${selectedPackage.id} - ${selectedPackage.name}`,
-        },
-        select: {
-          idHoaDonNap: true,
-          maGiaoDich: true,
-          so_xu_nap: true,
-          soTienVnd: true,
-          trang_thai: true,
-          createdAt: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        const account = await tx.taiKhoan.findUniqueOrThrow({
+          where: { idTaiKhoan },
+          select: { tenTaiKhoan: true },
+        });
+        const order = await tx.hoaDonNap.create({
+          data: {
+            idTaiKhoan,
+            maGiaoDich: referenceCode,
+            so_xu_nap: selectedPackage.totalCoins,
+            soTienVnd: selectedPackage.amountVnd,
+            trang_thai: "pending",
+            phuongThuc: "bank",
+            ghiChu: `${selectedPackage.id} - ${selectedPackage.name}`,
+          },
+          select: {
+            idHoaDonNap: true,
+            idTaiKhoan: true,
+            maGiaoDich: true,
+            so_xu_nap: true,
+            soTienVnd: true,
+            trang_thai: true,
+            createdAt: true,
+          },
+        });
+        const notification = await createTopUpRequestNotifications(tx, order, account);
+        return { order, notification };
       });
 
-      return { order, selectedPackage };
+      return { ...result, selectedPackage };
     } catch (error) {
       if (prismaErrorCode(error) !== "P2002") throw error;
     }
@@ -138,24 +151,16 @@ export function findTopUpOrder(idTaiKhoan: number, referenceCode: string) {
   });
 }
 
-export async function confirmSepayTopUp(referenceCode: string, transferAmount: number) {
-  const order = await prisma.hoaDonNap.findUnique({
-    where: { maGiaoDich: referenceCode },
-    select: {
-      idHoaDonNap: true,
-      idTaiKhoan: true,
-      so_xu_nap: true,
-      soTienVnd: true,
-      trang_thai: true,
-    },
-  });
+type CreditableTopUpOrder = {
+  idHoaDonNap: number;
+  idTaiKhoan: number;
+  maGiaoDich: string | null;
+  so_xu_nap: number;
+  soTienVnd: number | { toString(): string };
+  trang_thai: string | null;
+};
 
-  if (!order) return { kind: "not_found" } as const;
-
-  const expectedAmount = Number(order.soTienVnd);
-  if (!Number.isSafeInteger(expectedAmount) || expectedAmount !== transferAmount) {
-    return { kind: "amount_mismatch", expectedAmount } as const;
-  }
+async function creditTopUpOrder(order: CreditableTopUpOrder) {
   if (order.trang_thai === "success") return { kind: "already_processed" } as const;
   if (order.trang_thai !== "pending") return { kind: "inactive" } as const;
 
@@ -165,7 +170,6 @@ export async function confirmSepayTopUp(referenceCode: string, transferAmount: n
       where: {
         idHoaDonNap: order.idHoaDonNap,
         trang_thai: "pending",
-        soTienVnd: transferAmount,
       },
       data: { trang_thai: "success", ngay_xac_nhan: now },
     });
@@ -211,7 +215,61 @@ export async function confirmSepayTopUp(referenceCode: string, transferAmount: n
       },
       select: { idLichSuGiaoDich: true },
     });
+    const notification = await createTopUpSuccessNotification(tx, order, after);
 
-    return { kind: "credited", balance: after, creditedCoins: order.so_xu_nap } as const;
+    return { kind: "credited", balance: after, creditedCoins: order.so_xu_nap, notification } as const;
   });
+}
+
+export async function confirmSepayTopUp(referenceCode: string, transferAmount: number) {
+  const order = await prisma.hoaDonNap.findUnique({
+    where: { maGiaoDich: referenceCode },
+    select: {
+      idHoaDonNap: true,
+      idTaiKhoan: true,
+      maGiaoDich: true,
+      so_xu_nap: true,
+      soTienVnd: true,
+      trang_thai: true,
+    },
+  });
+
+  if (!order) return { kind: "not_found" } as const;
+
+  const expectedAmount = Number(order.soTienVnd);
+  if (!Number.isSafeInteger(expectedAmount) || expectedAmount !== transferAmount) {
+    return { kind: "amount_mismatch", expectedAmount } as const;
+  }
+  return creditTopUpOrder(order);
+}
+
+export async function confirmAdminTopUp(idHoaDonNap: number) {
+  const order = await prisma.hoaDonNap.findUnique({
+    where: { idHoaDonNap },
+    select: {
+      idHoaDonNap: true,
+      idTaiKhoan: true,
+      maGiaoDich: true,
+      so_xu_nap: true,
+      soTienVnd: true,
+      trang_thai: true,
+    },
+  });
+  if (!order) return { kind: "not_found" } as const;
+  return creditTopUpOrder(order);
+}
+
+export async function cancelAdminTopUp(idHoaDonNap: number) {
+  const cancelled = await prisma.hoaDonNap.updateMany({
+    where: { idHoaDonNap, trang_thai: "pending" },
+    data: { trang_thai: "cancelled" },
+  });
+  if (cancelled.count === 1) return { kind: "cancelled" } as const;
+
+  const order = await prisma.hoaDonNap.findUnique({
+    where: { idHoaDonNap },
+    select: { trang_thai: true },
+  });
+  if (!order) return { kind: "not_found" } as const;
+  return { kind: "inactive", status: order.trang_thai } as const;
 }

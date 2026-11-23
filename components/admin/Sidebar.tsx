@@ -20,6 +20,7 @@ import {
   Loader2,
   ShieldCheck,
   ScrollText,
+  WalletCards,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -143,6 +144,7 @@ const Sidebar = () => {
     { name: "Quản lý thể loại", href: "/admin/genres", icon: Tags },
     { name: "Người dùng", href: "/admin/users", icon: Users },
     { name: "Phân quyền", href: "/admin/permissions", icon: ShieldCheck },
+    { name: "Quản lý nạp xu", href: "/admin/topups", icon: WalletCards },
     { name: "Thông báo", href: "/admin/notifications", icon: Bell },
     { name: "Nhật ký hệ thống", href: "/admin/system-logs", icon: ScrollText },
     { name: "Cài đặt", href: "/admin/settings", icon: Settings },

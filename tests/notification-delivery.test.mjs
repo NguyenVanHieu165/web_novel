@@ -75,6 +75,27 @@ test("chapter notifications honor opt-in, batch followers and use bulk writes", 
   assert.equal(queries[0].where.taiKhoan.trangThai, "active");
 });
 
+test("top-up notifications target admins on request and the reader on success", async () => {
+  const { createTopUpRequestNotifications, createTopUpSuccessNotification } = load("lib/server/notifications.ts");
+  const writes = [];
+  const tx = {
+    taiKhoan: { findMany: async () => [{ idTaiKhoan: 1 }, { idTaiKhoan: 2 }] },
+    thongBao: {
+      createMany: async ({ data }) => { writes.push(...data); return { count: data.length }; },
+      create: async ({ data }) => { writes.push(data); return { idThongBao: writes.length }; },
+    },
+  };
+  const order = { idHoaDonNap: 9, idTaiKhoan: 7, maGiaoDich: "NVH123456", so_xu_nap: 550, soTienVnd: 50_000 };
+  const requested = await createTopUpRequestNotifications(tx, order, { tenTaiKhoan: "reader" });
+  const succeeded = await createTopUpSuccessNotification(tx, order, 900);
+  assert.deepEqual(Array.from(requested.userIds), [1, 2]);
+  assert.equal(requested.category, "transaction");
+  assert.deepEqual(Array.from(succeeded.userIds), [7]);
+  assert.equal(succeeded.type, "top-up-success");
+  assert.deepEqual(writes.map((row) => row.idTaiKhoan), [1, 2, 7]);
+  assert.equal(writes[2].tieu_de, "Nạp xu thành công");
+});
+
 test("socket failure preserves saved inboxes and dispatch batches stay bounded", async () => {
   const batches = [];
   const service = load("lib/server/notifications.ts", {}, { process: { env: { INTERNAL_SECRET_TOKEN: "fixture" } }, console: { error() {} }, fetch: async (_url, args) => { batches.push(JSON.parse(args.body)); throw new Error("offline"); } });

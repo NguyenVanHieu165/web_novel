@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { sepayWebhookSchema } from "@/lib/server/topup-packages";
+import { dispatchNotification } from "@/lib/server/notifications";
 import {
   confirmSepayTopUp,
   extractTopUpCode,
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
     if (result.kind === "already_processed") {
       return NextResponse.json({ success: true, processed: false, message: "Đơn nạp đã được xử lý trước đó." });
     }
+    await dispatchNotification(result.notification);
     return NextResponse.json({
       success: true,
       processed: true,

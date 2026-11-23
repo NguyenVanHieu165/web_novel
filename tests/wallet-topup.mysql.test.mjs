@@ -65,6 +65,12 @@ test("SePay top-up transaction with the installed Prisma/MySQL adapter", { skip:
         if (name === "@/lib/server/topup-packages") {
           return { topUpPackages: {}, topUpCodeSchema: { safeParse: () => ({ success: false }) } };
         }
+        if (name === "@/lib/server/notifications") {
+          return {
+            createTopUpRequestNotifications: async () => null,
+            createTopUpSuccessNotification: async () => null,
+          };
+        }
         return require(name);
       },
     }, { filename: "lib/server/wallet-topup.ts" });

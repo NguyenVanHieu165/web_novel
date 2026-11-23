@@ -3,12 +3,85 @@ import type { Prisma } from "@/app/generated/prisma/client";
 
 export type NotificationDispatch = {
   type: string;
-  category: "follow" | "system";
+  category: "follow" | "system" | "transaction";
   title: string;
   message: string;
   userIds: number[];
   data: Record<string, unknown>;
 };
+
+const vndFormatter = new Intl.NumberFormat("vi-VN");
+
+type TopUpNotificationOrder = {
+  idHoaDonNap: number;
+  idTaiKhoan: number;
+  maGiaoDich: string | null;
+  so_xu_nap: number;
+  soTienVnd: number | { toString(): string };
+};
+
+export async function createTopUpRequestNotifications(
+  tx: Prisma.TransactionClient,
+  order: TopUpNotificationOrder,
+  account: { tenTaiKhoan: string },
+): Promise<NotificationDispatch | null> {
+  const admins = await tx.taiKhoan.findMany({
+    where: { trangThai: "active", OR: [{ isDeleted: false }, { isDeleted: null }], vaiTroNguoiDung: { some: { vaiTro: { tenVaiTro: "admin" } } } },
+    select: { idTaiKhoan: true },
+  });
+  if (!admins.length) return null;
+
+  const amount = Number(order.soTienVnd);
+  const title = "💰 Yêu cầu nạp xu mới";
+  const message = `Tài khoản "${account.tenTaiKhoan}" tạo yêu cầu nạp ${vndFormatter.format(amount)} đ để nhận ${vndFormatter.format(order.so_xu_nap)} xu. Mã giao dịch: ${order.maGiaoDich ?? "không có"}.`;
+  const userIds = admins.map(({ idTaiKhoan }) => idTaiKhoan);
+  await tx.thongBao.createMany({
+    data: userIds.map((idTaiKhoan) => ({
+      idTaiKhoan,
+      tieu_de: title,
+      noiDung: message,
+      daDoc: false,
+      id_doi_tuong: order.idHoaDonNap,
+    })),
+  });
+
+  return {
+    type: "top-up-requested",
+    category: "transaction",
+    title,
+    message,
+    userIds,
+    data: { idHoaDonNap: order.idHoaDonNap, code: order.maGiaoDich, amountVnd: amount, coins: order.so_xu_nap },
+  };
+}
+
+export async function createTopUpSuccessNotification(
+  tx: Prisma.TransactionClient,
+  order: TopUpNotificationOrder,
+  balance: number,
+): Promise<NotificationDispatch> {
+  const title = "Nạp xu thành công";
+  const message = `Đơn ${order.maGiaoDich ?? `#${order.idHoaDonNap}`} đã được xác nhận. ${vndFormatter.format(order.so_xu_nap)} xu đã được cộng vào ví. Số dư mới: ${vndFormatter.format(balance)} xu.`;
+  await tx.thongBao.create({
+    data: {
+      idTaiKhoan: order.idTaiKhoan,
+      tieu_de: title,
+      noiDung: message,
+      daDoc: false,
+      id_doi_tuong: order.idHoaDonNap,
+    },
+    select: { idThongBao: true },
+  });
+
+  return {
+    type: "top-up-success",
+    category: "transaction",
+    title,
+    message,
+    userIds: [order.idTaiKhoan],
+    data: { idHoaDonNap: order.idHoaDonNap, code: order.maGiaoDich, coins: order.so_xu_nap, balance },
+  };
+}
 
 export async function createFollowNotifications(
   tx: Prisma.TransactionClient,

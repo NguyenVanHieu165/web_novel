@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const { NextRequest } = require("next/server");
 const modules = {
   "@/lib/server/topup-packages": "lib/server/topup-packages.ts",
+  "@/lib/server/notifications": "lib/server/notifications.ts",
   "@/lib/server/wallet-topup": "lib/server/wallet-topup.ts",
   "@/lib/server/reader-mutation": "lib/server/reader-mutation.ts",
   createRoute: "app/api/wallet/topup/route.ts",
@@ -29,6 +30,7 @@ function harness() {
   const orders = new Map();
   const wallets = new Map();
   const ledger = [];
+  const notifications = [];
   const transactionOptions = [];
   let failNextLedger = false;
   let transactionTail = Promise.resolve();
@@ -57,7 +59,8 @@ function harness() {
     },
     async updateMany({ where, data }) {
       const order = orders.get(where.idHoaDonNap);
-      if (!order || order.trang_thai !== where.trang_thai || Number(order.soTienVnd) !== Number(where.soTienVnd)) {
+      if (!order || order.trang_thai !== where.trang_thai ||
+          (where.soTienVnd !== undefined && Number(order.soTienVnd) !== Number(where.soTienVnd))) {
         return { count: 0 };
       }
       Object.assign(order, data);
@@ -91,6 +94,24 @@ function harness() {
         return { idLichSuGiaoDich: ledger.length };
       },
     },
+    taiKhoan: {
+      async findUniqueOrThrow({ where }) {
+        return { tenTaiKhoan: `reader-${where.idTaiKhoan}` };
+      },
+      async findMany() {
+        return [{ idTaiKhoan: 1 }];
+      },
+    },
+    thongBao: {
+      async createMany({ data }) {
+        notifications.push(...data);
+        return { count: data.length };
+      },
+      async create({ data }) {
+        notifications.push(data);
+        return { idThongBao: notifications.length };
+      },
+    },
   };
   const prisma = {
     hoaDonNap,
@@ -103,6 +124,7 @@ function harness() {
       const orderSnapshot = structuredClone(orders);
       const walletSnapshot = structuredClone(wallets);
       const ledgerSnapshot = structuredClone(ledger);
+      const notificationSnapshot = structuredClone(notifications);
       try {
         return await callback(tx);
       } catch (error) {
@@ -111,6 +133,7 @@ function harness() {
         wallets.clear();
         for (const [id, wallet] of walletSnapshot) wallets.set(id, wallet);
         ledger.splice(0, ledger.length, ...ledgerSnapshot);
+        notifications.splice(0, notifications.length, ...notificationSnapshot);
         throw error;
       } finally {
         release();
@@ -157,7 +180,7 @@ function harness() {
   const packages = load("@/lib/server/topup-packages");
 
   return {
-    state: { orders, wallets, ledger, transactionOptions },
+    state: { orders, wallets, ledger, notifications, transactionOptions },
     packages,
     failLedgerOnce() { failNextLedger = true; },
     setUser(idTaiKhoan) { currentUserId = idTaiKhoan; },
@@ -212,6 +235,8 @@ test("creates a pending bank order and returns SePay QR details", async () => {
   assert.equal(result.body.data.bank.transferContent, result.body.data.code);
   assert.match(result.body.data.bank.qrUrl, /^https:\/\/qr\.sepay\.vn\/img\?/);
   assert.equal([...app.state.orders.values()][0].trang_thai, "pending");
+  assert.equal(app.state.notifications.length, 1);
+  assert.match(app.state.notifications[0].tieu_de, /Yêu cầu nạp xu mới/);
 });
 
 test("status lookup is scoped to the authenticated account", async () => {
@@ -280,6 +305,9 @@ test("webhook credits the authenticated account for a matching pending order", a
   assert.equal(app.state.ledger[0].so_xu_thay_doi, 550);
   assert.equal(app.state.ledger[0].id_doi_tuong, 1);
   assert.equal([...app.state.orders.values()][0].trang_thai, "success");
+  assert.equal(app.state.notifications.length, 2);
+  assert.equal(app.state.notifications[1].idTaiKhoan, 7);
+  assert.equal(app.state.notifications[1].tieu_de, "Nạp xu thành công");
 });
 
 test("webhook processes the same payment twice but credits the wallet only once", async () => {

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { readerMutationError, runReaderMutation } from "@/lib/server/reader-mutation";
+import { dispatchNotification } from "@/lib/server/notifications";
 import { topUpRequestSchema } from "@/lib/server/topup-packages";
 import {
   buildSepayQrUrl,
@@ -16,11 +17,11 @@ export async function POST(request: NextRequest) {
   return runReaderMutation(request, topUpRequestSchema, async (idTaiKhoan, { packageId }) => {
     try {
       const bank = getSepayBankAccount();
-      const { order, selectedPackage } = await createTopUpOrder(idTaiKhoan, packageId);
+      const { order, selectedPackage, notification } = await createTopUpOrder(idTaiKhoan, packageId);
       const referenceCode = order.maGiaoDich;
       if (!referenceCode) throw new Error("Top-up reference code was not persisted");
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: "Đã tạo yêu cầu nạp xu.",
         data: {
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest) {
           createdAt: order.createdAt?.toISOString() ?? null,
         },
       }, { status: 201, headers: privateHeaders });
+      await dispatchNotification(notification);
+      return response;
     } catch (error) {
       if (error instanceof TopUpConfigurationError) {
         return readerMutationError("Hệ thống nạp xu chưa được cấu hình đầy đủ.", 503);
