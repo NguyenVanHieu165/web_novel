@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { z } from "zod";
 import { useAuth } from "@/context/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const countSchema = z.object({ success: z.literal(true), meta: z.object({ unread: z.number().int().nonnegative() }) });
 
@@ -43,11 +45,12 @@ function UserNotificationBell() {
   }, []);
 
   return (
-    <Link href="/thong-bao" aria-label={count ? `Thông báo, ${count} chưa đọc` : "Thông báo"}
-      className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
-      <Bell className="h-5 w-5" aria-hidden="true" />
-      {count > 0 && <span aria-hidden="true" className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">{count > 99 ? "99+" : count}</span>}
-    </Link>
+    <Button asChild variant="ghost" size="icon-sm" className="relative rounded-full text-muted-foreground">
+      <Link href="/thong-bao" aria-label={count ? `Thông báo, ${count} chưa đọc` : "Thông báo"}>
+        <Bell aria-hidden="true" />
+        {count > 0 && <Badge aria-hidden="true" variant="destructive" className="absolute right-0 top-0 h-4 min-w-4 px-0.5 text-[9px]">{count > 99 ? "99+" : count}</Badge>}
+      </Link>
+    </Button>
   );
 }
 

@@ -26,6 +26,8 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import AccountThemeToggle from "@/components/account/AccountThemeToggle";
 import ReaderAvatar from "@/components/account/ReaderAvatar";
 import HeaderSearch from "@/components/search/HeaderSearch";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const NAV_LINKS = [
   { label: "Trang chủ", href: "/" },
@@ -170,13 +172,14 @@ function HeaderContent() {
             <HeaderSearch />
 
             {/* Mobile Search Button */}
-            <button
-              className="sm:hidden w-9 h-9 flex items-center justify-center rounded-full text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            <Button
+              type="button" variant="ghost" size="icon-sm"
+              className="rounded-full text-muted-foreground sm:hidden"
               onClick={() => setSearchOpen(!searchOpen)}
               aria-label="Tìm kiếm"
             >
-              <Search className="h-5 w-5" />
-            </button>
+              <Search aria-hidden="true" />
+            </Button>
 
             <AccountThemeToggle compact />
             <NotificationBell />
@@ -184,9 +187,11 @@ function HeaderContent() {
             {/* User / Auth State */}
             {!loading && user ? (
               <div className="relative" ref={userMenuRef}>
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                  className="h-auto rounded-full px-2.5 py-1.5"
                   aria-expanded={userMenuOpen}
                   aria-label="Menu tài khoản"
                 >
@@ -204,12 +209,12 @@ function HeaderContent() {
                       userMenuOpen ? "rotate-180" : ""
                     }`}
                   />
-                </button>
+                </Button>
 
                 {userMenuOpen && (
-                  <div
+                  <Card
                     ref={dropdownRef}
-                    className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-black/30 overflow-hidden py-2 z-50 will-change-transform"
+                    className="absolute right-0 top-full z-50 mt-2 w-56 gap-0 overflow-hidden rounded-2xl py-2 shadow-xl will-change-transform"
                   >
                     {/* User Header in Dropdown */}
                     <div className="px-4 py-2 border-b border-slate-100 dark:border-zinc-800 mb-1">
@@ -245,42 +250,39 @@ function HeaderContent() {
                     ))}
 
                     <div className="my-1.5 border-t border-slate-100 dark:border-zinc-800" />
-                    <button
+                    <Button
+                      type="button"
+                      variant="destructive"
                       onClick={logout}
-                      className="flex items-center gap-3 w-full px-4 py-2 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      className="h-auto w-full justify-start gap-3 rounded-none px-4 py-2 text-xs"
                     >
                       <LogOut className="h-4 w-4" />
                       Đăng xuất
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link
-                  href="/dang-nhap"
-                  className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-semibold rounded-full shadow-sm shadow-blue-500/25 transition-all duration-150"
-                >
+                <Button asChild size="sm" className="hidden rounded-full sm:inline-flex"><Link href="/dang-nhap">
                   <User className="h-3.5 w-3.5" />
                   Đăng nhập
-                </Link>
-                <Link
-                  href="/dang-ky"
-                  className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 text-slate-700 dark:text-zinc-200 text-xs font-medium rounded-full transition-all duration-150"
-                >
+                </Link></Button>
+                <Button asChild size="sm" variant="outline" className="hidden rounded-full sm:inline-flex"><Link href="/dang-ky">
                   Đăng ký
-                </Link>
+                </Link></Button>
               </div>
             )}
 
             {/* Mobile Hamburger */}
-            <button
-              className="xl:hidden w-9 h-9 flex items-center justify-center rounded-full text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            <Button
+              type="button" variant="ghost" size="icon-sm"
+              className="rounded-full text-muted-foreground xl:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+              {mobileOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            </Button>
           </div>
         </div>
 
@@ -341,29 +343,25 @@ function HeaderContent() {
             {/* Mobile Auth actions */}
             {!user ? (
               <div className="mobile-nav-link pt-2 border-t border-slate-100 dark:border-zinc-800 flex flex-col gap-2">
-                <Link
-                  href="/dang-nhap"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
+                <Button asChild className="w-full rounded-xl"><Link href="/dang-nhap">
                   <User className="h-4 w-4" />
                   Đăng nhập
-                </Link>
-                <Link
-                  href="/dang-ky"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 text-sm font-medium rounded-xl transition-colors"
-                >
+                </Link></Button>
+                <Button asChild variant="outline" className="w-full rounded-xl"><Link href="/dang-ky">
                   Đăng ký tài khoản
-                </Link>
+                </Link></Button>
               </div>
             ) : (
               <div className="mobile-nav-link pt-2 border-t border-slate-100 dark:border-zinc-800">
-                <button
+                <Button
+                  type="button"
+                  variant="destructive"
                   onClick={logout}
-                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-500 font-medium rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20"
+                  className="w-full justify-start rounded-xl"
                 >
                   <LogOut className="h-4 w-4" />
                   Đăng xuất
-                </button>
+                </Button>
               </div>
             )}
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookOpen, ExternalLink, Mail, MessageCircle } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
+import { Button } from "@/components/ui/button";
 
 const EXPLORE_LINKS = [
   { label: "Truyện mới", href: "/truyen-moi" },
@@ -93,14 +94,9 @@ export default function Footer() {
             {/* Social icons */}
             <div className="flex items-center gap-3 pt-1">
               {SOCIAL_LINKS.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  aria-label={s.label}
-                  className={`w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 ${s.color} transition-colors duration-150`}
-                >
-                  <s.icon className="w-4 h-4" />
-                </a>
+                <Button key={s.label} asChild variant="ghost" size="icon-sm" className={`rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 ${s.color}`}>
+                  <a href={s.href} aria-label={s.label}><s.icon aria-hidden="true" /></a>
+                </Button>
               ))}
             </div>
           </div>
@@ -153,7 +149,7 @@ export default function Footer() {
                 <li key={s.label}>
                   <a
                     href={s.href}
-                    className={`flex items-center gap-2 text-sm text-slate-400 ${s.color} transition-all duration-150 group`}
+                    className={`group flex items-center gap-2 text-sm text-slate-400 ${s.color} transition-colors duration-150`}
                   >
                     <s.icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     {s.label}

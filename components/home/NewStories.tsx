@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import SectionHeader from "@/components/common/SectionHeader";
 import StoryCard from "@/components/story/StoryCard";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { Button } from "@/components/ui/button";
 import { getHomeTabStories, type HomeStoryCollections } from "@/lib/home-discovery";
 import { Flame, Sparkles, Star, CheckCircle2, Layers } from "lucide-react";
 
@@ -269,24 +270,22 @@ export default function NewStories({ collections }: NewStoriesProps) {
           const Icon = tab.icon;
 
           return (
-            <button
+            <Button
               key={tab.id}
               type="button"
+              size="sm"
+              variant={isActive ? "default" : "outline"}
               onClick={() => handleTabChange(tab.id)}
               disabled={isShuffling}
               aria-pressed={isActive}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-200 motion-reduce:transition-none cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-105"
-                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
-              }`}
+              className={isActive ? "scale-105 rounded-full px-4 font-bold shadow-md" : "rounded-full px-4 font-bold"}
             >
               <Icon
                 aria-hidden="true"
-                className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-blue-500"}`}
+                className={isActive ? "text-primary-foreground" : "text-primary"}
               />
               {tab.label}
-            </button>
+            </Button>
           );
         })}
       </div>

@@ -6,6 +6,13 @@ import { Search, ArrowUpDown, BookOpen, Clock, Coins, ChevronLeft, ChevronRight,
 import api from "@/lib/axios";
 import { CHAPTER_PAGE_SIZE, chapterListPageSchema, type ChapterListPage } from "@/lib/chapter-list";
 import { getChapterPath } from "@/lib/reader-navigation";
+import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 
 interface ChapterListProps {
   storySlug: string;
@@ -15,7 +22,6 @@ type ChapterRequestState =
   | { key: string; kind: "ready"; result: ChapterListPage }
   | { key: string; kind: "error" };
 
-const controlStyles = "rounded-md border px-3 py-2 transition-colors hover:border-blue-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40";
 const dateFormatter = new Intl.DateTimeFormat("vi-VN");
 
 export default function ChapterList({ storySlug }: ChapterListProps) {
@@ -96,10 +102,10 @@ export default function ChapterList({ storySlug }: ChapterListProps) {
   return (
     <div className="space-y-6" aria-busy={loading}>
       {/* Search and Sort Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50 dark:bg-zinc-900/60 p-3 rounded-2xl border border-slate-200/80 dark:border-zinc-800">
+      <FilterBar className="rounded-2xl">
         {/* Search input */}
-        <div className="relative flex-1">
-          <input
+        <FilterBarGroup><div className="relative flex-1">
+          <Input
             ref={searchRef}
             type="text"
             autoComplete="off"
@@ -113,36 +119,39 @@ export default function ChapterList({ storySlug }: ChapterListProps) {
               focusResults.current = false;
             }}
             placeholder="Số chương hoặc tiêu đề, ví dụ: Chương 1,5…"
-            className="w-full h-10 rounded-xl bg-white dark:bg-zinc-800 pl-10 pr-12 text-xs sm:text-sm text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 border border-slate-200 dark:border-zinc-700/80 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            className="h-10 w-full rounded-xl bg-background pl-10 pr-12 text-xs sm:text-sm"
           />
           <Search aria-hidden="true" className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
           {searchQuery && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               aria-label="Xóa từ khóa tìm chương"
               onClick={clearSearch}
-              className="absolute right-2 top-1.5 rounded-md p-1.5 text-slate-500 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="absolute right-2 top-1.5 text-muted-foreground"
             >
               <X aria-hidden="true" className="h-4 w-4" />
-            </button>
+            </Button>
           )}
-        </div>
+        </div></FilterBarGroup>
 
         {/* Sort Toggle Button */}
-        <button
+        <FilterBarActions><Button
           type="button"
+          variant="outline"
           onClick={() => {
             setIsDesc((current) => !current);
             setRequestedPage(1);
             focusResults.current = false;
           }}
           aria-label={isDesc ? "Mới nhất trước, chuyển sang cũ nhất trước" : "Cũ nhất trước, chuyển sang mới nhất trước"}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 hover:text-blue-600 transition-colors cursor-pointer self-start sm:self-auto shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          className="shrink-0 rounded-xl"
         >
           <ArrowUpDown aria-hidden="true" className="w-3.5 h-3.5 text-blue-500" />
           <span>{isDesc ? "Mới nhất trước" : "Cũ nhất trước"}</span>
-        </button>
-      </div>
+        </Button></FilterBarActions>
+      </FilterBar>
 
       {/* Chapters Count Info */}
       <div ref={resultsRef} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true" className="flex items-center justify-between rounded-md text-xs text-slate-500 dark:text-zinc-400 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
@@ -153,10 +162,7 @@ export default function ChapterList({ storySlug }: ChapterListProps) {
       {loading ? (
         <div className="py-12 text-center text-sm text-slate-500" aria-hidden="true">Đang tải chương…</div>
       ) : error ? (
-        <div className="py-12 text-center text-sm text-red-600">
-          <p role="alert">Không thể tải danh sách chương. Vui lòng thử lại.</p>
-          <button type="button" onClick={() => setRetry((value) => value + 1)} className={`mt-3 ${controlStyles}`}>Thử lại</button>
-        </div>
+        <ErrorState><div><ErrorStateTitle>Không thể tải danh sách chương</ErrorStateTitle><ErrorStateDescription>Vui lòng kiểm tra kết nối và thử lại.</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)}>Thử lại</Button></ErrorStateActions></div></ErrorState>
       ) : chapters.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {chapters.map((chap) => (
@@ -183,53 +189,56 @@ export default function ChapterList({ storySlug }: ChapterListProps) {
               {/* Status Badge: Free / VIP Xu */}
               <div className="shrink-0 flex items-center gap-1">
                 {chap.isFree !== false ? (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  <Badge variant="success" className="rounded-md text-[10px] font-bold">
                     Miễn phí
-                  </span>
+                  </Badge>
                 ) : (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                  <Badge variant="warning" className="rounded-md text-[10px] font-bold">
                     <Coins aria-hidden="true" className="w-3 h-3" />
                     {chap.giaXu ?? 0} xu
-                  </span>
+                  </Badge>
                 )}
               </div>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="py-16 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800">
-          <BookOpen aria-hidden="true" className="w-8 h-8 text-slate-300 dark:text-zinc-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">{searchQuery.trim() ? "Không tìm thấy chương nào phù hợp với từ khóa." : "Truyện chưa có chương nào."}</p>
-          {searchQuery.trim() && <button type="button" onClick={clearSearch} className={`mt-4 ${controlStyles}`}>Xóa từ khóa tìm kiếm</button>}
-        </div>
+        <EmptyState>
+          <EmptyStateIcon><BookOpen aria-hidden="true" /></EmptyStateIcon>
+          <EmptyStateTitle>{searchQuery.trim() ? "Không tìm thấy chương" : "Truyện chưa có chương"}</EmptyStateTitle>
+          <EmptyStateDescription>{searchQuery.trim() ? "Không có chương nào phù hợp với từ khóa hiện tại." : "Danh sách chương sẽ xuất hiện khi tác giả đăng nội dung."}</EmptyStateDescription>
+          {searchQuery.trim() && <EmptyStateActions><Button type="button" variant="outline" onClick={clearSearch}>Xóa từ khóa tìm kiếm</Button></EmptyStateActions>}
+        </EmptyState>
       )}
 
       {!loading && !error && totalPage > 1 && (
-        <nav aria-label="Phân trang danh sách chương" className="flex flex-wrap items-center justify-center gap-3">
-          <button
+        <Pagination aria-label="Phân trang danh sách chương"><PaginationContent className="flex-wrap gap-3">
+          <PaginationItem><Button
             type="button"
+            variant="outline"
+            size="icon"
             aria-label="Trang trước"
             disabled={page <= 1}
             onClick={() => navigateToPage(page - 1)}
-            className={controlStyles}
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-          </button>
-          <span className="text-sm tabular-nums">Trang {page} / {totalPage}</span>
-          <button
+          </Button></PaginationItem>
+          <PaginationItem><span className="px-2 text-sm tabular-nums">Trang {page} / {totalPage}</span></PaginationItem>
+          <PaginationItem><Button
             type="button"
+            variant="outline"
+            size="icon"
             aria-label="Trang sau"
             disabled={page >= totalPage}
             onClick={() => navigateToPage(page + 1)}
-            className={controlStyles}
           >
             <ChevronRight aria-hidden="true" className="h-4 w-4" />
-          </button>
+          </Button></PaginationItem>
           {totalPage > 5 && (
-            <form onSubmit={jumpToPage} className="flex items-center gap-2 text-sm">
+            <PaginationItem><form onSubmit={jumpToPage} className="flex items-center gap-2 text-sm">
               <label className="flex items-center gap-2">
                 Đến trang
-                <input
+                <Input
                   key={`${requestKey}:${page}`}
                   name="chapter-page"
                   type="number"
@@ -239,13 +248,13 @@ export default function ChapterList({ storySlug }: ChapterListProps) {
                   step={1}
                   defaultValue={page}
                   required
-                  className="w-20 rounded-md border border-slate-200 bg-white px-2 py-2 tabular-nums dark:border-zinc-700 dark:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="w-20 tabular-nums"
                 />
               </label>
-              <button type="submit" className={controlStyles}>Đi</button>
-            </form>
+              <Button type="submit" variant="outline">Đi</Button>
+            </form></PaginationItem>
           )}
-        </nav>
+        </PaginationContent></Pagination>
       )}
     </div>
   );

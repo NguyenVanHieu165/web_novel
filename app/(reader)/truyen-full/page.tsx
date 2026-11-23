@@ -10,6 +10,7 @@ import { parseStoryQueryParams } from "@/schemas/story-query.schema";
 import StorySearchProvider from "@/components/search/StorySearchProvider";
 import SearchInputBar from "@/components/search/SearchInputBar";
 import ActiveStoryFilters from "@/components/search/ActiveStoryFilters";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
 
 export const revalidate = 60;
 
@@ -42,39 +43,33 @@ export default async function TruyenFullPage({ searchParams }: TruyenFullPagePro
       <div className="space-y-4">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <Link href="/" className="hover:text-blue-600 transition-colors">
+          <Link href="/" className="transition-colors hover:text-primary">
             Trang chủ
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <span className="font-semibold text-foreground">
             Truyện Full
           </span>
         </nav>
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-zinc-800/80">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 mb-2 border border-indigo-200/60 dark:border-indigo-800/40">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Đã ra trọn bộ</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-zinc-100">
-              Truyện Full Đã Hoàn Thành
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1 max-w-2xl">
+        <PageHeader>
+          <PageHeaderContent>
+            <PageHeaderEyebrow className="flex items-center gap-2 text-info"><CheckCircle2 aria-hidden="true" className="size-3.5" />Đã ra trọn bộ</PageHeaderEyebrow>
+            <PageHeaderTitle>Truyện Full Đã Hoàn Thành</PageHeaderTitle>
+            <PageHeaderDescription>
               Đọc liền mạch từ đầu đến cuối không gián đoạn với tuyển tập truyện đã kết thúc trọn vẹn.
-            </p>
-          </div>
-
-          <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400 shrink-0">
+            </PageHeaderDescription>
+          </PageHeaderContent>
+          <PageHeaderActions className="text-xs font-medium text-muted-foreground sm:text-sm">
             Tổng cộng:{" "}
-            <span className="font-bold text-slate-900 dark:text-zinc-100">
+            <span className="font-bold text-foreground">
               {pagination.total}
             </span>{" "}
             tác phẩm
-          </div>
-        </div>
+          </PageHeaderActions>
+        </PageHeader>
       </div>
 
       {/* Filter Bar (Only Sort & Chapters, status fixed to 'hoan_thanh') */}

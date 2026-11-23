@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 type BadgeVariant = "hot" | "moi" | "full" | "dang-ra";
 
@@ -36,14 +37,14 @@ interface StoryBadgeProps {
 export default function StoryBadge({ variant, className }: StoryBadgeProps) {
   const config = BADGE_CONFIG[variant];
   return (
-    <span
+    <Badge
       className={cn(
-        "inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider leading-none",
+        "rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider leading-none",
         config.className,
         className
       )}
     >
       {config.label}
-    </span>
+    </Badge>
   );
 }

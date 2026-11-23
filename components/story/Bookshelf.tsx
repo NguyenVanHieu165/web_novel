@@ -6,6 +6,13 @@ import { BookMarked, BookOpen, ChevronLeft, ChevronRight, RefreshCw } from "luci
 import { z } from "zod";
 
 import { useAuth } from "@/context/AuthContext";
+import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 
 const responseSchema = z.object({
   success: z.literal(true),
@@ -28,7 +35,6 @@ type RequestState =
   | { key: string; kind: "ready"; result: BookshelfResponse }
   | { key: string; kind: "error"; requiresLogin: boolean };
 
-const buttonStyles = "inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800";
 const dateFormat = new Intl.DateTimeFormat("vi-VN");
 
 export default function Bookshelf() {
@@ -64,22 +70,16 @@ export default function Bookshelf() {
 
   return (
     <div className="space-y-7 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
-            <BookMarked className="h-5 w-5" aria-hidden="true" />
-            Truyện bạn đang theo dõi
-          </div>
-          <h1 className="text-2xl font-black text-slate-900 sm:text-3xl dark:text-white">Tủ sách của bạn</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Theo dõi một tác phẩm để lưu vào tủ sách và tìm lại khi muốn đọc.</p>
-        </div>
+      <PageHeader><PageHeaderContent><PageHeaderEyebrow className="flex items-center gap-2 text-primary"><BookMarked aria-hidden="true" className="size-4" />Truyện bạn đang theo dõi</PageHeaderEyebrow><PageHeaderTitle>Tủ Sách Của Bạn</PageHeaderTitle><PageHeaderDescription>Theo dõi một tác phẩm để lưu vào tủ sách và tìm lại khi muốn đọc.</PageHeaderDescription></PageHeaderContent>
+        <PageHeaderActions>
         {user && !requiresLogin && (
-          <button type="button" onClick={() => setRetry((value) => value + 1)} disabled={loading} className={buttonStyles}>
+          <Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)} disabled={loading}>
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Làm mới
-          </button>
+          </Button>
         )}
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       {loading ? (
         <div role="status" aria-label="Đang tải tủ sách" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -88,27 +88,20 @@ export default function Bookshelf() {
           ))}
         </div>
       ) : requiresLogin ? (
-        <section className="rounded-2xl border bg-white px-6 py-14 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <BookMarked className="mx-auto mb-4 h-10 w-10 text-blue-500" aria-hidden="true" />
-          <h2 className="text-lg font-bold">Đăng nhập để xem tủ sách</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-zinc-400">Tủ sách được lưu riêng trong tài khoản để bạn có thể đọc trên nhiều thiết bị.</p>
-          <Link href="/dang-nhap?redirect=%2Ftu-sach" className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">Đăng nhập</Link>
-        </section>
+        <EmptyState><EmptyStateIcon><BookMarked aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Đăng nhập để xem tủ sách</EmptyStateTitle><EmptyStateDescription>Tủ sách được lưu riêng trong tài khoản để bạn có thể đọc trên nhiều thiết bị.</EmptyStateDescription><EmptyStateActions><Button asChild><Link href="/dang-nhap?redirect=%2Ftu-sach">Đăng nhập</Link></Button></EmptyStateActions></EmptyState>
       ) : currentState?.kind === "error" ? (
-        <section className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900 dark:bg-red-950/30">
-          <p className="text-sm text-red-700 dark:text-red-300" role="alert">Không thể tải tủ sách. Vui lòng thử lại.</p>
-          <button type="button" onClick={() => setRetry((value) => value + 1)} className={`mt-4 ${buttonStyles}`}>Thử lại</button>
-        </section>
+        <ErrorState><div><ErrorStateTitle>Không thể tải tủ sách</ErrorStateTitle><ErrorStateDescription>Vui lòng kiểm tra kết nối và thử lại.</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)}>Thử lại</Button></ErrorStateActions></div></ErrorState>
       ) : result && result.data.length > 0 ? (
         <>
-          <p className="text-sm tabular-nums text-slate-500 dark:text-zinc-400" aria-live="polite">{result.meta.total.toLocaleString("vi-VN")} truyện trong tủ sách</p>
+          <p className="text-sm tabular-nums text-muted-foreground" aria-live="polite">{result.meta.total.toLocaleString("vi-VN")} truyện trong tủ sách</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {result.data.map(({ id, followedAt, story }) => (
               <Link
                 key={id}
                 href={`/truyen/${story.slug}`}
-                className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-600"
+                className="group rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
+                <Card className="h-full flex-row gap-4 rounded-2xl p-4 transition-colors group-hover:border-primary/60">
                 <div className="h-36 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-zinc-800">
                   {story.cover ? (
                     // Covers use existing external URLs, which are not restricted to Next image hosts.
@@ -117,31 +110,27 @@ export default function Bookshelf() {
                   ) : <BookOpen className="m-auto h-full w-8 text-slate-400" aria-hidden="true" />}
                 </div>
                 <div className="min-w-0 space-y-2">
-                  <h2 className="line-clamp-2 text-base font-bold text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">{story.tenTruyen}</h2>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400">{story.completed ? "Đã hoàn thành" : "Đang cập nhật"}</p>
-                  <p className="text-sm tabular-nums text-slate-600 dark:text-zinc-300">{story.chapters.toLocaleString("vi-VN")} chương</p>
-                  {followedAt && <p className="text-xs text-slate-400 dark:text-zinc-500">Theo dõi từ {dateFormat.format(new Date(followedAt))}</p>}
-                  <span className="inline-flex pt-1 text-xs font-bold text-blue-600 dark:text-blue-400">Xem truyện →</span>
+                  <h2 className="line-clamp-2 text-base font-bold group-hover:text-primary">{story.tenTruyen}</h2>
+                  <Badge variant={story.completed ? "success" : "info"}>{story.completed ? "Đã hoàn thành" : "Đang cập nhật"}</Badge>
+                  <p className="text-sm tabular-nums text-muted-foreground">{story.chapters.toLocaleString("vi-VN")} chương</p>
+                  {followedAt && <p className="text-xs text-muted-foreground">Theo dõi từ {dateFormat.format(new Date(followedAt))}</p>}
+                  <span className="inline-flex pt-1 text-xs font-bold text-primary">Xem truyện →</span>
                 </div>
+                </Card>
               </Link>
             ))}
           </div>
         </>
       ) : (
-        <section className="rounded-2xl border bg-white px-6 py-14 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <BookOpen className="mx-auto mb-4 h-10 w-10 text-slate-400" aria-hidden="true" />
-          <h2 className="text-lg font-bold">Tủ sách chưa có truyện</h2>
-          <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Nhấn “Theo dõi” ở trang truyện bạn yêu thích để lưu tại đây.</p>
-          <Link href="/truyen-moi" className={`mt-5 ${buttonStyles}`}>Khám phá truyện mới</Link>
-        </section>
+        <EmptyState><EmptyStateIcon><BookOpen aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Tủ sách chưa có truyện</EmptyStateTitle><EmptyStateDescription>Nhấn “Theo dõi” ở trang truyện bạn yêu thích để lưu tại đây.</EmptyStateDescription><EmptyStateActions><Button asChild variant="outline"><Link href="/truyen-moi">Khám phá truyện mới</Link></Button></EmptyStateActions></EmptyState>
       )}
 
       {result && result.meta.totalPage > 1 && (
-        <nav aria-label="Phân trang tủ sách" className="flex items-center justify-center gap-3">
-          <button type="button" aria-label="Trang trước" disabled={loading || page <= 1} onClick={() => setPagination({ accountId, page: page - 1 })} className={buttonStyles}><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
-          <span className="text-sm tabular-nums" aria-live="polite">Trang {page} / {result.meta.totalPage}</span>
-          <button type="button" aria-label="Trang sau" disabled={loading || page >= result.meta.totalPage} onClick={() => setPagination({ accountId, page: page + 1 })} className={buttonStyles}><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
-        </nav>
+        <Pagination aria-label="Phân trang tủ sách"><PaginationContent>
+          <PaginationItem><Button type="button" variant="outline" size="icon" aria-label="Trang trước" disabled={loading || page <= 1} onClick={() => setPagination({ accountId, page: page - 1 })}><ChevronLeft aria-hidden="true" /></Button></PaginationItem>
+          <PaginationItem><span className="px-2 text-sm tabular-nums" aria-live="polite">Trang {page} / {result.meta.totalPage}</span></PaginationItem>
+          <PaginationItem><Button type="button" variant="outline" size="icon" aria-label="Trang sau" disabled={loading || page >= result.meta.totalPage} onClick={() => setPagination({ accountId, page: page + 1 })}><ChevronRight aria-hidden="true" /></Button></PaginationItem>
+        </PaginationContent></Pagination>
       )}
     </div>
   );

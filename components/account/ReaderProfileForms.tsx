@@ -10,6 +10,7 @@ import { AccountField, AccountFormStatus } from "./AccountField";
 import { submitAccountForm } from "./account-request";
 import ReaderAvatar from "./ReaderAvatar";
 import PasswordStrengthInput from "@/components/auth/PasswordStrengthInput";
+import { FormActions } from "@/components/shared/form-actions";
 
 export function ProfileForm({ initial }: { initial: ReaderProfileInput }) {
   const { refreshUser } = useAuth();
@@ -41,10 +42,11 @@ export function ProfileForm({ initial }: { initial: ReaderProfileInput }) {
           autoComplete="off" spellCheck={false} maxLength={500} hint="Dùng đường dẫn HTTPS. Để trống để bỏ ảnh."
           readOnly={isSubmitting} error={errors.avatar?.message} />
       </fieldset>
-      <Button type="submit" disabled={isSubmitting}
-        className="min-h-11 w-full bg-blue-700 text-white transition-colors hover:bg-blue-800 sm:w-auto">
-        {isSubmitting ? "Đang lưu…" : "Lưu hồ sơ"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={isSubmitting} className="min-h-11 w-full sm:w-auto">
+          {isSubmitting ? "Đang lưu…" : "Lưu hồ sơ"}
+        </Button>
+      </FormActions>
       <AccountFormStatus error={errors.root?.message} message={message} />
     </form>
   );
@@ -76,12 +78,13 @@ export function PasswordForm() {
         <AccountField {...register("currentPassword")} id="current-password" type="password" label="Mật khẩu hiện tại"
           autoComplete="current-password" maxLength={1024} required readOnly={isSubmitting} error={errors.currentPassword?.message} />
         <PasswordStrengthInput id="new-password" password={newPassword} onPasswordChange={(value) => setValue("newPassword", value, { shouldValidate: true })} confirmPassword={confirmPassword} onConfirmPasswordChange={(value) => setValue("confirmPassword", value, { shouldValidate: true })} disabled={isSubmitting} passwordLabel="Mật khẩu mới" confirmLabel="Xác nhận mật khẩu mới" />
-        {errors.newPassword?.message || errors.confirmPassword?.message ? <p className="text-sm text-red-600">{errors.newPassword?.message || errors.confirmPassword?.message}</p> : null}
+        {errors.newPassword?.message || errors.confirmPassword?.message ? <p className="text-sm text-destructive">{errors.newPassword?.message || errors.confirmPassword?.message}</p> : null}
       </fieldset>
-      <Button type="submit" disabled={isSubmitting}
-        className="min-h-11 w-full bg-blue-700 text-white transition-colors hover:bg-blue-800 sm:w-auto">
-        {isSubmitting ? "Đang đổi…" : "Đổi mật khẩu"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={isSubmitting} className="min-h-11 w-full sm:w-auto">
+          {isSubmitting ? "Đang đổi…" : "Đổi mật khẩu"}
+        </Button>
+      </FormActions>
       <AccountFormStatus error={errors.root?.message} message={message} />
     </form>
   );

@@ -12,6 +12,7 @@ import { parseStoryQueryParams } from "@/schemas/story-query.schema";
 import StorySearchProvider from "@/components/search/StorySearchProvider";
 import SearchInputBar from "@/components/search/SearchInputBar";
 import ActiveStoryFilters from "@/components/search/ActiveStoryFilters";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
 
 interface GenreDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -64,44 +65,38 @@ export default async function GenreDetailPage({
       <div className="space-y-4">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <Link href="/" className="hover:text-blue-600 transition-colors">
+          <Link href="/" className="transition-colors hover:text-primary">
             Trang chủ
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <Link href="/the-loai" className="hover:text-blue-600 transition-colors">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <Link href="/the-loai" className="transition-colors hover:text-primary">
             Thể loại
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <span className="font-semibold text-foreground">
             {genre.tenTheLoai}
           </span>
         </nav>
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-zinc-800/80">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 mb-2 border border-blue-200/60 dark:border-blue-800/40">
-              <Layers className="w-3.5 h-3.5" />
-              <span>Thể loại truyện</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-zinc-100">
-              Truyện {genre.tenTheLoai}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1 max-w-2xl">
+        <PageHeader>
+          <PageHeaderContent>
+            <PageHeaderEyebrow className="flex items-center gap-2 text-primary"><Layers aria-hidden="true" className="size-3.5" />Thể loại truyện</PageHeaderEyebrow>
+            <PageHeaderTitle>Truyện {genre.tenTheLoai}</PageHeaderTitle>
+            <PageHeaderDescription>
               {genre.moTa ||
                 `Tổng hợp các tác phẩm ${genre.tenTheLoai} hay nhất, được chọn lọc và cập nhật liên tục.`}
-            </p>
-          </div>
-
-          <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400 shrink-0">
+            </PageHeaderDescription>
+          </PageHeaderContent>
+          <PageHeaderActions className="text-xs font-medium text-muted-foreground sm:text-sm">
             Tổng cộng:{" "}
-            <span className="font-bold text-slate-900 dark:text-zinc-100">
+            <span className="font-bold text-foreground">
               {pagination.total}
             </span>{" "}
             tác phẩm
-          </div>
-        </div>
+          </PageHeaderActions>
+        </PageHeader>
       </div>
 
       {/* Filter Bar */}

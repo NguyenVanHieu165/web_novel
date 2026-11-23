@@ -7,6 +7,12 @@ import { Star } from "lucide-react";
 import { z } from "zod";
 
 import { useAuth } from "@/context/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { FormActions } from "@/components/shared/form-actions";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
 
 const ratingResponseSchema = z.object({
   success: z.literal(true),
@@ -82,29 +88,26 @@ export default function StoryRatingForm({ storySlug }: { storySlug: string }) {
     }
   };
 
-  if (authLoading) return <p role="status" className="text-sm text-slate-500">Đang tải đánh giá…</p>;
+  if (authLoading) return <p role="status" className="text-sm text-muted-foreground">Đang tải đánh giá…</p>;
   if (!user || expired) {
     return (
-      <p className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-slate-200">
-        <Link href={`/dang-nhap?redirect=${encodeURIComponent(`/truyen/${storySlug}`)}`} className="font-semibold text-blue-600 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">Đăng nhập</Link>{" "}
+      <Alert variant="info"><AlertDescription>
+        <Link href={`/dang-nhap?redirect=${encodeURIComponent(`/truyen/${storySlug}`)}`} className="font-semibold underline underline-offset-4">Đăng nhập</Link>{" "}
         để đánh giá tác phẩm. Mỗi tài khoản có thể cập nhật một đánh giá.
-      </p>
+      </AlertDescription></Alert>
     );
   }
   if (loadError) {
     return (
-      <div className="rounded-xl border border-red-200 p-4 dark:border-red-900">
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
-        <button type="button" onClick={() => { setLoadError(null); setReloadVersion((version) => version + 1); }} className="mt-3 rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">Thử lại</button>
-      </div>
+      <ErrorState><div><ErrorStateTitle>Không thể tải đánh giá</ErrorStateTitle><ErrorStateDescription>{loadError}</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => { setLoadError(null); setReloadVersion((version) => version + 1); }}>Thử lại</Button></ErrorStateActions></div></ErrorState>
     );
   }
-  if (!loadedDraft) return <p role="status" className="text-sm text-slate-500">Đang tải đánh giá…</p>;
+  if (!loadedDraft) return <p role="status" className="text-sm text-muted-foreground">Đang tải đánh giá…</p>;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <Card><CardContent><form onSubmit={handleSubmit} className="space-y-4">
       <fieldset disabled={pending} className="space-y-3">
-        <legend className="text-sm font-bold text-slate-900 dark:text-zinc-100">Đánh giá của bạn</legend>
+        <legend className="text-sm font-bold">Đánh giá của bạn</legend>
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map((stars) => (
             <label key={stars} className="cursor-pointer">
@@ -118,14 +121,14 @@ export default function StoryRatingForm({ storySlug }: { storySlug: string }) {
                 aria-label={`${stars} sao`}
                 className="peer sr-only"
               />
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 transition-colors hover:bg-amber-50 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-checked:border-amber-400 peer-checked:bg-amber-50 dark:border-zinc-700 dark:hover:bg-amber-950/30 dark:peer-checked:bg-amber-950/30">
-                <Star aria-hidden="true" className={`h-6 w-6 ${loadedDraft.stars >= stars ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-zinc-600"}`} />
+              <span className="flex size-11 items-center justify-center rounded-lg border transition-colors hover:bg-warning/10 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-checked:border-warning peer-checked:bg-warning/10">
+                <Star aria-hidden="true" className={`size-6 ${loadedDraft.stars >= stars ? "fill-warning text-warning" : "text-muted-foreground/40"}`} />
               </span>
             </label>
           ))}
         </div>
-        <label htmlFor={`rating-content-${storySlug}`} className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Lời đánh giá (không bắt buộc)</label>
-        <textarea
+        <label htmlFor={`rating-content-${storySlug}`} className="block text-sm font-medium">Lời đánh giá (không bắt buộc)</label>
+        <Textarea
           id={`rating-content-${storySlug}`} name="content" rows={3} maxLength={2000}
           value={loadedDraft.content}
           onChange={(event) => {
@@ -133,17 +136,17 @@ export default function StoryRatingForm({ storySlug }: { storySlug: string }) {
             setSaved(false);
           }}
           placeholder="Bạn thích điều gì ở tác phẩm này?…"
-          className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+          className="min-h-24 resize-y rounded-xl"
         />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs tabular-nums text-slate-500">{loadedDraft.content.length}/2.000 ký tự</span>
-          <button type="submit" disabled={loadedDraft.stars === 0} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+        <FormActions className="justify-between sm:justify-between">
+          <span className="text-xs tabular-nums text-muted-foreground">{loadedDraft.content.length}/2.000 ký tự</span>
+          <Button type="submit" disabled={loadedDraft.stars === 0}>
             {pending ? "Đang lưu…" : loadedDraft.snapshot.rating ? "Cập nhật đánh giá" : "Gửi đánh giá"}
-          </button>
-        </div>
+          </Button>
+        </FormActions>
       </fieldset>
-      {postError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{postError}</p>}
-      {saved && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">Đã lưu đánh giá. Trung bình {loadedDraft.snapshot.average.toLocaleString("vi-VN")} / 5 từ {loadedDraft.snapshot.total.toLocaleString("vi-VN")} lượt đánh giá.</p>}
-    </form>
+      {postError && <Alert variant="destructive"><AlertDescription>{postError}</AlertDescription></Alert>}
+      {saved && <Alert variant="success"><AlertDescription>Đã lưu đánh giá. Trung bình {loadedDraft.snapshot.average.toLocaleString("vi-VN")} / 5 từ {loadedDraft.snapshot.total.toLocaleString("vi-VN")} lượt đánh giá.</AlertDescription></Alert>}
+    </form></CardContent></Card>
   );
 }

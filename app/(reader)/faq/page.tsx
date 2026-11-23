@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageHeader, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Câu Hỏi Thường Gặp",
@@ -14,16 +16,13 @@ const QUESTIONS = [
 export default function FaqPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-8 pb-16">
-      <header className="space-y-3">
-        <h1 className="text-pretty text-3xl font-black text-slate-950 dark:text-white sm:text-4xl">Câu Hỏi Thường Gặp</h1>
-        <p className="text-slate-600 dark:text-zinc-400">Thông tin nhanh để bạn sử dụng La Ca Truyện thuận tiện hơn.</p>
-      </header>
+      <PageHeader><PageHeaderContent><PageHeaderTitle className="text-3xl sm:text-4xl">Câu Hỏi Thường Gặp</PageHeaderTitle><PageHeaderDescription>Thông tin nhanh để bạn sử dụng La Ca Truyện thuận tiện hơn.</PageHeaderDescription></PageHeaderContent></PageHeader>
       <div className="space-y-4">
         {QUESTIONS.map(([question, answer]) => (
-          <section key={question} className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">{question}</h2>
-            <p className="mt-2 leading-7 text-slate-600 dark:text-zinc-300">{answer}</p>
-          </section>
+          <Card key={question}>
+            <CardHeader><CardTitle className="text-lg">{question}</CardTitle></CardHeader>
+            <CardContent><p className="leading-7 text-muted-foreground">{answer}</p></CardContent>
+          </Card>
         ))}
       </div>
     </main>

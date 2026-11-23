@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { demoCoinPackages, demoTopUpRequestSchema, type DemoTopUpInput } from "@/schemas/reader-wallet.schema";
 import { AccountFormStatus } from "./AccountField";
 import { submitAccountForm } from "./account-request";
+import { FormActions } from "@/components/shared/form-actions";
 
 export default function DemoTopUpForm() {
   const router = useRouter();
@@ -34,19 +35,18 @@ export default function DemoTopUpForm() {
       <fieldset disabled={isSubmitting} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <legend className="mb-2 text-sm font-medium">Chọn gói xu</legend>
         {Object.entries(demoCoinPackages).map(([id, amount]) => (
-          <label key={id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border
-            border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 has-checked:border-blue-600 has-checked:bg-blue-50
-            dark:border-zinc-700 dark:hover:bg-zinc-800 dark:has-checked:border-blue-400 dark:has-checked:bg-blue-950/50">
+          <label key={id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-muted has-checked:border-primary has-checked:bg-primary/10">
             <input type="radio" value={id} {...register("packageId")}
-              className="size-4 accent-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" />
+              className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />
             <span className="font-semibold tabular-nums">{amount} xu</span>
           </label>
         ))}
       </fieldset>
-      <Button type="submit" disabled={isSubmitting}
-        className="min-h-11 w-full bg-blue-700 text-white transition-colors hover:bg-blue-800 sm:w-auto">
-        {isSubmitting ? "Đang nạp…" : "Nạp xu mô phỏng"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={isSubmitting} className="min-h-11 w-full sm:w-auto">
+          {isSubmitting ? "Đang nạp…" : "Nạp xu mô phỏng"}
+        </Button>
+      </FormActions>
       <AccountFormStatus error={errors.root?.message ?? errors.packageId?.message} message={message} />
     </form>
   );

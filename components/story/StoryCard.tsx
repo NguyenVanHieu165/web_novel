@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookOpen, Star } from "lucide-react";
 import StoryBadge from "./StoryBadge";
 import { gsap } from "@/lib/gsap";
+import { Card, CardContent } from "@/components/ui/card";
 
 export interface StoryCardData {
   idTruyen: number;
@@ -95,9 +96,10 @@ export default function StoryCard({ story }: StoryCardProps) {
       prefetch={false}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="story-card-item group relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-sm hover:shadow-2xl hover:shadow-blue-500/15 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="story-card-item group relative block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       style={{ transformStyle: "preserve-3d" }}
     >
+      <Card className="relative h-full gap-0 overflow-hidden rounded-2xl py-0 transition-shadow duration-300 group-hover:shadow-2xl group-hover:shadow-primary/15">
       {/* Hologram Sheen Overlay */}
       <div
         ref={hologramRef}
@@ -106,7 +108,7 @@ export default function StoryCard({ story }: StoryCardProps) {
       />
 
       {/* Cover */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageSrc}
@@ -131,18 +133,18 @@ export default function StoryCard({ story }: StoryCardProps) {
 
         {/* Hover overlay with Read Now button */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-4 z-20">
-          <span className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-600/40 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
+          <span className="translate-y-2 transform rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/40 transition-transform duration-200 group-hover:translate-y-0">
             Đọc ngay
           </span>
         </div>
       </div>
 
       {/* Info */}
-      <div
-        className="p-3.5 space-y-1.5 flex-1 flex flex-col z-20"
+      <CardContent
+        className="z-20 flex flex-1 flex-col space-y-1.5 p-3.5"
         style={{ transform: "translateZ(20px)" }}
       >
-        <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-100 line-clamp-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-150">
+        <h3 className="line-clamp-2 text-sm font-bold leading-snug transition-colors duration-150 group-hover:text-primary">
           {story.tenTruyen}
         </h3>
 
@@ -158,7 +160,7 @@ export default function StoryCard({ story }: StoryCardProps) {
 
         {/* Chapter count */}
         {story.soChuong !== undefined && story.soChuong !== null && (
-          <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <BookOpen className="w-3 h-3" />
             <span className="text-[11px]">
               {story.soChuong.toLocaleString("vi-VN")} chương
@@ -168,11 +170,12 @@ export default function StoryCard({ story }: StoryCardProps) {
 
         {/* Genres */}
         {story.genres && story.genres.length > 0 && (
-          <p className="text-[10px] text-slate-400 dark:text-zinc-500 line-clamp-1 mt-auto pt-1">
+          <p className="mt-auto line-clamp-1 pt-1 text-[10px] text-muted-foreground">
             {story.genres.slice(0, 2).join(" · ")}
           </p>
         )}
-      </div>
+      </CardContent>
+      </Card>
     </Link>
   );
 }

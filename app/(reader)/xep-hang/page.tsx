@@ -3,6 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { getStoryList } from "@/lib/queries/story-list.query";
 import { Trophy, Flame, Star, Sparkles, ChevronRight, Eye } from "lucide-react";
+import { PageHeader, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const revalidate = 60;
 
@@ -46,51 +50,40 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
       <div className="space-y-4">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <Link href="/" className="hover:text-blue-600 transition-colors">
+          <Link href="/" className="transition-colors hover:text-primary">
             Trang chủ
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <span className="font-semibold text-foreground">
             Bảng xếp hạng
           </span>
         </nav>
 
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 via-slate-900 to-indigo-950 p-8 sm:p-10 border border-amber-500/20 text-white shadow-xl">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>Điện thờ danh vọng</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white">
-              Bảng Xếp Hạng Tác Phẩm
-            </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+        <PageHeader className="relative overflow-hidden rounded-3xl bg-card p-8 shadow-xl sm:p-10">
+          <PageHeaderContent className="max-w-2xl space-y-3">
+            <PageHeaderEyebrow className="flex items-center gap-2 text-warning"><Trophy aria-hidden="true" className="size-4" />Điện thờ danh vọng</PageHeaderEyebrow>
+            <PageHeaderTitle className="text-3xl sm:text-4xl">Bảng Xếp Hạng Tác Phẩm</PageHeaderTitle>
+            <PageHeaderDescription className="text-sm leading-relaxed sm:text-base">
               Bảng xếp hạng vinh danh những bộ truyện xuất sắc nhất, thu hút hàng triệu độc giả đồng hành mỗi ngày.
-            </p>
-          </div>
-        </div>
+            </PageHeaderDescription>
+          </PageHeaderContent>
+        </PageHeader>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-zinc-800/80 pb-3">
+      <div className="flex items-center gap-2 overflow-x-auto border-b pb-3">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.key;
           return (
-            <Link
-              key={tab.key}
-              href={`/xep-hang?tab=${tab.key}`}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                isActive
-                  ? "bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20"
-                  : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 border border-slate-200/80 dark:border-zinc-800/80"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
+            <Button key={tab.key} asChild variant={isActive ? "default" : "outline"} className="shrink-0 rounded-xl">
+            <Link href={`/xep-hang?tab=${tab.key}`} aria-current={isActive ? "page" : undefined}>
+              <Icon aria-hidden="true" />
               {tab.label}
             </Link>
+            </Button>
           );
         })}
       </div>
@@ -115,7 +108,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
               <Link
                 key={story.idTruyen}
                 href={`/truyen/${story.slug}`}
-                className={`group relative flex flex-col p-5 rounded-3xl bg-white dark:bg-zinc-900/60 border ${borderColors[idx]} shadow-lg transition-all duration-300 hover:-translate-y-1.5`}
+                className={`group relative flex flex-col rounded-3xl border bg-card p-5 shadow-lg transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1.5 ${borderColors[idx]}`}
               >
                 {/* Rank Badge */}
                 <div
@@ -140,12 +133,13 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex flex-wrap gap-1">
                       {story.genres?.slice(0, 2).map((g) => (
-                        <span
+                        <Badge
                           key={g}
-                          className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400"
+                          variant="secondary"
+                          className="rounded-md text-[10px]"
                         >
                           {g}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
 
@@ -175,14 +169,14 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
 
       {/* Ranks 4 to 30 Table List */}
       {remaining.length > 0 && (
-        <div className="bg-white dark:bg-zinc-900/60 rounded-3xl border border-slate-200/80 dark:border-zinc-800/80 overflow-hidden shadow-sm">
-          <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
-            <h2 className="font-bold text-base text-slate-800 dark:text-zinc-200">
+        <Card className="overflow-hidden rounded-3xl py-0">
+          <CardHeader className="flex-row items-center justify-between border-b p-4 sm:p-5">
+            <CardTitle className="text-base">
               Thứ Hạng Tiếp Theo (Từ Hạng 4)
-            </h2>
-          </div>
+            </CardTitle>
+          </CardHeader>
 
-          <div className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+          <CardContent className="divide-y p-0">
             {remaining.map((story, idx) => {
               const rank = idx + 4;
               return (
@@ -216,7 +210,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                       {story.genres?.slice(0, 3).map((g) => (
                         <span
                           key={g}
-                          className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400"
+                          className="rounded bg-secondary px-2 py-0.5 text-[10px] font-medium text-secondary-foreground"
                         >
                           {g}
                         </span>
@@ -243,8 +237,8 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                 </Link>
               );
             })}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

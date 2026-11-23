@@ -6,6 +6,9 @@ import { BookOpen, ArrowRight, RefreshCw } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import { useAuth } from "@/context/AuthContext";
 import { readingHistoryResponseSchema, type ReadingHistoryResponse } from "@/lib/reading-progress";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 type HistoryItem = ReadingHistoryResponse["data"][number];
 
@@ -52,18 +55,15 @@ function UserContinueReading() {
           {[1, 2, 3, 4].map((key) => <div key={key} aria-hidden="true" className="h-[114px] rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-zinc-900" />)}
         </div>
       ) : failed ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <p role="alert" className="text-sm text-slate-500 dark:text-zinc-400">Không thể tải các chương đang đọc.</p>
-          <button type="button" onClick={() => { setFailed(false); setLoading(true); setRetry((value) => value + 1); }} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400 dark:hover:bg-blue-950/40">
+        <ErrorState><div><ErrorStateTitle>Không thể tải các chương đang đọc</ErrorStateTitle><ErrorStateDescription>Vui lòng kiểm tra kết nối và thử lại.</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => { setFailed(false); setLoading(true); setRetry((value) => value + 1); }}>
             <RefreshCw className="h-4 w-4" aria-hidden="true" /> Thử lại
-          </button>
-        </div>
+          </Button></ErrorStateActions></div></ErrorState>
       ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {items.map((item) => (
-          <div
+          <Card
             key={item.chapterId}
-            className="flex gap-3 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-slate-100 dark:border-zinc-800/80 shadow-xs hover:shadow-md hover:border-blue-100 dark:hover:border-zinc-700 transition-[box-shadow,border-color] duration-200 motion-reduce:transition-none group"
+            className="group flex-row gap-3 rounded-xl p-3 transition-[box-shadow,border-color] duration-200 hover:border-primary/30 hover:shadow-md motion-reduce:transition-none"
           >
             {/* Cover */}
             <Link href={`/truyen/${item.storySlug}/${item.chapterSlug}`} className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
@@ -82,7 +82,7 @@ function UserContinueReading() {
             </Link>
 
             {/* Info */}
-            <div className="flex flex-col justify-between py-0.5 min-w-0 flex-1">
+            <CardContent className="flex min-w-0 flex-1 flex-col justify-between p-0 py-0.5">
               <div>
                 <Link href={`/truyen/${item.storySlug}`} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                   <h3 className="font-bold text-sm text-slate-800 dark:text-zinc-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -113,8 +113,8 @@ function UserContinueReading() {
                   </Link>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
       )}

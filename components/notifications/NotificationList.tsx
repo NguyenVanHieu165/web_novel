@@ -6,6 +6,13 @@ import { Bell, CheckCheck, ChevronLeft, ChevronRight, RefreshCw } from "lucide-r
 import { z } from "zod";
 
 import { useAuth } from "@/context/AuthContext";
+import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 
 const notificationSchema = z.object({
   success: z.literal(true),
@@ -21,7 +28,6 @@ type RequestState =
   | { key: string; kind: "ready"; result: NotificationResponse }
   | { key: string; kind: "error"; requiresLogin: boolean };
 
-const buttonStyles = "inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800";
 const dateFormat = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" });
 
 export default function NotificationList() {
@@ -108,54 +114,41 @@ export default function NotificationList() {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400"><Bell className="h-5 w-5" aria-hidden="true" />Cập nhật dành cho bạn</div>
-          <h1 className="text-2xl font-black sm:text-3xl">Thông báo</h1>
-          {result && <p className="mt-2 text-sm tabular-nums text-slate-500 dark:text-zinc-400" aria-live="polite">{result.meta.unread.toLocaleString("vi-VN")} chưa đọc · {result.meta.total.toLocaleString("vi-VN")} thông báo</p>}
-        </div>
-        {user && !requiresLogin && <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setRetry((value) => value + 1)} disabled={loading || pending !== null} className={buttonStyles}><RefreshCw className="h-4 w-4" aria-hidden="true" />Làm mới</button>
-          <button type="button" onClick={() => void markRead("all")} disabled={loading || pending !== null || !result?.meta.unread} className={buttonStyles}><CheckCheck className="h-4 w-4" aria-hidden="true" />{pending === "all" ? "Đang cập nhật…" : "Đọc tất cả"}</button>
-        </div>}
-      </div>
+      <PageHeader><PageHeaderContent><PageHeaderEyebrow className="flex items-center gap-2 text-primary"><Bell aria-hidden="true" className="size-4" />Cập nhật dành cho bạn</PageHeaderEyebrow><PageHeaderTitle>Thông Báo</PageHeaderTitle>{result && <PageHeaderDescription aria-live="polite">{result.meta.unread.toLocaleString("vi-VN")} chưa đọc · {result.meta.total.toLocaleString("vi-VN")} thông báo</PageHeaderDescription>}</PageHeaderContent>
+        {user && !requiresLogin && <PageHeaderActions>
+          <Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)} disabled={loading || pending !== null}><RefreshCw aria-hidden="true" />Làm mới</Button>
+          <Button type="button" variant="outline" onClick={() => void markRead("all")} disabled={loading || pending !== null || !result?.meta.unread}><CheckCheck aria-hidden="true" />{pending === "all" ? "Đang cập nhật…" : "Đọc tất cả"}</Button>
+        </PageHeaderActions>}
+      </PageHeader>
 
-      {mutationError?.key === key && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{mutationError.message}</p>}
+      {mutationError?.key === key && <Alert variant="destructive"><AlertDescription>{mutationError.message}</AlertDescription></Alert>}
       {loading ? (
         <div className="space-y-3" role="status" aria-label="Đang tải thông báo">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-28 rounded-2xl bg-slate-200/70 motion-safe:animate-pulse dark:bg-zinc-800" />)}</div>
       ) : requiresLogin ? (
-        <section className="rounded-2xl border bg-white px-6 py-14 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <Bell className="mx-auto mb-4 h-10 w-10 text-blue-500" aria-hidden="true" />
-          <h2 className="text-lg font-bold">Đăng nhập để xem thông báo</h2>
-          <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Thông báo của bạn chỉ hiển thị trong tài khoản của bạn.</p>
-          <Link href="/dang-nhap?redirect=%2Fthong-bao" className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500">Đăng nhập</Link>
-        </section>
+        <EmptyState><EmptyStateIcon><Bell aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Đăng nhập để xem thông báo</EmptyStateTitle><EmptyStateDescription>Thông báo của bạn chỉ hiển thị trong tài khoản của bạn.</EmptyStateDescription><EmptyStateActions><Button asChild><Link href="/dang-nhap?redirect=%2Fthong-bao">Đăng nhập</Link></Button></EmptyStateActions></EmptyState>
       ) : currentState?.kind === "error" ? (
-        <section className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900 dark:bg-red-950/30">
-          <p className="text-sm text-red-700 dark:text-red-300" role="alert">Không thể tải thông báo. Vui lòng thử lại.</p>
-          <button type="button" onClick={() => setRetry((value) => value + 1)} className={`mt-4 ${buttonStyles}`}>Thử lại</button>
-        </section>
+        <ErrorState><div><ErrorStateTitle>Không thể tải thông báo</ErrorStateTitle><ErrorStateDescription>Vui lòng kiểm tra kết nối và thử lại.</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)}>Thử lại</Button></ErrorStateActions></div></ErrorState>
       ) : result && result.data.length > 0 ? (
         <ul className="space-y-3">{result.data.map((notification) => (
-          <li key={notification.id} className={`rounded-2xl border p-5 ${notification.read ? "border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" : "border-blue-200 bg-blue-50/70 dark:border-blue-900 dark:bg-blue-950/20"}`}>
+          <li key={notification.id}><Card className={notification.read ? "rounded-2xl" : "rounded-2xl border-primary/30 bg-primary/5"}><CardContent>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h2 className="break-words text-base font-bold">{!notification.read && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-500" aria-label="Chưa đọc" />}{notification.title}</h2>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 dark:text-zinc-300">{notification.content}</p>
-                {notification.createdAt && <time dateTime={notification.createdAt} className="mt-3 block text-xs text-slate-400 dark:text-zinc-500">{dateFormat.format(new Date(notification.createdAt))}</time>}
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{notification.content}</p>
+                {notification.createdAt && <time dateTime={notification.createdAt} className="mt-3 block text-xs text-muted-foreground">{dateFormat.format(new Date(notification.createdAt))}</time>}
               </div>
-              {!notification.read && <button type="button" onClick={() => void markRead(notification.id)} disabled={pending !== null} className={`${buttonStyles} shrink-0`} aria-label={`Đánh dấu đã đọc: ${notification.title}`}>{pending === notification.id ? "Đang cập nhật…" : "Đánh dấu đã đọc"}</button>}
+              {!notification.read && <Button type="button" variant="outline" onClick={() => void markRead(notification.id)} disabled={pending !== null} className="shrink-0" aria-label={`Đánh dấu đã đọc: ${notification.title}`}>{pending === notification.id ? "Đang cập nhật…" : "Đánh dấu đã đọc"}</Button>}
             </div>
-          </li>
+          </CardContent></Card></li>
         ))}</ul>
       ) : (
-        <section className="rounded-2xl border bg-white px-6 py-14 text-center dark:border-zinc-800 dark:bg-zinc-900"><Bell className="mx-auto mb-4 h-10 w-10 text-slate-400" aria-hidden="true" /><h2 className="text-lg font-bold">Chưa có thông báo</h2><p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Các thông báo được gửi đến tài khoản sẽ xuất hiện ở đây.</p></section>
+        <EmptyState><EmptyStateIcon><Bell aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Chưa có thông báo</EmptyStateTitle><EmptyStateDescription>Các thông báo được gửi đến tài khoản sẽ xuất hiện ở đây.</EmptyStateDescription></EmptyState>
       )}
-      {result && result.meta.totalPage > 1 && <nav aria-label="Phân trang thông báo" className="flex items-center justify-center gap-3">
-        <button type="button" aria-label="Trang trước" disabled={loading || pending !== null || page <= 1} onClick={() => setPagination({ accountId, page: page - 1 })} className={buttonStyles}><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
-        <span className="text-sm tabular-nums" aria-live="polite">Trang {page} / {result.meta.totalPage}</span>
-        <button type="button" aria-label="Trang sau" disabled={loading || pending !== null || page >= result.meta.totalPage} onClick={() => setPagination({ accountId, page: page + 1 })} className={buttonStyles}><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
-      </nav>}
+      {result && result.meta.totalPage > 1 && <Pagination aria-label="Phân trang thông báo"><PaginationContent>
+        <PaginationItem><Button type="button" variant="outline" size="icon" aria-label="Trang trước" disabled={loading || pending !== null || page <= 1} onClick={() => setPagination({ accountId, page: page - 1 })}><ChevronLeft aria-hidden="true" /></Button></PaginationItem>
+        <PaginationItem><span className="px-2 text-sm tabular-nums" aria-live="polite">Trang {page} / {result.meta.totalPage}</span></PaginationItem>
+        <PaginationItem><Button type="button" variant="outline" size="icon" aria-label="Trang sau" disabled={loading || pending !== null || page >= result.meta.totalPage} onClick={() => setPagination({ accountId, page: page + 1 })}><ChevronRight aria-hidden="true" /></Button></PaginationItem>
+      </PaginationContent></Pagination>}
     </div>
   );
 }

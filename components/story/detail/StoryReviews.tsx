@@ -9,6 +9,14 @@ import { toast } from "sonner";
 import StoryRatingForm from "./StoryRatingForm";
 import StoryCommentReplies from "./StoryCommentReplies";
 import { commentsPageSchema, createdCommentSchema, commentErrorSchema as errorResponseSchema } from "./comment-response";
+import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { Textarea } from "@/components/ui/textarea";
 
 interface StoryReviewsProps {
   storyId: number;
@@ -115,63 +123,59 @@ export default function StoryReviews({
   return (
     <div className="space-y-8">
       {/* Rating Score Card */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <Card className="flex-col items-center justify-between gap-6 rounded-3xl bg-muted/30 p-6 sm:flex-row sm:p-8">
         <div className="flex items-center gap-5">
-          <div className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">
+          <div className="text-4xl font-black sm:text-5xl">
             {averageRating.toFixed(1)}
           </div>
           <div>
-            <div className="flex items-center gap-1 text-amber-400">
+            <div className="flex items-center gap-1 text-warning">
               {[1, 2, 3, 4, 5].map((s) => (
                 <Star
                   key={s}
                   className={`w-5 h-5 ${
                     s <= Math.round(averageRating)
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-slate-300 dark:text-zinc-700"
+                      ? "fill-warning text-warning"
+                      : "text-muted-foreground/30"
                   }`}
                 />
               ))}
             </div>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1 font-medium">
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
               Dựa trên {totalRatings} lượt đánh giá từ độc giả
             </p>
           </div>
         </div>
 
         {/* Sub-tabs switcher */}
-        <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-1 rounded-2xl border border-slate-200 dark:border-zinc-700">
-          <button
+        <div className="flex items-center gap-2 rounded-2xl border bg-background p-1">
+          <Button
             type="button"
+            size="sm"
+            variant={activeSubTab === "reviews" ? "default" : "ghost"}
             onClick={() => setActiveSubTab("reviews")}
             aria-pressed={activeSubTab === "reviews"}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer ${
-              activeSubTab === "reviews"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-            }`}
+            className="rounded-xl px-4 font-bold"
           >
-            <Star className="w-3.5 h-3.5" />
+            <Star aria-hidden="true" />
             <span>Đánh giá ({totalRatings})</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
+            variant={activeSubTab === "comments" ? "default" : "ghost"}
             onClick={() => {
               if (activeSubTab !== "comments") setCommentsLoading(true);
               setActiveSubTab("comments");
             }}
             aria-pressed={activeSubTab === "comments"}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer ${
-              activeSubTab === "comments"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-            }`}
+            className="rounded-xl px-4 font-bold"
           >
-            <MessageSquare className="w-3.5 h-3.5" />
+            <MessageSquare aria-hidden="true" />
             <span>Thảo luận ({total})</span>
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Sub-tab 1: Reviews List */}
       {activeSubTab === "reviews" && (
@@ -179,48 +183,47 @@ export default function StoryReviews({
           <StoryRatingForm key={storyId} storySlug={storySlug} />
           {reviews.length > 0 ? (
             reviews.map((rev) => (
-              <div
+              <Card
                 key={rev.idDanhGia}
-                className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800/80 space-y-3"
+                className="rounded-2xl"
               >
+                <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs">
                       {rev.authorName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100">
+                      <h4 className="text-xs font-bold sm:text-sm">
                         {rev.authorName}
                       </h4>
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-500">
+                      <p className="text-[11px] text-muted-foreground">
                         {rev.createdAt}
                       </p>
                     </div>
                   </div>
 
                   {/* Stars */}
-                  <div className="flex items-center gap-0.5 text-amber-400">
+                  <div className="flex items-center gap-0.5 text-warning">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star
                         key={s}
                         className={`w-3.5 h-3.5 ${
-                          s <= rev.soSao ? "fill-amber-400 text-amber-400" : "text-slate-200"
+                          s <= rev.soSao ? "fill-warning text-warning" : "text-muted-foreground/30"
                         }`}
                       />
                     ))}
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
+                <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
                   {rev.noiDung || "Độc giả không để lại lời bình chi tiết."}
                 </p>
-              </div>
+                </CardContent>
+              </Card>
             ))
           ) : (
-            <div className="py-12 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800">
-              <Star className="w-8 h-8 text-slate-300 dark:text-zinc-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">Chưa có bài đánh giá nào.</p>
-            </div>
+            <EmptyState><EmptyStateIcon><Star aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Chưa có bài đánh giá</EmptyStateTitle><EmptyStateDescription>Hãy là độc giả đầu tiên chia sẻ cảm nhận về tác phẩm.</EmptyStateDescription></EmptyState>
           )}
         </div>
       )}
@@ -230,21 +233,21 @@ export default function StoryReviews({
         <div className="space-y-6">
           {/* Post Comment Input */}
           {requiresLogin ? (
-            <p className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-slate-200">
+            <Alert variant="info"><AlertDescription>
               <Link
                 href={`/dang-nhap?redirect=${encodeURIComponent(returnPath)}`}
-                className="font-semibold text-blue-600 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
+                className="font-semibold underline underline-offset-4"
               >
                 Đăng nhập
               </Link>{" "}để tham gia thảo luận cùng độc giả.
-            </p>
+            </AlertDescription></Alert>
           ) : (
           <form onSubmit={handlePostComment} className="space-y-3">
             <label htmlFor={`story-comment-${storyId}`} className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
               Bình luận của bạn
             </label>
             <div>
-              <textarea
+              <Textarea
                 id={`story-comment-${storyId}`}
                 name="noiDung"
                 value={commentText}
@@ -255,68 +258,67 @@ export default function StoryReviews({
                 placeholder="Chia sẻ cảm nhận của bạn về tác phẩm…"
                 aria-describedby={`comment-limit-${storyId}`}
                 aria-invalid={postError ? true : undefined}
-                className="w-full p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs sm:text-sm text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-y disabled:opacity-60"
+                className="min-h-24 resize-y rounded-2xl p-4 text-xs sm:text-sm"
               />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span id={`comment-limit-${storyId}`} className="text-xs text-slate-500 tabular-nums dark:text-zinc-400">{commentText.length}/1.000 ký tự</span>
-              <button
+              <span id={`comment-limit-${storyId}`} className="text-xs tabular-nums text-muted-foreground">{commentText.length}/1.000 ký tự</span>
+              <Button
                 type="submit"
+                size="sm"
                 disabled={posting || !commentText.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 cursor-pointer disabled:cursor-not-allowed"
+                className="rounded-xl font-bold"
               >
                 <Send className="w-3.5 h-3.5" aria-hidden="true" />
                 {posting ? "Đang gửi…" : "Gửi bình luận"}
-              </button>
+              </Button>
             </div>
-            {postError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{postError}</p>}
+            {postError && <Alert variant="destructive"><AlertDescription>{postError}</AlertDescription></Alert>}
           </form>
           )}
 
           {/* Comments List */}
           <div className="space-y-3" aria-busy={commentsLoading}>
             {commentsLoading ? (
-              <p role="status" className="py-8 text-center text-sm text-slate-500">Đang tải bình luận…</p>
+              <p role="status" className="py-8 text-center text-sm text-muted-foreground">Đang tải bình luận…</p>
             ) : commentsError ? (
-              <div className="rounded-xl border border-red-200 p-4 text-center dark:border-red-900">
-                <p role="alert" className="text-sm text-red-600 dark:text-red-400">{commentsError}</p>
-                <button
+              <ErrorState><div><ErrorStateTitle>Không thể tải bình luận</ErrorStateTitle><ErrorStateDescription>{commentsError}</ErrorStateDescription><ErrorStateActions><Button
                   type="button"
+                  variant="outline"
                   onClick={() => {
                     setCommentsLoading(true);
                     setCommentsError(null);
                     setRefreshVersion((previous) => previous + 1);
                   }}
-                  className="mt-3 rounded-md border px-4 py-2 text-sm font-semibold hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
                 >
                   Thử lại
-                </button>
-              </div>
+                </Button></ErrorStateActions></div></ErrorState>
             ) : commentList.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500 dark:text-zinc-400">Chưa có bình luận nào. Hãy chia sẻ cảm nhận đầu tiên.</p>
+              <EmptyState><EmptyStateIcon><MessageSquare aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Chưa có bình luận</EmptyStateTitle><EmptyStateDescription>Hãy chia sẻ cảm nhận đầu tiên về tác phẩm.</EmptyStateDescription></EmptyState>
             ) : commentList.map((comm) => (
-              <div
+              <Card
                 key={comm.idBinhLuan}
-                className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800/80 space-y-2"
+                className="rounded-2xl"
               >
+                <CardContent className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs">
                       {comm.authorName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100">
+                      <h4 className="text-xs font-bold">
                         {comm.authorName}
-                        {comm.isStoryAuthor && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">Tác giả</span>}
+                        {comm.isStoryAuthor && <Badge variant="warning" className="ml-2 rounded text-[10px]">Tác giả</Badge>}
                       </h4>
-                      <p className="text-[10px] text-slate-400 dark:text-zinc-500">
+                      <p className="text-[10px] text-muted-foreground">
                         {comm.createdAt}
                       </p>
                     </div>
                   </div>
 
                   <span
-                    className="flex items-center gap-1 text-[11px] text-slate-400"
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground"
                     aria-label={`${comm.likeCount} lượt thích`}
                   >
                     <ThumbsUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -324,35 +326,38 @@ export default function StoryReviews({
                   </span>
                 </div>
 
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-zinc-300 leading-relaxed pl-10 whitespace-pre-wrap break-words">
+                <p className="whitespace-pre-wrap break-words pl-10 text-xs leading-relaxed text-muted-foreground sm:text-sm">
                   {comm.noiDung}
                 </p>
                 <StoryCommentReplies storySlug={storySlug} parentId={comm.idBinhLuan} />
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
           {!commentsLoading && !commentsError && totalPage > 1 && (
-            <nav aria-label="Phân trang bình luận" className="flex items-center justify-center gap-3">
-              <button
+            <Pagination aria-label="Phân trang bình luận"><PaginationContent>
+              <PaginationItem><Button
                 type="button"
+                variant="outline"
+                size="icon"
                 aria-label="Trang bình luận trước"
                 disabled={page <= 1 || posting}
                 onClick={() => changePage(page - 1)}
-                className="rounded-md border p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <span className="text-sm tabular-nums" aria-live="polite">Trang {page}/{totalPage}</span>
-              <button
+              </Button></PaginationItem>
+              <PaginationItem><span className="px-2 text-sm tabular-nums" aria-live="polite">Trang {page}/{totalPage}</span></PaginationItem>
+              <PaginationItem><Button
                 type="button"
+                variant="outline"
+                size="icon"
                 aria-label="Trang bình luận sau"
                 disabled={page >= totalPage || posting}
                 onClick={() => changePage(page + 1)}
-                className="rounded-md border p-2 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800"
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </nav>
+              </Button></PaginationItem>
+            </PaginationContent></Pagination>
           )}
         </div>
       )}

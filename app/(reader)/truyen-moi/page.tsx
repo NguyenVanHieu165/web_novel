@@ -10,6 +10,7 @@ import { parseStoryQueryParams } from "@/schemas/story-query.schema";
 import StorySearchProvider from "@/components/search/StorySearchProvider";
 import SearchInputBar from "@/components/search/SearchInputBar";
 import ActiveStoryFilters from "@/components/search/ActiveStoryFilters";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
 
 export const revalidate = 60;
 
@@ -39,39 +40,33 @@ export default async function TruyenMoiPage({ searchParams }: TruyenMoiPageProps
       <div className="space-y-4">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <Link href="/" className="hover:text-blue-600 transition-colors">
+          <Link href="/" className="transition-colors hover:text-primary">
             Trang chủ
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <span className="font-semibold text-foreground">
             Truyện mới
           </span>
         </nav>
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-zinc-800/80">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mb-2 border border-emerald-200/60 dark:border-emerald-800/40">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Cập nhật liên tục</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-zinc-100">
-              Truyện Mới Ra Mắt & Cập Nhật
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1 max-w-2xl">
+        <PageHeader>
+          <PageHeaderContent>
+            <PageHeaderEyebrow className="flex items-center gap-2 text-success"><Sparkles aria-hidden="true" className="size-3.5" />Cập nhật liên tục</PageHeaderEyebrow>
+            <PageHeaderTitle>Truyện Mới Ra Mắt & Cập Nhật</PageHeaderTitle>
+            <PageHeaderDescription>
               Tuyển tập những bộ truyện vừa được đăng tải và có chương mới nhất trên toàn hệ thống WebNovel.
-            </p>
-          </div>
-
-          <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400 shrink-0">
+            </PageHeaderDescription>
+          </PageHeaderContent>
+          <PageHeaderActions className="text-xs font-medium text-muted-foreground sm:text-sm">
             Tổng cộng:{" "}
-            <span className="font-bold text-slate-900 dark:text-zinc-100">
+            <span className="font-bold text-foreground">
               {pagination.total}
             </span>{" "}
             tác phẩm
-          </div>
-        </div>
+          </PageHeaderActions>
+        </PageHeader>
       </div>
 
       {/* Filter Bar */}

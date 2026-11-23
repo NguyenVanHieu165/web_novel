@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import type { GenreItem } from "@/lib/queries/genre.query";
 import type { StorySearchKey } from "@/lib/story-search";
 import { useStorySearchNavigation } from "./StorySearchProvider";
+import { Button } from "@/components/ui/button";
 
 const labels: Record<string, string> = {
   dang_tien_hanh: "Đang ra", hoan_thanh: "Hoàn thành", tam_dung: "Tạm dừng", sap_ra_mat: "Sắp ra mắt",
@@ -24,14 +25,14 @@ export default function ActiveStoryFilters({ genres = [] }: { genres?: GenreItem
   return (
     <div className="space-y-2">
       {filters.length > 0 && <div role="group" aria-label="Bộ lọc đang áp dụng" className="flex flex-wrap items-center gap-2">
-        {filters.map((filter) => <button key={filter.key} type="button" aria-label={`Bỏ bộ lọc ${filter.label}`}
-          onClick={() => controller.update({ [filter.key]: undefined })}
-          className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-blue-950/50 dark:text-blue-200 dark:hover:bg-blue-900/60">
-          <span className="truncate">{filter.label}</span><X className="h-3 w-3 shrink-0" aria-hidden="true" />
-        </button>)}
-        <button type="button" onClick={() => controller.clear()} className="rounded px-2 py-1.5 text-xs font-semibold text-slate-600 underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-zinc-300">Xóa tất cả bộ lọc</button>
+        {filters.map((filter) => <Button key={filter.key} type="button" size="xs" variant="secondary" aria-label={`Bỏ bộ lọc ${filter.label}`}
+            onClick={() => controller.update({ [filter.key]: undefined })}
+            className="max-w-full gap-2 rounded-full bg-info/10 px-3 text-info hover:bg-info/15">
+            <span className="truncate">{filter.label}</span><X className="size-3 shrink-0" aria-hidden="true" />
+          </Button>)}
+        <Button type="button" variant="link" size="xs" onClick={() => controller.clear()}>Xóa tất cả bộ lọc</Button>
       </div>}
-      <p role="status" aria-live="polite" className="min-h-5 text-xs text-slate-500 dark:text-zinc-400">{pending ? "Đang cập nhật kết quả…" : ""}</p>
+      <p role="status" aria-live="polite" className="min-h-5 text-xs text-muted-foreground">{pending ? "Đang cập nhật kết quả…" : ""}</p>
     </div>
   );
 }

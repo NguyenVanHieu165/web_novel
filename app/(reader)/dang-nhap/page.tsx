@@ -7,6 +7,12 @@ import { BookOpen, Loader2, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { safeAuthRedirect } from "@/lib/auth-redirect";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FormActions } from "@/components/shared/form-actions";
 
 const oauthErrors: Record<string, string> = { account_locked: "Tài khoản của bạn đã bị khóa.", email_not_verified: "Email Google chưa được xác minh.", oauth_state_invalid: "Phiên đăng nhập Google không hợp lệ. Hãy thử lại.", oauth_unavailable: "Đăng nhập Google chưa được cấu hình.", oauth_failed: "Không thể đăng nhập bằng Google." };
 
@@ -59,54 +65,59 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md bg-white dark:bg-zinc-900 p-8 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-xl shadow-slate-900/5 dark:shadow-black/20">
+    <Card className="w-full max-w-md rounded-3xl py-0 shadow-xl">
       {/* Brand Header */}
-      <div className="text-center mb-8">
+      <CardHeader className="items-center px-8 pb-0 pt-8 text-center">
         <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
             <BookOpen className="w-6 h-6" />
           </div>
         </Link>
-        <h1 className="text-2xl font-black text-slate-800 dark:text-zinc-100 tracking-tight">
+        <CardTitle className="text-2xl font-black tracking-tight">
           Chào Mừng Trở Lại!
-        </h1>
-        <p className="text-xs text-slate-400 mt-1.5">
+        </CardTitle>
+        <CardDescription className="mt-1.5 text-xs">
           Đăng nhập để đọc tiếp chương truyện và quản lý tủ sách của bạn
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-5 px-8 pb-8">
 
       {/* Error alert */}
       {error && (
-        <div className="mb-5 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs rounded-xl font-medium flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-          {error}
-        </div>
+        <Alert variant="destructive" aria-live="polite">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 mb-1.5">
+          <Label htmlFor="login-identity" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Tài khoản hoặc Email
-          </label>
+          </Label>
           <div className="relative">
-            <input
+            <Input
+              id="login-identity"
+              name="usernameOrEmail"
               type="text"
               required
+              autoComplete="username"
+              spellCheck={false}
               value={form.usernameOrEmail}
               onChange={(e) => setForm({ ...form, usernameOrEmail: e.target.value })}
-              placeholder="VD: admin hoặc admin@example.com"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 transition-all"
+              placeholder="VD: admin hoặc admin@example.com…"
+              className="h-11 rounded-xl bg-muted/40 pl-10"
             />
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Mail aria-hidden="true" className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">
+            <Label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Mật khẩu
-            </label>
+            </Label>
             <Link
               href="#"
               className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
@@ -115,55 +126,55 @@ function LoginForm() {
             </Link>
           </div>
           <div className="relative">
-            <input
+            <Input
+              id="login-password"
+              name="password"
               type={showPassword ? "text" : "password"}
               required
+              autoComplete="current-password"
               value={form.matKhau}
               onChange={(e) => setForm({ ...form, matKhau: e.target.value })}
               placeholder="••••••••"
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 transition-all"
+              className="h-11 rounded-xl bg-muted/40 pl-10 pr-10"
             />
-            <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-            <button
+            <Lock aria-hidden="true" className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+              className="absolute right-2 top-1.5 text-muted-foreground"
+              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+              {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            </Button>
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Đang xác thực...
-            </>
-          ) : (
-            "Đăng Nhập"
-          )}
-        </button>
+        <FormActions className="border-0 pt-2">
+          <Button type="submit" size="lg" disabled={loading} className="w-full rounded-xl font-bold">
+            {loading ? <><Loader2 aria-hidden="true" className="animate-spin" />Đang xác thực…</> : "Đăng Nhập"}
+          </Button>
+        </FormActions>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-xs text-slate-400 before:h-px before:flex-1 before:bg-slate-200 after:h-px after:flex-1 after:bg-slate-200 dark:before:bg-zinc-800 dark:after:bg-zinc-800">hoặc</div>
-      <a href={`/api/auth/google?redirect=${encodeURIComponent(redirectUrl)}`} className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"><GoogleLogo />Tiếp tục với Google</a>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">hoặc</div>
+      <Button asChild variant="outline" className="w-full rounded-xl">
+        <a href={`/api/auth/google?redirect=${encodeURIComponent(redirectUrl)}`}><GoogleLogo />Tiếp tục với Google</a>
+      </Button>
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t border-slate-100 dark:border-zinc-800 text-center text-xs text-slate-400">
+      <div className="border-t pt-6 text-center text-xs text-muted-foreground">
         Chưa có tài khoản WebNovel?{" "}
         <Link
           href={`/dang-ky${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
-          className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+          className="font-bold text-primary hover:underline"
         >
           Đăng ký miễn phí
         </Link>
       </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -172,7 +183,7 @@ function GoogleLogo() { return <svg aria-hidden="true" className="h-5 w-5" viewB
 export default function LoginPage() {
   return (
     <div className="flex min-h-[75vh] items-center justify-center py-10">
-      <Suspense fallback={<div className="text-center text-sm text-slate-400">Đang tải...</div>}>
+      <Suspense fallback={<div role="status" className="text-center text-sm text-muted-foreground">Đang tải…</div>}>
         <LoginForm />
       </Suspense>
     </div>

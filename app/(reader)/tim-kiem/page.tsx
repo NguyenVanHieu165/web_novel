@@ -12,6 +12,7 @@ import { Search, ChevronRight } from "lucide-react";
 import { parseStoryQueryParams } from "@/schemas/story-query.schema";
 import StorySearchProvider from "@/components/search/StorySearchProvider";
 import ActiveStoryFilters from "@/components/search/ActiveStoryFilters";
+import { PageHeader, PageHeaderContent, PageHeaderDescription, PageHeaderEyebrow, PageHeaderTitle } from "@/components/shared/page-header";
 
 export const metadata: Metadata = {
   title: "Tìm Kiếm Truyện Nâng Cao | WebNovel",
@@ -42,29 +43,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div className="space-y-4">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
         >
-          <Link href="/" className="hover:text-blue-600 transition-colors">
+          <Link href="/" className="transition-colors hover:text-primary">
             Trang chủ
           </Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="font-semibold text-slate-800 dark:text-zinc-200">
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+          <span className="font-semibold text-foreground">
             Tìm kiếm truyện
           </span>
         </nav>
 
-        <div className="text-center max-w-xl mx-auto space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40">
-            <Search className="w-3.5 h-3.5" />
-            <span>Bộ máy tra cứu</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-zinc-100">
-            Tìm Kiếm Tác Phẩm
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
+        <PageHeader className="mx-auto max-w-2xl justify-center text-center sm:items-center">
+          <PageHeaderContent>
+          <PageHeaderEyebrow className="flex items-center justify-center gap-2 text-primary"><Search aria-hidden="true" className="size-3.5" />Bộ máy tra cứu</PageHeaderEyebrow>
+          <PageHeaderTitle>Tìm Kiếm Tác Phẩm</PageHeaderTitle>
+          <PageHeaderDescription className="mx-auto">
             Khám phá kho tàng truyện chữ với bộ lọc đa điều kiện thông minh.
-          </p>
-        </div>
+          </PageHeaderDescription>
+          </PageHeaderContent>
+        </PageHeader>
 
         {/* Search Bar */}
         <div className="pt-2">
@@ -74,7 +72,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       {/* Genre Filter Chips */}
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Lọc theo thể loại
         </div>
         <SearchGenreChips genres={genres} />
@@ -85,12 +83,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <ActiveStoryFilters genres={genres} />
 
       {/* Results Header */}
-      <div className="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-zinc-400 px-1">
+      <div className="flex items-center justify-between px-1 text-xs text-muted-foreground sm:text-sm">
         <div>
           {query.q ? (
             <span>
               Kết quả cho từ khóa:{" "}
-              <strong className="text-slate-900 dark:text-zinc-100">
+              <strong className="text-foreground">
                 &ldquo;{query.q}&rdquo;
               </strong>
             </span>
@@ -99,7 +97,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           )}
         </div>
         <div aria-live="polite">
-          Tìm thấy <strong className="text-slate-900 dark:text-zinc-100">{pagination.total}</strong> truyện
+          Tìm thấy <strong className="text-foreground">{pagination.total}</strong> truyện
         </div>
       </div>
 

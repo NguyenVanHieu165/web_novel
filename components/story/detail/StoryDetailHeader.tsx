@@ -18,6 +18,10 @@ import { StoryDetailData } from "@/lib/mappers/story-detail.mapper";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface StoryDetailHeaderProps {
   story: StoryDetailData;
@@ -156,17 +160,17 @@ export default function StoryDetailHeader({ story, readingAction }: StoryDetailH
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 shadow-xl shadow-slate-900/5 dark:shadow-black/20 p-6 sm:p-8 md:p-10 mb-8">
+    <Card className="relative mb-8 w-full overflow-hidden rounded-3xl p-6 shadow-xl sm:p-8 md:p-10">
       {/* 1. Ambient Backdrop Glow lan tỏa màu sắc theo ảnh bìa */}
       <div
-        className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-25 blur-[120px] transition-all duration-1000 -z-10"
+        className="pointer-events-none absolute -top-24 -left-24 -z-10 h-96 w-96 rounded-full opacity-25 blur-[120px]"
         style={{
           backgroundImage: `url(${story.anhBia})`,
           backgroundSize: "cover",
         }}
       />
       <div
-        className="pointer-events-none absolute -bottom-24 -right-24 w-96 h-96 rounded-full opacity-20 blur-[120px] transition-all duration-1000 -z-10 bg-blue-500"
+        className="pointer-events-none absolute -bottom-24 -right-24 -z-10 h-96 w-96 rounded-full bg-primary opacity-20 blur-[120px]"
       />
 
       {/* Breadcrumb Navigation */}
@@ -251,13 +255,14 @@ export default function StoryDetailHeader({ story, readingAction }: StoryDetailH
               {/* Genres Pills */}
               <div className="flex items-center gap-2 flex-wrap pt-1">
                 {story.genres.map((g) => (
+                  <Badge key={g.idTheLoai} asChild variant="info">
                   <Link
-                    key={g.idTheLoai}
                     href={`/the-loai/${g.idTheLoai}`}
-                    className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full transition-colors"
+                    className="px-3 py-1 text-xs font-bold hover:bg-info/15"
                   >
                     {g.tenTheLoai}
                   </Link>
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -325,52 +330,51 @@ export default function StoryDetailHeader({ story, readingAction }: StoryDetailH
           {/* Action Buttons */}
           <div className="flex items-center gap-3 flex-wrap">
             {readingAction ?? (
-              <button
+              <Button
                 disabled
-                className="px-6 py-3 bg-slate-200 dark:bg-zinc-800 text-slate-400 text-sm font-semibold rounded-xl cursor-not-allowed"
+                size="lg"
+                variant="secondary"
+                className="rounded-xl"
               >
                 Chưa có chương
-              </button>
+              </Button>
             )}
 
             {story.latestChapterSlug && (
-              <Link
-                href={`/truyen/${story.slug}/${story.latestChapterSlug}`}
-                className="flex items-center gap-2 px-5 py-3 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 font-semibold text-sm rounded-xl active:scale-95 transition-all duration-200"
-              >
+              <Button asChild size="lg" variant="outline" className="rounded-xl"><Link href={`/truyen/${story.slug}/${story.latestChapterSlug}`}>
                 <Sparkles className="w-4 h-4 text-blue-500" />
                 Chương mới nhất
-              </Link>
+              </Link></Button>
             )}
 
-            <button
+            <Button
               type="button"
+              size="lg"
+              variant={isFollowing ? "destructive" : "outline"}
               onClick={handleToggleFollow}
               aria-pressed={isFollowing}
               aria-busy={authLoading || followPending || (!followReady && !followError)}
               disabled={authLoading || followPending || (!followReady && !followError)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl border font-semibold text-sm transition-colors duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 motion-reduce:transform-none ${
-                isFollowing
-                  ? "bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:border-rose-900/50 text-rose-600 dark:text-rose-400"
-                  : "border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300"
-              }`}
+              className="rounded-xl"
             >
               <Heart className={`w-4 h-4 ${isFollowing ? "fill-rose-500 text-rose-500" : ""}`} />
               <span>{followPending ? "Đang cập nhật…" : authLoading || (!followReady && !followError) ? "Đang tải…" : isFollowing ? "Đang theo dõi" : "Theo dõi"}</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon-lg"
               onClick={handleShare}
               aria-label="Chia sẻ truyện"
-              className="p-3 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400 rounded-xl active:scale-95 transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-reduce:transform-none"
+              className="rounded-xl text-muted-foreground"
             >
-              <Share2 className="w-4 h-4" />
-            </button>
+              <Share2 aria-hidden="true" />
+            </Button>
           </div>
-          {followError && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{followError}</p>}
+          {followError && <Alert variant="destructive"><AlertDescription>{followError}</AlertDescription></Alert>}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { BookX, RefreshCw } from "lucide-react";
+import {
+  EmptyState as EmptyStateRoot,
+  EmptyStateActions,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+} from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
   title?: string;
@@ -15,25 +23,22 @@ export default function EmptyState({
   resetLabel = "Đặt lại bộ lọc",
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center text-center p-12 sm:p-16 my-8 rounded-3xl border border-slate-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/40 backdrop-blur-sm">
-      <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-4 shadow-inner">
-        <BookX className="w-8 h-8" />
-      </div>
-      <h3 className="text-xl font-bold text-slate-800 dark:text-zinc-100 mb-2">
-        {title}
-      </h3>
-      <p className="max-w-md text-sm text-slate-500 dark:text-zinc-400 mb-6">
-        {description}
-      </p>
+    <EmptyStateRoot className="my-8 min-h-72 rounded-3xl bg-card/60 backdrop-blur-sm">
+      <EmptyStateIcon className="size-16 rounded-2xl bg-primary/10 text-primary shadow-inner [&>svg]:size-8">
+        <BookX aria-hidden="true" />
+      </EmptyStateIcon>
+      <EmptyStateTitle className="text-xl">{title}</EmptyStateTitle>
+      <EmptyStateDescription>{description}</EmptyStateDescription>
       {resetHref && (
-        <Link
-          href={resetHref}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <RefreshCw className="w-4 h-4" />
-          {resetLabel}
-        </Link>
+        <EmptyStateActions>
+          <Button asChild>
+            <Link href={resetHref}>
+              <RefreshCw aria-hidden="true" />
+              {resetLabel}
+            </Link>
+          </Button>
+        </EmptyStateActions>
       )}
-    </div>
+    </EmptyStateRoot>
   );
 }

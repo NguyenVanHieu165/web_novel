@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { BookOpen, ArrowRight, X, Sparkles } from "lucide-react";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 import { readingHistoryResponseSchema } from "@/lib/reading-progress";
 
 interface ReadingStoryItem {
@@ -146,23 +147,22 @@ function ReadingDockContent({ story: activeStory }: { story: ReadingStoryItem })
         </div>
 
         {/* Read Button */}
-        <Link
-          href={`/truyen/${activeStory.slug}/${activeStory.chapterSlug}`}
-          className="ml-2 flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-full shadow-md shadow-blue-500/25 transition-all shrink-0"
-        >
+        <Button asChild size="sm" className="ml-2 shrink-0 rounded-full font-bold"><Link href={`/truyen/${activeStory.slug}/${activeStory.chapterSlug}`}>
           <span>Đọc tiếp</span>
           <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        </Link></Button>
 
         {/* Close Button */}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => setClosed(true)}
           aria-label="Đóng thanh đọc truyện"
-          className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="rounded-full text-slate-400 hover:bg-white/10 hover:text-white"
         >
-          <X className="w-4 h-4" />
-        </button>
+          <X aria-hidden="true" />
+        </Button>
       </div>
     </aside>
   );

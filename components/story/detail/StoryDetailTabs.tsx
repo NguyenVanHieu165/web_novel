@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { ChapterListSkeleton, CommentSkeleton } from "@/components/common/InteractionSkeleton";
 import CommentSection from "@/components/comments/LazyCommentSection";
 import { StoryDetailData } from "@/lib/mappers/story-detail.mapper";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface StoryDetailTabsProps {
   story: StoryDetailData;
@@ -20,101 +22,88 @@ export default function StoryDetailTabs({ story }: StoryDetailTabsProps) {
   return (
     <div className="space-y-8">
       {/* Tab Navigation Buttons */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-zinc-800 pb-3 overflow-x-auto scrollbar-none">
-        <button
+      <div className="flex items-center gap-2 overflow-x-auto border-b pb-3 scrollbar-none">
+        <Button
           type="button"
+          variant={activeTab === "synopsis" ? "default" : "ghost"}
           onClick={() => setActiveTab("synopsis")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-            activeTab === "synopsis"
-              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60"
-          }`}
+          className="rounded-2xl px-5 font-bold"
         >
-          <FileText className="w-4 h-4" />
+          <FileText aria-hidden="true" />
           <span>Giới thiệu</span>
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant={activeTab === "chapters" ? "default" : "ghost"}
           onClick={() => setActiveTab("chapters")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-            activeTab === "chapters"
-              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60"
-          }`}
+          className="rounded-2xl px-5 font-bold"
         >
-          <List className="w-4 h-4" />
+          <List aria-hidden="true" />
           <span>Danh sách chương ({story.soChuong})</span>
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant={activeTab === "reviews" ? "default" : "ghost"}
           onClick={() => setActiveTab("reviews")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-            activeTab === "reviews"
-              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60"
-          }`}
+          className="rounded-2xl px-5 font-bold"
         >
-          <Star className="w-4 h-4" />
+          <Star aria-hidden="true" />
           <span>Đánh giá & Thảo luận</span>
-        </button>
+        </Button>
       </div>
 
       {/* Tab 1: Synopsis / Description */}
       {activeTab === "synopsis" && (
         <div className="space-y-8 animate-fadeIn">
           {/* Main Description */}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/80 dark:border-zinc-800 p-6 sm:p-8 space-y-4 shadow-sm">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              Tóm tắt nội dung
-            </h3>
-            <div className="text-sm sm:text-base text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line space-y-3">
+          <Card className="rounded-3xl">
+            <CardHeader><CardTitle className="text-base font-black sm:text-lg">Tóm tắt nội dung</CardTitle></CardHeader>
+            <CardContent className="space-y-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground sm:text-base">
               {story.moTa}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Chapters Preview */}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/80 dark:border-zinc-800 p-6 sm:p-8 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                Chương mới nhất
-              </h3>
-              <button
+          <Card className="rounded-3xl">
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle className="text-base font-black sm:text-lg">Chương mới nhất</CardTitle>
+              <Button
                 type="button"
+                variant="link"
+                size="sm"
                 onClick={() => setActiveTab("chapters")}
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                className="text-xs font-bold"
               >
                 Xem tất cả {story.soChuong} chương &rarr;
-              </button>
-            </div>
+              </Button>
+            </CardHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {story.chapters.map((chap) => (
                 <a
                   key={chap.idChuong}
                   href={`/truyen/${story.slug}/${chap.slug}`}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 text-xs text-slate-800 dark:text-zinc-200 transition-colors"
+                  className="flex items-center justify-between rounded-xl bg-muted/50 p-3 text-xs transition-colors hover:bg-muted"
                 >
                   <span className="font-semibold truncate pr-2">{chap.tieuDeChuong}</span>
-                  <span className="text-[11px] text-slate-400 shrink-0">{chap.updatedAt}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{chap.updatedAt}</span>
                 </a>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Tab 2: Full Chapter List */}
       {activeTab === "chapters" && (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/80 dark:border-zinc-800 p-6 sm:p-8 shadow-sm">
-          <ChapterList key={story.slug} storySlug={story.slug} />
-        </div>
+        <Card className="rounded-3xl"><CardContent><ChapterList key={story.slug} storySlug={story.slug} /></CardContent></Card>
       )}
 
       {/* Tab 3: Reviews & Discussion */}
       {activeTab === "reviews" && (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200/80 dark:border-zinc-800 p-6 sm:p-8 shadow-sm">
+        <Card className="rounded-3xl"><CardContent>
           <StoryReviews
             key={story.idTruyen}
             storyId={story.idTruyen}
@@ -127,7 +116,7 @@ export default function StoryDetailTabs({ story }: StoryDetailTabsProps) {
             <div className="mt-8 border-t pt-8">
               <CommentSection storySlug={story.slug} />
             </div>
-        </div>
+        </CardContent></Card>
       )}
     </div>
   );

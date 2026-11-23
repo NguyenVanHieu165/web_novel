@@ -7,6 +7,11 @@ import { prisma } from "@/lib/prisma";
 import { requireReaderPage } from "@/lib/server/reader-page";
 import { isDemoTopUpEnabled } from "@/lib/server/reader-wallet";
 import { walletPageSchema } from "@/schemas/reader-wallet.schema";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderTitle } from "@/components/shared/page-header";
+import { EmptyState, EmptyStateDescription, EmptyStateTitle } from "@/components/shared/empty-state";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink } from "@/components/ui/pagination";
 
 export const metadata: Metadata = {
   title: "Ví xu và lịch sử giao dịch | WebNovel",
@@ -26,8 +31,6 @@ const transactionLabels: Record<lich_su_giao_dich_loai, string> = {
   khuyen_mai: "Khuyến mãi",
   rut_tien: "Rút tiền",
 };
-const navClass = "inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-3 text-sm font-medium hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-zinc-700 dark:hover:bg-zinc-800";
-
 function pageHref(page: number) {
   return page === 1 ? "/vi-xu#lich-su-giao-dich" : `/vi-xu?page=${page}#lich-su-giao-dich`;
 }
@@ -52,67 +55,66 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ví xu</h1>
-        <AccountThemeToggle />
-      </header>
+      <PageHeader>
+        <PageHeaderContent><PageHeaderTitle>Ví Xu</PageHeaderTitle></PageHeaderContent>
+        <PageHeaderActions><AccountThemeToggle /></PageHeaderActions>
+      </PageHeader>
       <div className="grid gap-5 md:grid-cols-2">
-        <section aria-labelledby="balance-heading"
-          className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/40 sm:p-6">
-          <h2 id="balance-heading" className="text-sm font-semibold text-blue-900 dark:text-blue-200">Số dư hiện tại</h2>
+        <Card className="border-primary/25 bg-primary/5">
+          <CardHeader><CardTitle id="balance-heading" className="text-sm text-primary">Số dư hiện tại</CardTitle></CardHeader>
+          <CardContent aria-labelledby="balance-heading" className="space-y-3">
           <p className="text-3xl font-bold tabular-nums sm:text-4xl">{number.format(wallet?.soDuXu ?? 0)} <span className="text-xl">xu</span></p>
-          {!wallet && <p className="text-sm text-slate-700 dark:text-zinc-300">Tài khoản chưa có ví xu.</p>}
-        </section>
-        <section aria-labelledby="top-up-heading"
-          className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-          <h2 id="top-up-heading" className="text-lg font-semibold">Nạp xu</h2>
+          {!wallet && <Alert variant="info"><AlertDescription>Tài khoản chưa có ví xu.</AlertDescription></Alert>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle id="top-up-heading" className="text-lg">Nạp xu</CardTitle>
+          <CardDescription>{isDemoTopUpEnabled() ? "Nạp xu mô phỏng để thử mở khóa chương VIP." : "Nạp xu chưa khả dụng."}</CardDescription></CardHeader>
+          <CardContent aria-labelledby="top-up-heading">
           {isDemoTopUpEnabled() ? (
-            <>
-              <p className="text-sm text-slate-600 dark:text-zinc-400">Nạp xu mô phỏng để thử mở khóa chương VIP.</p>
-              <DemoTopUpForm key={user.idTaiKhoan} />
-            </>
-          ) : (
-            <p className="text-sm text-slate-600 dark:text-zinc-400">Nạp xu chưa khả dụng.</p>
-          )}
-        </section>
+            <DemoTopUpForm key={user.idTaiKhoan} />
+          ) : null}
+          </CardContent>
+        </Card>
       </div>
-      <section aria-labelledby="lich-su-giao-dich"
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="lich-su-giao-dich" className="scroll-mt-24 text-lg font-semibold">Lịch sử giao dịch</h2>
-          <p className="text-sm text-slate-600 dark:text-zinc-400">{number.format(total)} giao dịch</p>
-        </div>
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2">
+          <CardTitle id="lich-su-giao-dich" className="scroll-mt-24 text-lg">Lịch sử giao dịch</CardTitle>
+          <CardDescription>{number.format(total)} giao dịch</CardDescription>
+        </CardHeader>
+        <CardContent aria-labelledby="lich-su-giao-dich" className="space-y-4">
         {entries.length === 0 ? (
-          <p className="rounded-xl bg-slate-50 px-4 py-5 text-sm text-slate-600 dark:bg-zinc-950 dark:text-zinc-400">Chưa có giao dịch để hiển thị.</p>
+          <EmptyState className="min-h-36 py-6"><EmptyStateTitle>Chưa có giao dịch</EmptyStateTitle><EmptyStateDescription>Lịch sử nạp và sử dụng xu sẽ xuất hiện tại đây.</EmptyStateDescription></EmptyState>
         ) : (
           <ul className="divide-y divide-slate-200 dark:divide-zinc-800">
             {entries.map((entry) => (
               <li key={entry.idLichSuGiaoDich} className="grid gap-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="space-y-1">
                   <p className="font-medium">{transactionLabels[entry.loai]}</p>
-                  {entry.createdAt && <time className="text-slate-600 dark:text-zinc-400"
+                  {entry.createdAt && <time className="text-muted-foreground"
                     dateTime={entry.createdAt.toISOString()}>{date.format(entry.createdAt)}</time>}
                 </div>
                 <div className="space-y-1 tabular-nums sm:text-right">
                   <p className={entry.so_xu_thay_doi < 0
-                    ? "font-semibold text-red-700 dark:text-red-400"
-                    : "font-semibold text-emerald-700 dark:text-emerald-400"}>
+                    ? "font-semibold text-destructive"
+                    : "font-semibold text-success"}>
                     {entry.so_xu_thay_doi > 0 ? "+" : ""}{number.format(entry.so_xu_thay_doi)} xu
                   </p>
-                  <p className="text-slate-600 dark:text-zinc-400">Số dư {number.format(entry.soDuTruoc)} → {number.format(entry.soDuSau)} xu</p>
+                  <p className="text-muted-foreground">Số dư {number.format(entry.soDuTruoc)} → {number.format(entry.soDuSau)} xu</p>
                 </div>
               </li>
             ))}
           </ul>
         )}
         {totalPages > 1 && (
-          <nav aria-label="Phân trang giao dịch" className="flex flex-wrap items-center justify-center gap-3">
-            {page > 1 && <Link href={pageHref(page - 1)} prefetch={false} className={navClass}>Trang trước</Link>}
-            <span aria-current="page" className="text-sm tabular-nums">Trang {page} / {totalPages}</span>
-            {page < totalPages && <Link href={pageHref(page + 1)} prefetch={false} className={navClass}>Trang sau</Link>}
-          </nav>
+          <Pagination aria-label="Phân trang giao dịch"><PaginationContent>
+            {page > 1 && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page - 1)} prefetch={false}>Trang trước</Link></PaginationLink></PaginationItem>}
+            <PaginationItem><span aria-current="page" className="px-3 text-sm tabular-nums">Trang {page} / {totalPages}</span></PaginationItem>
+            {page < totalPages && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page + 1)} prefetch={false}>Trang sau</Link></PaginationLink></PaginationItem>}
+          </PaginationContent></Pagination>
         )}
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }
