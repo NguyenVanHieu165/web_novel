@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Bell, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { AdminNotificationResponse } from "@/lib/admin-notification-types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const Navbar = () => {
   const router = useRouter();
@@ -39,34 +41,37 @@ const Navbar = () => {
   }, []);
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-end">
+    <header className="flex h-16 items-center justify-end border-b bg-card px-6 text-card-foreground">
       {/* Search Bar */}
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
         {/* Notifications */}
-        <button 
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => router.push("/admin/notifications")}
-          className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative cursor-pointer"
-          title="Trung tâm thông báo"
+          className="relative rounded-full"
+          aria-label="Trung tâm thông báo"
         >
-          <Bell size={20} />
+          <Bell aria-hidden="true" size={20} />
           {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full px-1 flex items-center justify-center border border-white animate-pulse">
+            <Badge variant="destructive" className="absolute -right-1 -top-1 h-4 min-w-4 border-background px-1 text-[9px]">
               {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
+            </Badge>
           )}
-        </button>
+        </Button>
 
-        <div className="h-8 w-[1px] bg-gray-200 mx-2"></div>
+        <div className="mx-2 h-8 w-px bg-border"></div>
 
         {/* Admin Profile */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-900">admin</p>
+            <p className="text-sm font-semibold">admin</p>
           </div>
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 border border-blue-200 cursor-pointer">
-            <UserCircle size={24} />
+          <div className="flex size-10 items-center justify-center rounded-full border bg-primary/10 text-primary">
+            <UserCircle aria-hidden="true" size={24} />
           </div>
         </div>
       </div>

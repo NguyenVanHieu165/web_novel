@@ -6,6 +6,11 @@ import Chart from "@/components/admin/Chart";
 import Card from "@/components/admin/card";
 import { useRouter } from "next/navigation";
 import axiosClient from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card as UICard, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { PageHeader, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 type DashboardOverview = {
   useTotal: number;
@@ -64,14 +69,13 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="min-h-screen space-y-6 bg-gray-50/50 dark:bg-background sm:space-y-8 sm:p-4">
-      {/* Header Section */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Bảng điều khiển</h1>
-        <p className="text-sm text-muted-foreground">
-          Chào mừng bạn trở lại hệ thống quản trị Web Novel.
-        </p>
-      </div>
+    <div className="min-h-screen space-y-6 bg-background sm:space-y-8 sm:p-4">
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Bảng điều khiển</PageHeaderTitle>
+          <PageHeaderDescription>Chào mừng bạn trở lại hệ thống quản trị Web Novel.</PageHeaderDescription>
+        </PageHeaderContent>
+      </PageHeader>
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -108,71 +112,59 @@ export default function DashboardPage() {
 
       {/* Main Content: Chart & Recent Activities */}
       <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 xl:col-span-2">
-          <h2 className="mb-4 font-bold text-card-foreground">Phân tích tăng trưởng</h2>
+        <UICard className="min-w-0 xl:col-span-2">
+          <CardHeader><CardTitle>Phân tích tăng trưởng</CardTitle></CardHeader>
+          <CardContent>
           <Suspense fallback={<p role="status" className="rounded-xl border border-border p-5 text-sm text-muted-foreground">Đang tải biểu đồ…</p>}>
             <Chart />
           </Suspense>
-        </div>
+          </CardContent>
+        </UICard>
 
         {/* Recent Users Section */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[450px]">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="font-bold text-gray-800">Người dùng mới</h3>
-              <p className="text-xs text-gray-400">Đăng ký gần đây</p>
-            </div>
-            <Users size={18} className="text-gray-300" />
-          </div>
+        <UICard className="min-h-[450px]">
+          <CardHeader className="grid-cols-[1fr_auto] items-start">
+            <div><CardTitle>Người dùng mới</CardTitle><CardDescription>Đăng ký gần đây</CardDescription></div>
+            <Users aria-hidden="true" size={18} className="text-muted-foreground" />
+          </CardHeader>
 
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <CardContent className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full space-y-2">
-                <Loader2 className="animate-spin text-indigo-500" />
-                <span className="text-xs text-gray-400">Đang tải...</span>
+                <Loader2 aria-hidden="true" className="animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">Đang tải…</span>
               </div>
             ) : recentUsers.length > 0 ? (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y">
                 {recentUsers.map((u) => (
                   <div
                     key={u.idTaiKhoan}
-                    className="flex justify-between items-center py-4 hover:bg-gray-50 px-2 rounded-lg transition-colors group"
+                    className="flex items-center justify-between rounded-lg px-2 py-4 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold uppercase text-primary">
                         {u.tenTaiKhoan?.charAt(0)}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-semibold text-gray-700 group-hover:text-indigo-600 transition-colors">
+                        <span className="font-semibold text-foreground">
                           {u.tenTaiKhoan}
                         </span>
-                        <span className="text-[10px] text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           ID: #{u.idTaiKhoan}
                         </span>
                       </div>
                     </div>
-                    <div className="text-[10px] bg-gray-100 px-2 py-1 rounded text-gray-500">
-                      Thành viên
-                    </div>
+                    <Badge variant="secondary">Thành viên</Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
-                <p className="text-sm text-gray-400 italic">
-                  Không có người dùng mới
-                </p>
-              </div>
+              <EmptyState className="h-full min-h-48"><EmptyStateIcon><Users /></EmptyStateIcon><EmptyStateTitle>Không có người dùng mới</EmptyStateTitle><EmptyStateDescription>Các tài khoản đăng ký gần đây sẽ xuất hiện tại đây.</EmptyStateDescription></EmptyState>
             )}
-          </div>
+          </CardContent>
 
-          <button
-            onClick={() => router.push("/admin/users")}
-            className="mt-4 w-full py-2 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"
-          >
-            Xem tất cả
-          </button>
-        </div>
+          <CardFooter><Button variant="outline" className="w-full" onClick={() => router.push("/admin/users")}>Xem tất cả</Button></CardFooter>
+        </UICard>
       </div>
     </div>
   );

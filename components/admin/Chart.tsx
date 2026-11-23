@@ -12,12 +12,15 @@ import {
   type StatisticsFilters,
   type StatisticsReport,
 } from "@/lib/admin-statistics";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
 
 const numberFormat = new Intl.NumberFormat("vi-VN");
 const compactFormat = new Intl.NumberFormat("vi-VN", { notation: "compact" });
 const dateFormat = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeZone: "UTC" });
-const fieldClass = "min-h-10 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-indigo-500";
-const actionClass = "min-h-10 rounded-lg bg-indigo-700 px-4 text-sm font-semibold whitespace-nowrap text-white hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500";
 
 const formatDate = (value: string) => dateFormat.format(new Date(`${value}T00:00:00Z`));
 function formatPeriod(from: string, to: string) {
@@ -79,10 +82,7 @@ export default function Chart() {
             Đang tải biểu đồ…
           </p>
         ) : "error" in current ? (
-          <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border p-6 text-center">
-            <p role="alert" className="text-sm text-red-700 dark:text-red-300">{current.error}</p>
-            <button type="button" className={actionClass} onClick={() => setAttempt((value) => value + 1)}>Thử lại</button>
-          </div>
+          <ErrorState className="min-h-40 content-center"><ErrorStateTitle>Không thể tải báo cáo</ErrorStateTitle><ErrorStateDescription>{current.error}</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>Thử lại</Button></ErrorStateActions></ErrorState>
         ) : (
           <ReportChart report={current.report} metric={filters.metric} />
         )}
@@ -115,48 +115,43 @@ function ChartFilters({ filters }: { filters: StatisticsFilters }) {
 
   return (
     <form aria-label="Bộ lọc biểu đồ" className="space-y-3" onSubmit={apply}>
-      <div className="grid min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <FilterBar>
+        <FilterBarGroup className="grid min-w-0 grid-cols-1 items-end sm:grid-cols-2 xl:grid-cols-3">
         <label className="min-w-0 space-y-1 text-sm font-medium">
           <span>Chỉ số</span>
-          <select className={fieldClass} name="metric" defaultValue={filters.metric}>
-            {Object.entries(metricLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <Select name="metric" defaultValue={filters.metric}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(metricLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
         </label>
         <label className="min-w-0 space-y-1 text-sm font-medium">
           <span>Khoảng thời gian</span>
-          <select className={fieldClass} name="range" value={range} onChange={(event) => {
-            const value = event.target.value;
+          <Select name="range" value={range} onValueChange={(value) => {
             if (!Object.hasOwn(rangeLabels, value)) return;
             if (value === "custom" && !suggestedDates) {
               setSuggestedDates(statisticsWindow(filters));
             }
             setRange(value as StatisticsFilters["range"]);
             setValidation("");
-          }}>
-            {Object.entries(rangeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          }}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(rangeLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
         </label>
         <label className="min-w-0 space-y-1 text-sm font-medium">
           <span>Gom số liệu</span>
-          <select className={fieldClass} name="group" defaultValue={filters.group}>
-            {Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <Select name="group" defaultValue={filters.group}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(groupLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
         </label>
         {range === "custom" && (
           <>
             <label className="min-w-0 space-y-1 text-sm font-medium">
               <span>Từ ngày</span>
-              <input className={fieldClass} type="date" name="from" defaultValue={filters.from ?? suggestedDates?.from} required />
+              <Input type="date" name="from" defaultValue={filters.from ?? suggestedDates?.from} required />
             </label>
             <label className="min-w-0 space-y-1 text-sm font-medium">
               <span>Đến ngày</span>
-              <input className={fieldClass} type="date" name="to" defaultValue={filters.to ?? suggestedDates?.to} required />
+              <Input type="date" name="to" defaultValue={filters.to ?? suggestedDates?.to} required />
             </label>
           </>
         )}
-        <button type="submit" className={actionClass}>Áp dụng</button>
-      </div>
-      {validation && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{validation}</p>}
+        </FilterBarGroup>
+        <FilterBarActions><Button type="submit">Áp dụng</Button></FilterBarActions>
+      </FilterBar>
+      {validation && <ErrorState><ErrorStateTitle>Bộ lọc chưa hợp lệ</ErrorStateTitle><ErrorStateDescription>{validation}</ErrorStateDescription></ErrorState>}
     </form>
   );
 }

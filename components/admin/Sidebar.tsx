@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   ScrollText,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -155,19 +156,21 @@ const Sidebar = () => {
       }`}
    >
       {/* Toggle Button */}
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="icon-sm"
         aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
         aria-expanded={!collapsed}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-6 z-10 hidden rounded-full border border-border bg-card p-1 text-foreground shadow hover:bg-muted focus-visible:outline-2 focus-visible:outline-indigo-500 md:block"
+        className="absolute -right-3 top-6 z-10 hidden rounded-full md:inline-flex"
       >
         <ChevronLeft
 
           size={16}
           className={`transition-transform ${collapsed ? "rotate-180" : ""}`}
         />
-      </button>
+      </Button>
 
       {/* Logo */}
       <div className="px-3 py-5 md:px-6 md:py-6">
@@ -230,7 +233,7 @@ const Sidebar = () => {
 
                 {/* Tooltip khi collapsed */}
                 {collapsed && (
-                  <span className="absolute left-full ml-2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100">
+                  <span className="absolute left-full ml-2 whitespace-nowrap rounded bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow group-hover:opacity-100">
                     {item.name}
                   </span>
                 )}
@@ -242,12 +245,13 @@ const Sidebar = () => {
 
       {/* Logout */}
       <div className={`border-t border-border p-1 md:p-2 ${process.env.NODE_ENV === "development" ? "pb-14 md:pb-14" : ""}`}>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           aria-label="Đăng xuất"
           onClick={handleLogout}
           disabled={loggingOut}
-          className="group relative flex items-center px-3 py-3 w-full rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="group relative h-auto w-full justify-start rounded-xl px-3 py-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         >
           <div
             className={`flex items-center ${
@@ -255,9 +259,9 @@ const Sidebar = () => {
             }`}
           >
             {loggingOut ? (
-              <Loader2 size={20} className="animate-spin text-red-500" />
+              <Loader2 aria-hidden="true" size={20} className="animate-spin text-destructive" />
             ) : (
-              <LogOut size={20} />
+              <LogOut aria-hidden="true" size={20} />
             )}
             {!collapsed && (
               <span className="hidden font-medium md:inline">
@@ -268,11 +272,11 @@ const Sidebar = () => {
 
           {/* Tooltip logout */}
           {collapsed && (
-            <span className="absolute left-full ml-2 whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 z-50">
+            <span className="absolute left-full z-50 ml-2 whitespace-nowrap rounded bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow group-hover:opacity-100">
               Đăng xuất
             </span>
           )}
-        </button>
+        </Button>
       </div>
     </aside>
   );

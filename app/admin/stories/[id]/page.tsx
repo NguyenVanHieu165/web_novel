@@ -6,6 +6,10 @@ import { ArrowLeft, Edit2, Eye, BookOpen } from "lucide-react";
 
 import StoryForm from "@/components/stories/StoryForm";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateTitle } from "@/components/shared/empty-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 import type { Story } from "@/hooks/useStories";
 import { useStory } from "@/hooks/useStory";
 const statusLabels: Record<Story["trang_thai"], string> = {
@@ -22,23 +26,18 @@ export default function StoryDetailPage() {
   const [editing, setEditing] = useState(false);
 
   if (loading) {
-    return <div className="p-6 text-slate-500">Đang tải...</div>;
+    return <div role="status" className="p-6 text-muted-foreground">Đang tải…</div>;
   }
 
   if (!story) {
     return (
-      <div className="p-6">
-        <p className="mb-4 text-slate-500">Không tìm thấy truyện.</p>
-        <Button variant="outline" onClick={() => router.back()}>
-          Quay lại
-        </Button>
-      </div>
+      <EmptyState><EmptyStateTitle>Không tìm thấy truyện</EmptyStateTitle><EmptyStateDescription>Truyện có thể đã bị xóa hoặc bạn không còn quyền truy cập.</EmptyStateDescription><EmptyStateActions><Button variant="outline" onClick={() => router.back()}>Quay lại</Button></EmptyStateActions></EmptyState>
     );
   }
 
   if (editing) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-3xl">
           <Button
             type="button"
@@ -46,7 +45,7 @@ export default function StoryDetailPage() {
             className="mb-4"
             onClick={() => setEditing(false)}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
             Quay lại chi tiết
           </Button>
 
@@ -66,22 +65,27 @@ export default function StoryDetailPage() {
   const imageUrl = story.anhThumbnail || story.anhBia || "/default.jpg";
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <PageHeader className="mb-6">
+          <PageHeaderContent>
           <Button variant="outline" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
             Quay lại
           </Button>
-
+          <PageHeaderTitle>{story.tenTruyen}</PageHeaderTitle>
+          <PageHeaderDescription>Thông tin chi tiết và trạng thái xuất bản của truyện.</PageHeaderDescription>
+          </PageHeaderContent>
+          <PageHeaderActions>
           <Button onClick={() => setEditing(true)}>
-            <Edit2 className="h-4 w-4" />
+            <Edit2 aria-hidden="true" className="h-4 w-4" />
             Chỉnh sửa
           </Button>
-        </div>
+          </PageHeaderActions>
+        </PageHeader>
 
-        <div className="grid gap-8 rounded-xl border bg-white p-6 shadow-sm lg:grid-cols-[400px_1fr]">
-          <div className="overflow-hidden rounded-xl border bg-slate-100 p-2">
+        <Card><CardContent className="grid gap-8 p-6 lg:grid-cols-[400px_1fr]">
+          <div className="overflow-hidden rounded-xl border bg-muted p-2">
             <Image
               src={imageUrl}
               alt={story.tenTruyen}
@@ -94,26 +98,19 @@ export default function StoryDetailPage() {
           </div>
 
           <div>
-            <h1 className="mb-3 text-3xl font-bold text-slate-900">
-              {story.tenTruyen}
-            </h1>
-
             <div className="mb-4 flex flex-wrap gap-2">
               {story.truyenTheLoai && story.truyenTheLoai.length > 0 ? (
                 story.truyenTheLoai.map((item) => (
-                  <span
-                    key={item.idTheLoai}
-                    className="rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-700"
-                  >
+                  <Badge key={item.idTheLoai} variant="secondary">
                     {item.theLoai?.tenTheLoai || "Không rõ"}
-                  </span>
+                  </Badge>
                 ))
               ) : (
-                <span className="text-sm text-slate-500">Chưa phân loại</span>
+                <span className="text-sm text-muted-foreground">Chưa phân loại</span>
               )}
             </div>
 
-            <div className="grid gap-3 text-slate-700 sm:grid-cols-2">
+            <div className="grid gap-3 text-foreground sm:grid-cols-2">
               <p>
                 <strong>Trạng thái:</strong>{" "}
                 {story.trang_thai
@@ -122,13 +119,13 @@ export default function StoryDetailPage() {
               </p>
 
               <p className="flex items-center gap-1">
-                <Eye className="h-4 w-4" />
+                <Eye aria-hidden="true" className="h-4 w-4" />
                 <strong>Lượt xem:</strong>{" "}
                 {(story.luotXem ?? 0).toLocaleString("vi-VN")}
               </p>
 
               <p className="flex items-center gap-1">
-                <BookOpen className="h-4 w-4" />
+                <BookOpen aria-hidden="true" className="h-4 w-4" />
                 <strong>Số chương:</strong> {story.soChuong ?? "Chưa cập nhật"}
               </p>
 
@@ -142,17 +139,17 @@ export default function StoryDetailPage() {
 
             {story.moTa && (
               <div className="mt-8">
-                <h2 className="mb-3 text-xl font-semibold text-slate-900">
+                <h2 className="mb-3 text-xl font-semibold">
                   Giới thiệu
                 </h2>
 
-                <div className="whitespace-pre-line rounded-lg border bg-slate-50 p-4 leading-7 text-slate-700">
+                <div className="whitespace-pre-line rounded-lg border bg-muted/40 p-4 leading-7 text-foreground">
                   {story.moTa}
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </CardContent></Card>
       </div>
     </div>
   );

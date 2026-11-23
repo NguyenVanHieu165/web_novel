@@ -27,6 +27,12 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -49,6 +55,7 @@
 }
 
 :root {
+  color-scheme: light;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -62,6 +69,12 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.53 0.15 145);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.72 0.16 75);
+  --warning-foreground: oklch(0.25 0.06 55);
+  --info: oklch(0.55 0.19 255);
+  --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -71,6 +84,12 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  --control-height-sm: 2rem;
+  --control-height: 2.25rem;
+  --control-height-lg: 2.5rem;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --disabled-opacity: 0.5;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -84,6 +103,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -99,6 +119,12 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --success: oklch(0.72 0.17 145);
+  --success-foreground: oklch(0.18 0.04 145);
+  --warning: oklch(0.82 0.16 80);
+  --warning-foreground: oklch(0.22 0.05 55);
+  --info: oklch(0.72 0.15 255);
+  --info-foreground: oklch(0.18 0.04 255);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -121,13 +147,26 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
   }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  :where(button, a, input, select, textarea, [role="button"]):focus-visible {
+    outline: var(--focus-ring-width) solid var(--ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  :where(button, input, select, textarea):disabled {
+    cursor: not-allowed;
+    opacity: var(--disabled-opacity);
+  }
 }
+
 .hero-story-card {
   width: 360px;
   height: 570px;
@@ -138,7 +177,7 @@
 
   will-change: transform, opacity;
 
-  border-radius: 24px;
+  border-radius: var(--radius-3xl);
 
   overflow: hidden;
 
@@ -184,7 +223,7 @@
 
   pointer-events: none;
 
-  border-radius: 24px;
+  border-radius: var(--radius-3xl);
 
   border: 1px solid rgba(96, 165, 250, 0.6);
 
@@ -207,16 +246,10 @@
   }
 }
 
-/* Keep keyboard focus and motion preferences consistent across reader controls. */
-@layer base {
-  :where(button, a, input, select, textarea):focus-visible {
-    outline: 2px solid #3b82f6;
-    outline-offset: 3px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

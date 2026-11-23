@@ -1,17 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { submitAccountForm } from "@/components/account/account-request";
 import { Button } from "@/components/ui/button";
-import { SheetClose, SheetFooter } from "@/components/ui/sheet";
+import { SheetClose } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormActions } from "@/components/shared/form-actions";
+import { ErrorState, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
 import { bulkRolesSchema, roleLabel, type RoleOption } from "@/schemas/admin-roles.schema";
 
 type Values = z.infer<typeof bulkRolesSchema>;
-const controlClass = "h-10 rounded-lg border border-border bg-background px-3 text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 
 export function BulkRoleForm({ accountIds, roles, onSaving, onSaved }: {
   accountIds: number[];
@@ -48,30 +50,24 @@ export function BulkRoleForm({ accountIds, roles, onSaving, onSaved }: {
         <fieldset className="grid gap-4" disabled={isSubmitting || !roles.length}>
           <label className="grid gap-1.5 font-medium">
             Thao tác
-            <select className={controlClass} {...form.register("operation")}>
-              <option value="grant">Cấp vai trò</option>
-              <option value="revoke">Thu hồi vai trò</option>
-            </select>
+            <Controller control={form.control} name="operation" render={({ field }) => <Select value={field.value} onValueChange={field.onChange} disabled={field.disabled}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="grant">Cấp vai trò</SelectItem><SelectItem value="revoke">Thu hồi vai trò</SelectItem></SelectContent></Select>} />
           </label>
           <label className="grid gap-1.5 font-medium">
             Vai trò
-            <select className={controlClass} {...form.register("roleId", { valueAsNumber: true })} required>
-              <option value="">Chọn vai trò</option>
-              {roles.map((role) => <option key={role.idVaiTro} value={role.idVaiTro}>{roleLabel(role.tenVaiTro)}</option>)}
-            </select>
+            <Controller control={form.control} name="roleId" render={({ field }) => <Select value={field.value ? String(field.value) : undefined} onValueChange={(value) => field.onChange(Number(value))} disabled={field.disabled}><SelectTrigger className="w-full"><SelectValue placeholder="Chọn vai trò" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.idVaiTro} value={String(role.idVaiTro)}>{roleLabel(role.tenVaiTro)}</SelectItem>)}</SelectContent></Select>} />
           </label>
         </fieldset>
         <p className="text-xs text-muted-foreground">
           {roles.length ? "Mỗi lần lưu sẽ cấp hoặc thu hồi một vai trò. Mỗi tài khoản cần giữ ít nhất một vai trò khi thu hồi." : "Chưa có vai trò để phân quyền."}
         </p>
-        <div aria-live="polite">{errors.root ? <p className="text-sm text-red-700 dark:text-red-400">{errors.root.message}</p> : null}</div>
+        <div aria-live="polite">{errors.root ? <ErrorState><ErrorStateTitle>Không thể cập nhật vai trò</ErrorStateTitle><ErrorStateDescription>{errors.root.message}</ErrorStateDescription></ErrorState> : null}</div>
       </div>
-      <SheetFooter className="flex-row justify-end border-t border-border px-5 py-4">
+      <FormActions className="px-5 pb-4">
         <SheetClose asChild><Button type="button" variant="outline" disabled={isSubmitting} className="min-h-10">Hủy</Button></SheetClose>
         <Button type="submit" disabled={isSubmitting || !roles.length} className="min-h-10" aria-busy={isSubmitting}>
           {isSubmitting ? "Đang áp dụng…" : "Áp dụng thay đổi"}
         </Button>
-      </SheetFooter>
+      </FormActions>
     </form>
   );
 }

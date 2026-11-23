@@ -18,6 +18,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 type StoryListMeta = { totalPage: number; total: number; page: number };
 type StoryListResponse = {
@@ -182,7 +184,7 @@ export default function StoriesPage() {
   }, [fetchStories]);
 
   return (
-    <div className="p-6 space-y-4 bg-white min-h-screen">
+    <div className="min-h-screen space-y-6 bg-background p-3 text-foreground sm:p-6">
       <input
         ref={fileInputRef}
         type="file"
@@ -191,10 +193,12 @@ export default function StoriesPage() {
         onChange={handleImport}
       />
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-800">Quản lý truyện</h1>
-
-        <div className="flex gap-3">
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Cài đặt nội dung truyện</PageHeaderTitle>
+          <PageHeaderDescription>Quản lý danh sách truyện từ khu vực cấu hình quản trị.</PageHeaderDescription>
+        </PageHeaderContent>
+        <PageHeaderActions>
           <Button
             onClick={() => {
               setSelected(null);
@@ -213,14 +217,14 @@ export default function StoriesPage() {
           </Button>
 
           <Button onClick={handleExport}>Xuất Excel</Button>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       <StoryFilter query={query} setQuery={setQuery} />
 
       {loading ? (
-        <div className="py-10 text-center text-slate-500">
-          Đang tải dữ liệu...
+        <div role="status" className="py-10 text-center text-muted-foreground">
+          Đang tải dữ liệu…
         </div>
       ) : (
         <StoryTable
@@ -232,39 +236,11 @@ export default function StoriesPage() {
           refresh={fetchStories}
         />
       )}
-      <div className="flex justify-center items-center gap-4 py-4 text-slate-600">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page === 1}
-          onClick={() =>
-            setQuery({
-              ...query,
-              page: query.page - 1,
-            })
-          }
-        >
-          Trước
-        </Button>
-
-        <span className="text-sm font-medium">
-          Trang {query.page} / {meta?.totalPage ?? 1}
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page >= (meta?.totalPage ?? 1)}
-          onClick={() =>
-            setQuery({
-              ...query,
-              page: query.page + 1,
-            })
-          }
-        >
-          Sau
-        </Button>
-      </div>
+      <Pagination><PaginationContent>
+        <PaginationItem><Button variant="outline" size="sm" disabled={query.page === 1} onClick={() => setQuery({ ...query, page: query.page - 1 })}>Trước</Button></PaginationItem>
+        <PaginationItem><span className="px-2 text-sm font-medium">Trang {query.page} / {meta?.totalPage ?? 1}</span></PaginationItem>
+        <PaginationItem><Button variant="outline" size="sm" disabled={query.page >= (meta?.totalPage ?? 1)} onClick={() => setQuery({ ...query, page: query.page + 1 })}>Sau</Button></PaginationItem>
+      </PaginationContent></Pagination>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="!w-full !max-w-[500px]">

@@ -74,6 +74,12 @@ Primary product features:
 
 12. Never silently ignore errors or suppress TypeScript errors to make code compile.
 
+13. Never change database configuration or run migrations against production.
+
+14. Never write runtime-generated files to `public`; store runtime media with Cloudinary.
+
+15. Reuse primitives from `components/ui` and patterns from `components/shared`; do not create ad-hoc button or input styles.
+
 ## 3. AGENT SKILLS SYSTEM
 
 Before implementing a task:

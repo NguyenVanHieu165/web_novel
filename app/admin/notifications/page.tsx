@@ -24,6 +24,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import type { AdminNotificationResponse } from "@/lib/admin-notification-types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { FilterBar, FilterBarGroup } from "@/components/shared/filter-bar";
+import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateActions, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 export type NotificationCategory =
   | "follow"
@@ -395,7 +405,7 @@ export default function NotificationsPage() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-gray-400">Đang tải...</div>
+        <div role="status" className="animate-pulse text-muted-foreground">Đang tải…</div>
       </div>
     );
   }
@@ -419,80 +429,76 @@ export default function NotificationsPage() {
                 }
             `}</style>
 
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 pb-5">
-        <div className="flex items-center gap-3">
-          <button
+      <PageHeader>
+        <PageHeaderContent className="flex-row items-start">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => router.push("/admin/dashboard")}
-            className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors text-gray-500 cursor-pointer"
-            title="Quay lại Bảng điều khiển"
+            aria-label="Quay lại Bảng điều khiển"
           >
-            <ArrowLeft size={20} />
-          </button>
+            <ArrowLeft aria-hidden="true" size={20} />
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Bell size={24} className="text-blue-600 animate-pulse" />
+            <PageHeaderTitle className="flex items-center gap-2">
+              <Bell aria-hidden="true" size={24} className="text-primary" />
               Trung tâm Thông báo <span className="text-sm tabular-nums" aria-live="polite">({unreadCount} chưa đọc)</span>
-            </h1>
-            <p className="text-xs text-gray-500">
+            </PageHeaderTitle>
+            <PageHeaderDescription>
               Quản lý, tìm kiếm và phân loại thông báo từ độc giả thời gian
               thực.
-            </p>
+            </PageHeaderDescription>
           </div>
-        </div>
+        </PageHeaderContent>
 
-        <div className="flex items-center gap-2">
+        <PageHeaderActions>
           {unreadCount > 0 && (
-            <button
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleMarkAllAsRead}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors duration-200 cursor-pointer border border-blue-100/50"
             >
-              <CheckCheck size={14} />
+              <CheckCheck aria-hidden="true" size={14} />
               Đánh dấu tất cả đã đọc
-            </button>
+            </Button>
           )}
           {notifications.length > 0 && (
-            <button
+            <Button
+              type="button"
+              variant="destructive"
               onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors duration-200 cursor-pointer border border-red-100/50"
             >
-              <Trash2 size={14} />
+              <Trash2 aria-hidden="true" size={14} />
               Xóa tất cả
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
       {/* THANH TÌM KIẾM & BỘ LỌC TRẠNG THÁI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <FilterBar><FilterBarGroup className="grid grid-cols-1 md:grid-cols-3">
         {/* 1. Ô tìm kiếm */}
         <div className="md:col-span-2 relative flex items-center">
-          <Search size={16} className="absolute left-3.5 text-gray-400" />
-          <input
+          <Search aria-hidden="true" size={16} className="absolute left-3.5 text-muted-foreground" />
+          <Input
+            aria-label="Tìm kiếm thông báo"
             type="text"
-            placeholder="🔍 Tìm theo tên độc giả, tên truyện, từ khóa..."
+            placeholder="Tìm theo tên độc giả, tên truyện, từ khóa…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-full pl-10"
           />
         </div>
 
         {/* 2. Bộ lọc trạng thái */}
         <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="w-full bg-white border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs font-bold transition-all cursor-pointer"
-          >
-            <option value="all">👁️ Tất cả trạng thái</option>
-            <option value="unread">🔵 Thông báo chưa đọc</option>
-            <option value="read">⚪ Thông báo đã đọc</option>
-          </select>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả trạng thái</SelectItem><SelectItem value="unread">Thông báo chưa đọc</SelectItem><SelectItem value="read">Thông báo đã đọc</SelectItem></SelectContent></Select>
         </div>
-      </div>
+      </FilterBarGroup></FilterBar>
 
       {/* THANH TABS CHỌN CATEGORY */}
-      <div className="flex flex-wrap gap-1.5 border-b border-gray-100 pb-3">
+      <div className="flex flex-wrap gap-1.5 border-b pb-3">
         {[
           { key: "all", label: "Tất cả" },
           { key: "follow", label: "Theo dõi" },
@@ -504,50 +510,38 @@ export default function NotificationsPage() {
           const isActive = activeTab === tab.key;
 
           return (
-            <button
+            <Button
+              type="button"
+              size="sm"
+              variant={isActive ? "default" : "outline"}
               key={tab.key}
               onClick={() => {
                 setActiveTab(tab.key as CategoryTab);
 
               }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-100"
-              }`}
             >
               {tab.label}
               {count > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
+                <Badge variant={isActive ? "secondary" : "outline"} className="px-1.5 text-[9px]">
                   {count}
-                </span>
+                </Badge>
               )}
-            </button>
+            </Button>
           );
         })}
       </div>
 
-      {loadError && <p role="alert" className="text-sm text-red-600">Không thể tải thông báo. <button type="button" onClick={() => void fetchNotifications()} className="underline">Thử lại</button></p>}
+      {loadError && <ErrorState><ErrorStateTitle>Không thể tải thông báo</ErrorStateTitle><ErrorStateDescription>Máy chủ chưa trả về danh sách thông báo.</ErrorStateDescription><ErrorStateActions><Button type="button" variant="outline" onClick={() => void fetchNotifications()}>Thử lại</Button></ErrorStateActions></ErrorState>}
       {/* DANH SÁCH THÔNG BÁO */}
       {loading && notifications.length === 0 ? <p role="status">Đang tải thông báo…</p> : paginatedNotifications.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-2xl p-16 text-center flex flex-col items-center justify-center space-y-4 shadow-sm">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
-            <Inbox size={32} />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-bold text-gray-700 text-base">Hộp thư trống</h3>
-            <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
+        <EmptyState>
+          <EmptyStateIcon><Inbox /></EmptyStateIcon>
+          <EmptyStateTitle>Hộp thư trống</EmptyStateTitle>
+          <EmptyStateDescription>
               Không tìm thấy thông báo nào khớp với cấu hình bộ lọc hiện tại của
               bạn.
-            </p>
-          </div>
-        </div>
+          </EmptyStateDescription>
+        </EmptyState>
       ) : (
         <div className="space-y-3">
           {paginatedNotifications.map((notif) => {
@@ -556,13 +550,13 @@ export default function NotificationsPage() {
             const isMenuOpen = activeMenuId === notif.id;
 
             return (
-              <div
+              <Card
                 key={notif.id}
                 onClick={() =>
                   !notif.isRead && handleMarkAsRead(notif.id, true)
                 }
-                className={`bg-white border border-gray-100 ${styles.hoverColor} ${priorityBorder} rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex gap-4 relative group cursor-pointer overflow-visible animate-new-item ${
-                  !notif.isRead ? "bg-blue-50/20 border-blue-50" : ""
+                className={`${styles.hoverColor} ${priorityBorder} relative flex cursor-pointer flex-row gap-4 overflow-visible p-5 py-5 transition-[box-shadow,transform,background-color] duration-300 hover:-translate-y-0.5 hover:shadow-md animate-new-item ${
+                  !notif.isRead ? "bg-primary/5" : ""
                 }`}
               >
                 {/* Chấm xanh báo Chưa đọc */}
@@ -583,13 +577,11 @@ export default function NotificationsPage() {
                 {/* Nội dung chính */}
                 <div className="flex-1 space-y-2 pr-6">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                    <h4
-                      className={`font-bold text-gray-800 text-sm ${!notif.isRead ? "text-blue-900" : ""}`}
-                    >
+                    <h4 className={`text-sm font-bold ${!notif.isRead ? "text-primary" : "text-foreground"}`}>
                       {notif.title}
                     </h4>
                     <span
-                      className="text-[10px] text-gray-400 flex items-center gap-1 font-medium cursor-help"
+                      className="flex cursor-help items-center gap-1 text-[10px] font-medium text-muted-foreground"
                       title={formatAbsoluteTime(notif.timestamp)}
                     >
                       <Calendar size={11} />
@@ -597,51 +589,51 @@ export default function NotificationsPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                  <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                     {notif.message}
                   </p>
 
                   {/* Các tag chi tiết phụ thuộc vào loại dữ liệu */}
                   {notif.data && (
-                    <div className="flex flex-wrap gap-2.5 pt-1 text-[11px] text-gray-500 font-bold">
+                    <div className="flex flex-wrap gap-2.5 pt-1 text-[11px] font-bold text-muted-foreground">
                       {notif.data.tenTaiKhoan && (
-                        <span className="flex items-center gap-1 bg-slate-50 border border-slate-100/50 px-2 py-0.5 rounded-lg">
-                          <User size={11} className="text-slate-400" />
+                        <Badge variant="outline" className="rounded-lg">
+                          <User aria-hidden="true" size={11} />
                           Độc giả:{" "}
-                          <span className="text-gray-700">
+                          <span className="text-foreground">
                             {notif.data.tenTaiKhoan}
                           </span>
-                        </span>
+                        </Badge>
                       )}
                       {notif.data.tenTruyen && (
-                        <span className="flex items-center gap-1 bg-slate-50 border border-slate-100/50 px-2 py-0.5 rounded-lg">
-                          <BookOpen size={11} className="text-slate-400" />
+                        <Badge variant="outline" className="rounded-lg">
+                          <BookOpen aria-hidden="true" size={11} />
                           Truyện:{" "}
-                          <span className="text-gray-700">
+                          <span className="text-foreground">
                             {notif.data.tenTruyen}
                           </span>
-                        </span>
+                        </Badge>
                       )}
 
                       {/* Tag trạng thái màu đặc biệt */}
                       {notif.category === "transaction" &&
                         notif.data.amount !== undefined && (
-                          <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-100/50 text-emerald-700 px-2 py-0.5 rounded-lg">
+                          <Badge variant="success" className="rounded-lg">
                             💸 nạp {notif.data.amount.toLocaleString("vi-VN")} đ
                             (Thành công)
-                          </span>
+                          </Badge>
                         )}
                       {notif.category === "report" &&
                         notif.data.reportReason && (
-                          <span className="flex items-center gap-1 bg-red-50 border border-red-100/50 text-red-700 px-2 py-0.5 rounded-lg">
+                          <Badge variant="destructive" className="rounded-lg">
                             ⚠️ Chờ xử lý: {notif.data.reportReason}
-                          </span>
+                          </Badge>
                         )}
                       {notif.category === "system" &&
                         notif.data.systemEvent && (
-                          <span className="flex items-center gap-1 bg-purple-50 border border-purple-100/50 text-purple-700 px-2 py-0.5 rounded-lg">
+                          <Badge variant="info" className="rounded-lg">
                             ⚙️ Hoàn tất: {notif.data.systemEvent}
-                          </span>
+                          </Badge>
                         )}
                     </div>
                   )}
@@ -652,52 +644,60 @@ export default function NotificationsPage() {
                   className="absolute top-4 right-4"
                   onClick={(e) => e.stopPropagation()} // Tránh kích hoạt sự kiện đọc card
                 >
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() =>
                       setActiveMenuId(isMenuOpen ? null : notif.id)
                     }
                     aria-label={`Tùy chọn thông báo: ${notif.title}`}
                     aria-expanded={isMenuOpen}
-                    className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
-                    <MoreVertical size={16} />
-                  </button>
+                    <MoreVertical aria-hidden="true" size={16} />
+                  </Button>
 
                   {/* Dropdown Menu */}
                   {isMenuOpen && (
                     <div
                       ref={menuRef}
-                      className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-1 text-xs font-bold text-gray-600 animate-in fade-in-50 zoom-in-95 duration-100"
+                      className="absolute right-0 z-30 mt-1 w-44 rounded-xl border bg-popover py-1 text-xs font-bold text-popover-foreground shadow-xl animate-in fade-in-50 zoom-in-95 duration-100"
                     >
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() =>
                           handleMarkAsRead(notif.id, !notif.isRead)
                         }
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
+                        className="w-full justify-start"
                       >
                         {notif.isRead ? (
                           <>
-                            <EyeOff size={13} className="text-gray-400" />
+                            <EyeOff aria-hidden="true" size={13} />
                             Đánh dấu chưa đọc
                           </>
                         ) : (
                           <>
-                            <Check size={13} className="text-blue-500" />
+                            <Check aria-hidden="true" size={13} />
                             Đánh dấu đã đọc
                           </>
                         )}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(notif.id)}
-                        className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 cursor-pointer"
+                        className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 aria-hidden="true" size={13} />
                         Xóa thông báo
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -705,16 +705,14 @@ export default function NotificationsPage() {
 
       {/* NÚT TẢI THÊM THÔNG BÁO (PAGINATION) */}
       {hasMore && (
-        <div className="flex justify-center pt-3">
-          <button
-            disabled={loading}
-            onClick={handleLoadMore}
-            className="px-6 py-2.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 font-bold text-xs rounded-xl shadow-sm transition-all duration-200 flex items-center gap-1.5 cursor-pointer"
-          >
-            {loading ? "Đang tải…" : "Tải thêm thông báo"}
-            <ChevronDown size={14} />
-          </button>
-        </div>
+        <Pagination><PaginationContent><PaginationItem>
+          <Button asChild variant="outline">
+            <button type="button" disabled={loading} onClick={handleLoadMore}>
+              {loading ? "Đang tải…" : "Tải thêm thông báo"}
+              <ChevronDown aria-hidden="true" size={14} />
+            </button>
+          </Button>
+        </PaginationItem></PaginationContent></Pagination>
       )}
     </div>
   );

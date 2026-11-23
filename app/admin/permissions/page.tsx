@@ -7,6 +7,8 @@ import { permissionsQuerySchema } from "@/schemas/admin-roles.schema";
 import { PermissionsToolbar } from "@/components/admin/PermissionsToolbar";
 import { PermissionsTable } from "@/components/admin/PermissionsTable";
 import { PermissionsPagination } from "@/components/admin/PermissionsPagination";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 const pageSize = 15;
 const number = new Intl.NumberFormat("vi-VN");
@@ -59,7 +61,7 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
     skip: (currentPage - 1) * pageSize,
   });
   const stats = [
-    { title: "Tổng thành viên", value: members, icon: Users, tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" },
+    { title: "Tổng thành viên", value: members, icon: Users, tone: "bg-muted text-muted-foreground" },
     { title: "Quản trị viên", value: admins, icon: ShieldCheck, tone: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" },
     { title: "Tác giả", value: authors, icon: UserRoundPen, tone: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
     { title: "Chỉ có quyền cơ bản", value: basic, icon: BookOpen, tone: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300" },
@@ -67,13 +69,10 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-5 text-foreground">
-      <header className="space-y-1">
-        <h1 className="text-balance text-2xl font-bold tracking-tight md:text-3xl">Quản lý phân quyền</h1>
-        <p className="text-sm text-muted-foreground">Xem và cập nhật vai trò của từng tài khoản hoặc nhiều tài khoản cùng lúc.</p>
-      </header>
+      <PageHeader><PageHeaderContent><PageHeaderTitle>Quản lý phân quyền</PageHeaderTitle><PageHeaderDescription>Xem và cập nhật vai trò của từng tài khoản hoặc nhiều tài khoản cùng lúc.</PageHeaderDescription></PageHeaderContent></PageHeader>
       <dl aria-label="Thống kê vai trò" className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {stats.map(({ title, value, icon: Icon, tone }) => (
-          <div key={title} className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-xs sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+          <Card key={title} className="py-0"><CardContent className="flex min-w-0 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
             <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${tone}`}>
               <Icon aria-hidden="true" className="size-4" />
             </span>
@@ -81,7 +80,7 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
               <dt className="text-xs font-medium text-muted-foreground sm:text-sm">{title}</dt>
               <dd className="text-xl leading-tight font-semibold tabular-nums">{number.format(value)}</dd>
             </div>
-          </div>
+          </CardContent></Card>
         ))}
       </dl>
       <p className="text-xs text-muted-foreground">

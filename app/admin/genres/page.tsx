@@ -19,6 +19,11 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { ErrorState, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 type ImportResult = {
   insertedRows?: number;
@@ -157,7 +162,7 @@ export default function GenresPage() {
   };
 
   return (
-    <div className="p-6 space-y-4 bg-white min-h-screen">
+    <div className="min-h-screen space-y-6 bg-background p-3 text-foreground sm:p-6">
       <input
         ref={fileInputRef}
         type="file"
@@ -166,10 +171,12 @@ export default function GenresPage() {
         onChange={handleImport}
       />
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-800">Quản lý thể loại</h1>
-
-        <div className="flex gap-3">
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Quản lý thể loại</PageHeaderTitle>
+          <PageHeaderDescription>Quản lý danh mục phân loại truyện trong hệ thống.</PageHeaderDescription>
+        </PageHeaderContent>
+        <PageHeaderActions>
           <Button
             onClick={() => {
               setSelected(null);
@@ -186,38 +193,37 @@ export default function GenresPage() {
             {importing ? "Đang import..." : "Import Excel"}
           </Button>
           <Button onClick={handleExport}>Xuất Excel</Button>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="max-w-sm w-full">
+      <FilterBar>
+        <FilterBarGroup>
+          <div className="w-full max-w-sm">
+            <label className="sr-only" htmlFor="genre-search">Tìm kiếm thể loại</label>
           <Input
+            id="genre-search"
             placeholder="Tìm kiếm thể loại..."
             value={query.search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
+          </div>
+        </FilterBarGroup>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <FilterBarActions className="text-sm text-muted-foreground">
           <span>Hiển thị</span>
-
-          <select
-            className="h-9 rounded-md border px-3 text-sm outline-none"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-
+          <Select value={String(limit)} onValueChange={(value) => setLimit(Number(value))}>
+            <SelectTrigger aria-label="Số thể loại mỗi trang" size="sm" className="min-w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[5, 10, 15, 20, 50].map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <span>bản ghi / trang</span>
-        </div>
-      </div>
+        </FilterBarActions>
+      </FilterBar>
 
-      <div className="text-sm text-slate-500">
+      <div className="text-sm text-muted-foreground">
         Tổng số:{" "}
         <b>
           {genres.length}/{meta?.total ?? 0}
@@ -225,14 +231,10 @@ export default function GenresPage() {
         thể loại
       </div>
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <ErrorState><ErrorStateTitle>Không thể tải thể loại</ErrorStateTitle><ErrorStateDescription>{error}</ErrorStateDescription></ErrorState>}
 
       {loading ? (
-        <div className="py-10 text-center text-slate-500">
+        <div role="status" className="py-10 text-center text-muted-foreground">
           Đang tải dữ liệu...
         </div>
       ) : (
@@ -247,29 +249,13 @@ export default function GenresPage() {
         />
       )}
 
-      <div className="flex justify-center items-center gap-4 py-4 text-slate-600">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page === 1}
-          onClick={() => setPage(query.page - 1)}
-        >
-          Trước
-        </Button>
-
-        <span className="text-sm font-medium">
-          Trang {query.page} / {meta?.totalPage ?? 1}
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page >= (meta?.totalPage ?? 1)}
-          onClick={() => setPage(query.page + 1)}
-        >
-          Sau
-        </Button>
-      </div>
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem><Button variant="outline" size="sm" disabled={query.page === 1} onClick={() => setPage(query.page - 1)}>Trước</Button></PaginationItem>
+          <PaginationItem><span className="px-2 text-sm font-medium">Trang {query.page} / {meta?.totalPage ?? 1}</span></PaginationItem>
+          <PaginationItem><Button variant="outline" size="sm" disabled={query.page >= (meta?.totalPage ?? 1)} onClick={() => setPage(query.page + 1)}>Sau</Button></PaginationItem>
+        </PaginationContent>
+      </Pagination>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-[420px] sm:max-w-[420px]">

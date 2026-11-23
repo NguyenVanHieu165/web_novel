@@ -6,6 +6,8 @@ import ReaderAvatar from "@/components/account/ReaderAvatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState, EmptyStateDescription, EmptyStateTitle } from "@/components/shared/empty-state";
 import RoleAssignmentForm from "@/components/users/RoleAssignmentForm";
 import { roleLabel, type RoleOption } from "@/schemas/admin-roles.schema";
 import { BulkRoleForm } from "./BulkRoleForm";
@@ -123,16 +125,16 @@ export function PermissionsTable({ actorId, accounts, roles }: { actorId: number
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
                       {accountRoles.length ? accountRoles.map((role) => (
-                        <span key={role.idVaiTro} className={`rounded-full px-2.5 py-1 text-xs font-medium wrap-anywhere ${roleTones[role.tenVaiTro] ?? neutral}`}>
+                        <Badge key={role.idVaiTro} variant="outline" className={`wrap-anywhere ${roleTones[role.tenVaiTro] ?? neutral}`}>
                           {roleLabel(role.tenVaiTro)}
-                        </span>
-                      )) : <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${neutral}`}>Chưa có vai trò</span>}
+                        </Badge>
+                      )) : <Badge variant="secondary">Chưa có vai trò</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.tone}`}>
+                    <Badge variant="outline" className={status.tone}>
                       <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${status.dot}`} />{status.label}
-                    </span>
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     {isSelf ? <span className="text-xs text-muted-foreground">Tài khoản của bạn</span> : (
@@ -145,7 +147,7 @@ export function PermissionsTable({ actorId, accounts, roles }: { actorId: number
                   </TableCell>
                 </TableRow>
               );
-            }) : <TableRow><TableCell colSpan={5} className="h-28 text-center text-muted-foreground">Không tìm thấy tài khoản phù hợp.</TableCell></TableRow>}
+            }) : <TableRow><TableCell colSpan={5}><EmptyState className="my-3 min-h-36 border-0"><EmptyStateTitle>Không tìm thấy tài khoản phù hợp</EmptyStateTitle><EmptyStateDescription>Thử thay đổi từ khóa hoặc bộ lọc vai trò.</EmptyStateDescription></EmptyState></TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>

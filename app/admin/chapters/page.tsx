@@ -19,6 +19,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { ErrorState, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 type ImportResult = {
   insertedRows?: number;
@@ -174,54 +179,43 @@ function ChaptersContent() {
         onChange={handleImport}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">
-            Quản lý chương truyện
-          </h1>
-          <p className="text-sm text-slate-500">
-            Thêm, sửa, xóa chương và quản lý nội dung đọc.
-          </p>
-        </div>
-
-        <Button
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Quản lý chương truyện</PageHeaderTitle>
+          <PageHeaderDescription>Thêm, sửa, xóa chương và quản lý nội dung đọc.</PageHeaderDescription>
+        </PageHeaderContent>
+        <PageHeaderActions><Button
           onClick={() => {
             setSelected(null);
             setOpen(true);
           }}
           disabled={stories.length === 0}
         >
-          <Plus className="h-4 w-4" />
+          <Plus aria-hidden="true" className="h-4 w-4" />
           Thêm chương
-        </Button>
-      </div>
+        </Button></PageHeaderActions>
+      </PageHeader>
 
       <ChapterFilter query={query} stories={stories} setQuery={setQuery} onAutoVip={() => setAutoVip(true)} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-slate-500">
+      <FilterBar aria-label="Thiết lập danh sách chương">
+        <FilterBarGroup>
+        <div className="text-sm text-muted-foreground">
           Tổng số:{" "}
           <b>
             {chapters.length}/{meta.total}
           </b>{" "}
           chương
         </div>
+        </FilterBarGroup>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+        <FilterBarActions>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Hiển thị</span>
-            <select
-              aria-label="Số chương mỗi trang"
-              className="h-9 rounded-md border bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={15}>15</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+            <Select value={String(limit)} onValueChange={(value) => setLimit(Number(value))}>
+              <SelectTrigger aria-label="Số chương mỗi trang" size="sm" className="min-w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>{[5, 10, 15, 20, 50].map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent>
+            </Select>
             <span>bản ghi / trang</span>
           </div>
 
@@ -233,17 +227,13 @@ function ChaptersContent() {
             {importing ? "Đang import..." : "Import Excel"}
           </Button>
           <Button onClick={handleExport}>Xuất Excel</Button>
-        </div>
-      </div>
+        </FilterBarActions>
+      </FilterBar>
 
-      {error && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <ErrorState><ErrorStateTitle>Không thể tải danh sách chương</ErrorStateTitle><ErrorStateDescription>{error}</ErrorStateDescription></ErrorState>}
 
       {loading ? (
-        <div className="rounded-lg border bg-card py-10 text-center text-slate-500">
+        <div role="status" className="rounded-lg border bg-card py-10 text-center text-muted-foreground">
           Đang tải dữ liệu…
         </div>
       ) : (
@@ -267,29 +257,11 @@ function ChaptersContent() {
         />
       )}
 
-      <div className="flex items-center justify-center gap-4 py-4 text-slate-600">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={loading || query.page === 1}
-          onClick={() => setPage(query.page - 1)}
-        >
-          Trước
-        </Button>
-
-        <span className="text-sm font-medium">
-          Trang {query.page} / {meta.totalPage}
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={loading || query.page >= meta.totalPage}
-          onClick={() => setPage(query.page + 1)}
-        >
-          Sau
-        </Button>
-      </div>
+      <Pagination><PaginationContent>
+        <PaginationItem><Button variant="outline" size="sm" disabled={loading || query.page === 1} onClick={() => setPage(query.page - 1)}>Trước</Button></PaginationItem>
+        <PaginationItem><span className="px-2 text-sm font-medium">Trang {query.page} / {meta.totalPage}</span></PaginationItem>
+        <PaginationItem><Button variant="outline" size="sm" disabled={loading || query.page >= meta.totalPage} onClick={() => setPage(query.page + 1)}>Sau</Button></PaginationItem>
+      </PaginationContent></Pagination>
 
       <ChapterPriceSheet target={autoVip && query.storyId ? { kind: "story", storyId: query.storyId } : null} onClose={() => setAutoVip(false)} onSuccess={fetchChapters} />
       <ChapterPreview id={previewId} onClose={() => setPreviewId(null)} onEdit={(chapter) => { setSelected(chapter); setOpen(true); }} onSuccess={fetchChapters} />

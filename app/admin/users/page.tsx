@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { ErrorState, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 
 type ImportResult = {
   insertedRows?: number;
@@ -170,12 +176,12 @@ export default function UsersPage() {
         onChange={handleImport}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-black">
-          Danh sách người dùng
-        </h1>
-        <div className="flex gap-3">
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Danh sách người dùng</PageHeaderTitle>
+          <PageHeaderDescription>Quản lý tài khoản và thông tin người dùng trong hệ thống.</PageHeaderDescription>
+        </PageHeaderContent>
+        <PageHeaderActions>
           <Button
             onClick={() => {
               setSelected(null);
@@ -192,36 +198,33 @@ export default function UsersPage() {
             {importing ? "Đang import..." : "Import Excel"}
           </Button>
           <Button onClick={handleExport}>Xuất Excel</Button>
-        </div>
-      </div>
+        </PageHeaderActions>
+      </PageHeader>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="max-w-sm w-full">
+      <FilterBar>
+        <FilterBarGroup>
+          <div className="w-full max-w-sm">
+            <label className="sr-only" htmlFor="user-search">Tìm kiếm người dùng</label>
           <Input
+            id="user-search"
             placeholder="Tìm kiếm người dùng..."
             value={query.search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
+          </div>
+        </FilterBarGroup>
 
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <FilterBarActions className="text-sm text-muted-foreground">
           <span>Hiển thị</span>
-          <select
-            className="h-9 rounded-md border px-3 text-sm outline-none"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+          <Select value={String(limit)} onValueChange={(value) => setLimit(Number(value))}>
+            <SelectTrigger aria-label="Số người dùng mỗi trang" size="sm" className="min-w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>{[5, 10, 15, 20, 50].map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent>
+          </Select>
           <span>bản ghi / trang</span>
-        </div>
-      </div>
+        </FilterBarActions>
+      </FilterBar>
 
-      <div className="text-sm text-slate-500">
+      <div className="text-sm text-muted-foreground">
         Tổng số:{" "}
         <b>
           {users.length}/{meta.total}
@@ -229,44 +232,23 @@ export default function UsersPage() {
         người dùng
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        {error && (
-          <div className="border-b border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      {error && <ErrorState><ErrorStateTitle>Không thể tải người dùng</ErrorStateTitle><ErrorStateDescription>{error}</ErrorStateDescription></ErrorState>}
+      <Card className="overflow-hidden py-0">
+        <CardContent className="p-0">
         <UserTable
           data={users}
           loading={loading}
           refresh={fetchUsers}
           onEdit={handleEdit}
         />
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="flex justify-center items-center gap-4 py-4 text-slate-600">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page === 1}
-          onClick={() => setPage(query.page - 1)}
-        >
-          Trước
-        </Button>
-
-        <span className="text-sm font-medium">
-          Trang {query.page} / {meta.totalPage}
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={query.page >= meta.totalPage}
-          onClick={() => setPage(query.page + 1)}
-        >
-          Sau
-        </Button>
-      </div>
+      <Pagination><PaginationContent>
+        <PaginationItem><Button variant="outline" size="sm" disabled={query.page === 1} onClick={() => setPage(query.page - 1)}>Trước</Button></PaginationItem>
+        <PaginationItem><span className="px-2 text-sm font-medium">Trang {query.page} / {meta.totalPage}</span></PaginationItem>
+        <PaginationItem><Button variant="outline" size="sm" disabled={query.page >= meta.totalPage} onClick={() => setPage(query.page + 1)}>Sau</Button></PaginationItem>
+      </PaginationContent></Pagination>
 
       {/* Drawer */}
       <Sheet open={open} onOpenChange={setOpen}>

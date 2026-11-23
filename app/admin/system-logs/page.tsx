@@ -1,7 +1,16 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Database, Search } from "lucide-react";
+import { CheckCircle2, Database, Search } from "lucide-react";
 import { DatabaseDiagnosticButton } from "@/components/admin/DatabaseDiagnosticButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { FilterBar, FilterBarActions, FilterBarGroup } from "@/components/shared/filter-bar";
+import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "@/components/shared/empty-state";
+import { ErrorState, ErrorStateDescription, ErrorStateTitle } from "@/components/shared/error-state";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 import { requireAdminPage } from "@/lib/server/admin-page";
 import { listSystemLogs, systemLogQuerySchema, type SystemLogLevel } from "@/lib/server/system-log";
 
@@ -13,11 +22,11 @@ const dateTime = new Intl.DateTimeFormat("vi-VN", {
   timeStyle: "medium",
   timeZone: "Asia/Ho_Chi_Minh",
 });
-const levelStyles: Record<SystemLogLevel, string> = {
-  info: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  error: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-  critical: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
+const levelVariants: Record<SystemLogLevel, "success" | "warning" | "destructive" | "info"> = {
+  info: "success",
+  warning: "warning",
+  error: "destructive",
+  critical: "info",
 };
 const levelLabels: Record<SystemLogLevel, string> = {
   info: "Thông tin", warning: "Cảnh báo", error: "Lỗi", critical: "Nghiêm trọng",
@@ -47,8 +56,8 @@ export default async function SystemLogsPage({ searchParams }: { searchParams: S
   await requireAdminPage();
   const raw = await searchParams;
   const parsed = systemLogQuerySchema.safeParse({
-    page: first(raw.page), limit: first(raw.limit), level: first(raw.level),
-    source: first(raw.source), code: first(raw.code), q: first(raw.q),
+    page: first(raw.page), limit: first(raw.limit), level: first(raw.level) === "all" ? undefined : first(raw.level),
+    source: first(raw.source) === "all" ? undefined : first(raw.source), code: first(raw.code), q: first(raw.q),
   });
   const query = parsed.success ? parsed.data : systemLogQuerySchema.parse({});
   let result: Awaited<ReturnType<typeof listSystemLogs>> | null = null;
@@ -62,17 +71,17 @@ export default async function SystemLogsPage({ searchParams }: { searchParams: S
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-pretty text-2xl font-bold tracking-tight">Nhật ký hệ thống</h1>
-          <p className="mt-1 max-w-3xl text-pretty text-sm text-muted-foreground">
+      <PageHeader>
+        <PageHeaderContent>
+          <PageHeaderTitle>Nhật ký hệ thống</PageHeaderTitle>
+          <PageHeaderDescription>
             Theo dõi lỗi import, checkpoint và chẩn đoán database. Nội dung nhạy cảm, stack trace và credential không được lưu vào giao diện này.
-          </p>
-        </div>
-        <DatabaseDiagnosticButton />
-      </header>
+          </PageHeaderDescription>
+        </PageHeaderContent>
+        <PageHeaderActions><DatabaseDiagnosticButton /></PageHeaderActions>
+      </PageHeader>
 
-      <section aria-labelledby="checkpoint-health" className="rounded-xl border bg-card p-4 shadow-sm">
+      <Card aria-labelledby="checkpoint-health"><CardContent>
         <div className="flex items-start gap-3">
           <Database aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-blue-600 dark:text-blue-400" />
           <div>
@@ -82,54 +91,42 @@ export default async function SystemLogsPage({ searchParams }: { searchParams: S
             </p>
           </div>
         </div>
-      </section>
+      </CardContent></Card>
 
-      <form method="get" className="grid gap-3 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-6">
-        <div className="sm:col-span-2 xl:col-span-2">
+      <form method="get">
+        <FilterBar>
+        <FilterBarGroup className="grid sm:grid-cols-2 xl:grid-cols-5">
+        <div className="sm:col-span-2">
           <label htmlFor="log-search" className="mb-1 block text-sm font-medium">Tìm kiếm</label>
           <div className="flex items-center gap-2 rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
             <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-            <input id="log-search" name="q" type="search" defaultValue={query.q} autoComplete="off"
+            <Input id="log-search" name="q" type="search" defaultValue={query.q} autoComplete="off"
               placeholder="Mã lỗi, request ID hoặc job ID…"
-              className="min-h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" />
+              className="min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
           </div>
         </div>
         <div>
           <label htmlFor="log-level" className="mb-1 block text-sm font-medium">Mức độ</label>
-          <select id="log-level" name="level" defaultValue={query.level ?? ""}
-            className="min-h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring">
-            <option value="">Tất cả</option>
-            {Object.entries(levelLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <Select name="level" defaultValue={query.level ?? "all"}><SelectTrigger id="log-level" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả</SelectItem>{Object.entries(levelLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
         </div>
         <div>
           <label htmlFor="log-source" className="mb-1 block text-sm font-medium">Nguồn</label>
-          <select id="log-source" name="source" defaultValue={query.source ?? ""}
-            className="min-h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring">
-            <option value="">Tất cả</option>
-            <option value="story-import">Import URL</option>
-            <option value="database-diagnostic">Database</option>
-            <option value="rate-limit">Rate limit</option>
-            <option value="system">Hệ thống</option>
-          </select>
+          <Select name="source" defaultValue={query.source ?? "all"}><SelectTrigger id="log-source" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả</SelectItem><SelectItem value="story-import">Import URL</SelectItem><SelectItem value="database-diagnostic">Database</SelectItem><SelectItem value="rate-limit">Rate limit</SelectItem><SelectItem value="system">Hệ thống</SelectItem></SelectContent></Select>
         </div>
         <div>
           <label htmlFor="log-code" className="mb-1 block text-sm font-medium">Mã lỗi</label>
-          <input id="log-code" name="code" defaultValue={query.code} autoComplete="off" spellCheck={false}
-            placeholder="CHECKPOINT_FAILED…"
-            className="min-h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring" />
+          <Input id="log-code" name="code" defaultValue={query.code} autoComplete="off" spellCheck={false} placeholder="CHECKPOINT_FAILED…" />
         </div>
-        <div className="flex items-end gap-2">
+        </FilterBarGroup>
+        <FilterBarActions>
           <Button type="submit" className="flex-1">Lọc nhật ký</Button>
           <Button asChild variant="outline"><Link href="/admin/system-logs">Xóa lọc</Link></Button>
-        </div>
+        </FilterBarActions>
+        </FilterBar>
       </form>
 
       {loadFailed ? (
-        <div role="alert" className="flex gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          <AlertTriangle aria-hidden="true" className="size-5 shrink-0 text-destructive" />
-          <div><p className="font-medium text-destructive">Chưa đọc được bảng nhật ký</p><p className="mt-1 text-muted-foreground">Hãy chạy migration production rồi tải lại trang.</p></div>
-        </div>
+        <ErrorState><ErrorStateTitle>Chưa đọc được bảng nhật ký</ErrorStateTitle><ErrorStateDescription>Kiểm tra trạng thái triển khai database ở môi trường an toàn; không chạy migration trực tiếp trên production.</ErrorStateDescription></ErrorState>
       ) : result?.items.length ? (
         <section aria-label="Danh sách nhật ký" className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="overflow-x-auto">
@@ -143,7 +140,7 @@ export default async function SystemLogsPage({ searchParams }: { searchParams: S
                   const formattedDetails = details(item.chiTiet);
                   return <tr key={item.idNhatKy} className="align-top [content-visibility:auto]">
                     <td className="whitespace-nowrap px-4 py-4 tabular-nums">{dateTime.format(item.createdAt)}</td>
-                    <td className="px-4 py-4"><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${levelStyles[level]}`}>{levelLabels[level]}</span></td>
+                    <td className="px-4 py-4"><Badge variant={levelVariants[level]}>{levelLabels[level]}</Badge></td>
                     <td className="px-4 py-4"><p className="font-medium">{item.nguon}</p>{item.maLoi && <code translate="no" className="mt-1 block break-all text-xs text-muted-foreground">{item.maLoi}</code>}</td>
                     <td className="max-w-xl px-4 py-4"><p className="break-words font-medium">{item.thongDiep}</p>{formattedDetails && <details className="mt-2"><summary className="cursor-pointer text-xs text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-ring dark:text-blue-300">Chi tiết đã làm sạch</summary><pre className="mt-2 max-h-80 overflow-auto overscroll-contain whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-xs">{formattedDetails}</pre></details>}{item.taiKhoan && <p className="mt-2 text-xs text-muted-foreground">Thực hiện bởi {item.taiKhoan.tenTaiKhoan} (ID {item.taiKhoan.idTaiKhoan})</p>}</td>
                     <td className="px-4 py-4 text-xs"><dl className="space-y-2">{item.requestId && <div><dt className="text-muted-foreground">Request ID</dt><dd><code translate="no" className="break-all">{item.requestId}</code></dd></div>}{item.jobId && <div><dt className="text-muted-foreground">Job ID</dt><dd><code translate="no" className="break-all">{item.jobId}</code></dd></div>}</dl></td>
@@ -154,24 +151,23 @@ export default async function SystemLogsPage({ searchParams }: { searchParams: S
           </div>
         </section>
       ) : (
-        <div className="flex flex-col items-center rounded-xl border border-dashed p-10 text-center">
-          <CheckCircle2 aria-hidden="true" className="size-8 text-emerald-600" />
-          <h2 className="mt-3 font-semibold">Chưa có nhật ký phù hợp</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Thử thay đổi bộ lọc hoặc chạy kiểm tra quyền checkpoint.</p>
-        </div>
+        <EmptyState><EmptyStateIcon><CheckCircle2 /></EmptyStateIcon><EmptyStateTitle>Chưa có nhật ký phù hợp</EmptyStateTitle><EmptyStateDescription>Thử thay đổi bộ lọc hoặc chạy kiểm tra quyền checkpoint.</EmptyStateDescription></EmptyState>
       )}
 
-      <nav aria-label="Phân trang nhật ký" className="flex items-center justify-between gap-4">
+      <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
         <p className="text-sm tabular-nums text-muted-foreground">{meta.total.toLocaleString("vi-VN")} bản ghi · Trang {meta.page}/{meta.totalPage}</p>
-        <div className="flex gap-2">
+        <Pagination className="mx-0 w-auto"><PaginationContent>
+          <PaginationItem>
           {meta.page <= 1
             ? <Button type="button" variant="outline" size="sm" disabled>Trang trước</Button>
             : <Button asChild variant="outline" size="sm"><Link href={pageHref(raw, meta.page - 1)}>Trang trước</Link></Button>}
+          </PaginationItem><PaginationItem>
           {meta.page >= meta.totalPage
             ? <Button type="button" variant="outline" size="sm" disabled>Trang sau</Button>
             : <Button asChild variant="outline" size="sm"><Link href={pageHref(raw, meta.page + 1)}>Trang sau</Link></Button>}
-        </div>
-      </nav>
+          </PaginationItem>
+        </PaginationContent></Pagination>
+      </div>
     </div>
   );
 }
