@@ -125,7 +125,7 @@ export default function UniverseShowcase({ story }: UniverseShowcaseProps) {
             <span className="flex items-center gap-1.5">
               <BookOpen className="w-4 h-4 text-blue-400" />
               <span className="font-semibold text-white">
-                {(showcaseStory.soChuong || 0).toLocaleString()}
+                    {(showcaseStory.soChuong || 0).toLocaleString("vi-VN")}
               </span>
               <span className="text-slate-400 text-xs">chương</span>
             </span>

@@ -13,6 +13,7 @@ export default function ChapterChrome({ header, children }: { header: ReactNode;
     let previous = Math.max(0, window.scrollY);
     let delta = 0;
     let hidden = false;
+    const mobileViewport = window.matchMedia("(max-width: 767px)");
 
     const onScroll = () => {
       if (frame) return;
@@ -24,7 +25,8 @@ export default function ChapterChrome({ header, children }: { header: ReactNode;
 
         // Accumulate small trackpad movements in the same direction.
         if (step !== 0) delta = Math.sign(step) === Math.sign(delta) ? delta + step : step;
-        const next = y < 80 || delta < -8 ? false : y > 120 && delta > 10 ? true : hidden;
+        const revealThreshold = mobileViewport.matches ? -4 : -8;
+        const next = y < 80 || delta < revealThreshold ? false : y > 120 && delta > 10 ? true : hidden;
         if (next !== hidden) {
           hidden = next;
           root.dataset.readerChrome = hidden ? "hidden" : "visible";
@@ -33,9 +35,19 @@ export default function ChapterChrome({ header, children }: { header: ReactNode;
       });
     };
 
+    const revealOnMobileTap = () => {
+      if (!hidden || !mobileViewport.matches) return;
+      hidden = false;
+      delta = 0;
+      previous = Math.max(0, window.scrollY);
+      root.dataset.readerChrome = "visible";
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
+    root.addEventListener("pointerdown", revealOnMobileTap, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
+      root.removeEventListener("pointerdown", revealOnMobileTap);
       window.cancelAnimationFrame(frame);
     };
   }, []);

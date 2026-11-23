@@ -129,7 +129,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                     <Image
                       fill
                       unoptimized
-                      loading="eager"
+                      priority={idx === 0}
                       sizes="(min-width: 640px) 96px, 80px"
                       src={story.anhBia || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400"}
                       alt={story.tenTruyen}
@@ -156,7 +156,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                     <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-zinc-400 pt-1">
                       <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-300">
                         <Eye className="w-3.5 h-3.5 text-blue-500" />
-                        {story.luotXem?.toLocaleString() ?? 0}
+                        {story.luotXem?.toLocaleString("vi-VN") ?? 0}
                       </span>
                       {story.diemDanhGiaTrungBinh && (
                         <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
@@ -199,7 +199,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                     <Image
                       fill
                       unoptimized
-                      loading="eager"
+                      loading="lazy"
                       sizes="(min-width: 640px) 56px, 48px"
                       src={story.anhBia || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400"}
                       alt={story.tenTruyen}
@@ -231,7 +231,7 @@ export default async function XepHangPage({ searchParams }: XepHangPageProps) {
                   <div className="shrink-0 text-right space-y-1">
                     <div className="flex items-center justify-end gap-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">
                       <Eye className="w-3.5 h-3.5 text-blue-500" />
-                      <span>{story.luotXem?.toLocaleString() ?? 0}</span>
+                      <span>{story.luotXem?.toLocaleString("vi-VN") ?? 0}</span>
                     </div>
                     {story.diemDanhGiaTrungBinh && (
                       <div className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">

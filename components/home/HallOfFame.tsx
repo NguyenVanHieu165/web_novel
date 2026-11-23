@@ -169,7 +169,7 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800/80 text-[11px] font-semibold text-slate-600 dark:text-zinc-300 border border-slate-200/50 dark:border-zinc-700/50">
                     <Eye className="w-3 h-3 text-blue-500" />
-                    <span>{(story.luotXem || 0).toLocaleString()}</span>
+                    <span>{(story.luotXem || 0).toLocaleString("vi-VN")}</span>
                   </div>
                 </div>
 
@@ -177,6 +177,7 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                 <div className="flex gap-4 z-10 mb-4">
                   <Link
                     href={`/truyen/${story.slug}`}
+                    prefetch={false}
                     className="w-24 sm:w-28 aspect-[2/3] rounded-2xl overflow-hidden shrink-0 bg-slate-800 shadow-md group-hover:scale-105 transition-transform duration-300"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -198,7 +199,7 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                           {story.genres[0]}
                         </span>
                       )}
-                      <Link href={`/truyen/${story.slug}`}>
+                      <Link href={`/truyen/${story.slug}`} prefetch={false}>
                         <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-zinc-100 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors leading-snug mt-0.5">
                           {story.tenTruyen}
                         </h3>
@@ -213,7 +214,7 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                       <div className="flex items-center gap-1 text-[11px] text-slate-400">
                         <BookOpen className="w-3 h-3" />
                         <span>
-                          {(story.soChuong || 0).toLocaleString()} chương
+                          {(story.soChuong || 0).toLocaleString("vi-VN")} chương
                         </span>
                       </div>
                     </div>
@@ -233,6 +234,7 @@ export default function HallOfFame({ stories }: HallOfFameProps) {
                   </span>
                   <Link
                     href={`/truyen/${story.slug}`}
+                    prefetch={false}
                     className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors group-hover:translate-x-0.5"
                   >
                     <span>Khám phá</span>

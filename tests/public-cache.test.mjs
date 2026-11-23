@@ -81,16 +81,14 @@ test("home cache survives JSON round trips and reuses five bounded queries until
   assert.equal(calls.length, 10);
 });
 
-test("a home database failure preserves the fallback and retries instead of caching an empty catalog", async () => {
+test("a home database failure reaches the error boundary and retries instead of caching an empty catalog", async () => {
   const app = await cacheHarness();
   let unavailable = true;
   let calls = 0;
-  const errors = [];
   const prisma = { truyen: { async findMany() { calls++; if (unavailable) throw new Error("Database unavailable"); return []; } } };
-  const query = await load("lib/queries/home.query.ts", { ...app.dependencies, "@/lib/prisma": { prisma } }, { console: { error: (...args) => errors.push(args) } });
-  assert.equal((await query.getHomeData()).featured, null);
+  const query = await load("lib/queries/home.query.ts", { ...app.dependencies, "@/lib/prisma": { prisma } });
+  await assert.rejects(query.getHomeData(), /Database unavailable/u);
   assert.equal(app.entries.size, 0);
-  assert.equal(errors.length, 1);
   unavailable = false;
   await query.getHomeData();
   await query.getHomeData();

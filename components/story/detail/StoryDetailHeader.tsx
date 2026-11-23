@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 interface StoryDetailHeaderProps {
   story: StoryDetailData;
+  readingAction?: ReactNode;
 }
 
 const followResponseSchema = z.object({
@@ -36,7 +37,7 @@ interface FollowState {
   total: number;
 }
 
-export default function StoryDetailHeader({ story }: StoryDetailHeaderProps) {
+export default function StoryDetailHeader({ story, readingAction }: StoryDetailHeaderProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const coverCardRef = useRef<HTMLDivElement>(null);
@@ -323,15 +324,7 @@ export default function StoryDetailHeader({ story }: StoryDetailHeaderProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3 flex-wrap">
-            {story.firstChapterSlug ? (
-              <Link
-                href={`/truyen/${story.slug}/${story.firstChapterSlug}`}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 active:scale-95 transition-all duration-200"
-              >
-                <BookOpen className="w-4 h-4" />
-                Đọc từ đầu
-              </Link>
-            ) : (
+            {readingAction ?? (
               <button
                 disabled
                 className="px-6 py-3 bg-slate-200 dark:bg-zinc-800 text-slate-400 text-sm font-semibold rounded-xl cursor-not-allowed"

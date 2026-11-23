@@ -21,17 +21,17 @@ interface RecentlyUpdatedProps {
   items: UpdatedItem[];
 }
 
-function timeAgo(date: Date | string | null | undefined): string {
+const updateDateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
+function formattedUpdateDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
-  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (seconds < 60) return `${seconds} giây`;
-  const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins} phút`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} giờ`;
-  const days = Math.floor(hrs / 24);
-  return `${days} ngày`;
+  return Number.isNaN(d.getTime()) ? "" : updateDateFormatter.format(d);
 }
 
 export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
@@ -101,6 +101,7 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
               <div className="min-w-0">
                 <Link
                   href={`/truyen/${item.slug}`}
+                  prefetch={false}
                   className="font-bold text-sm text-slate-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 flex items-center gap-1.5"
                 >
                   <span>{item.tenTruyen}</span>
@@ -118,6 +119,7 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
             {item.latestChapterSlug ? (
               <Link
                 href={`/truyen/${item.slug}/${item.latestChapterSlug}`}
+                prefetch={false}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium flex items-center gap-1 line-clamp-1 group/chap"
               >
                 <span className="line-clamp-1">{item.latestChapterName || "Chương mới"}</span>
@@ -135,7 +137,9 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
             {/* Time */}
             <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-zinc-500 whitespace-nowrap">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>{timeAgo(item.updatedAt)} trước</span>
+              <time dateTime={item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined}>
+                {formattedUpdateDate(item.updatedAt)}
+              </time>
             </div>
           </div>
         ))}
@@ -166,6 +170,7 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
             <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
               <Link
                 href={`/truyen/${item.slug}`}
+                prefetch={false}
                 className="font-bold text-sm text-slate-800 dark:text-zinc-100 line-clamp-1 group-hover:text-blue-600 transition-colors"
               >
                 {item.tenTruyen}
@@ -175,7 +180,9 @@ export default function RecentlyUpdated({ items }: RecentlyUpdatedProps) {
               </p>
               <div className="flex items-center gap-1 text-[11px] text-slate-400">
                 <Clock className="w-3 h-3" />
-                {timeAgo(item.updatedAt)} trước
+                <time dateTime={item.updatedAt ? new Date(item.updatedAt).toISOString() : undefined}>
+                  {formattedUpdateDate(item.updatedAt)}
+                </time>
               </div>
             </div>
           </div>

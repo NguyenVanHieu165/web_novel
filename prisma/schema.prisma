@@ -36,6 +36,7 @@ model TaiKhoan {
   vaiTroNguoiDung   VaiTroNguoiDung[]
   viTien            ViTien?
   yeuc_cau_rut_tien yeuc_cau_rut_tien[]
+  nhatKyHeThong     NhatKyHeThong[]
 
   @@index([email], map: "idx_email")
   @@index([tenTaiKhoan], map: "idx_ten_tai_khoan")
@@ -436,6 +437,38 @@ model CaiDatHeThong {
   moTa   String? @map("mo_ta") @db.VarChar(255)
 
   @@map("cai_dat_he_thong")
+}
+
+model NhatKyHeThong {
+  idNhatKy    BigInt     @id @default(autoincrement()) @map("idNHAT_KY") @db.UnsignedBigInt
+  mucDo       String     @map("muc_do") @db.VarChar(10)
+  nguon       String     @db.VarChar(80)
+  maLoi       String?    @map("ma_loi") @db.VarChar(80)
+  thongDiep   String     @map("thong_diep") @db.VarChar(500)
+  chiTiet     String?    @map("chi_tiet") @db.Text
+  requestId   String?    @map("request_id") @db.VarChar(36)
+  jobId       String?    @map("job_id") @db.VarChar(36)
+  idTaiKhoan  Int?       @map("idTAI_KHOAN")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  taiKhoan    TaiKhoan?  @relation(fields: [idTaiKhoan], references: [idTaiKhoan], onDelete: SetNull, onUpdate: NoAction, map: "nhat_ky_he_thong_ibfk_1")
+
+  @@index([createdAt], map: "idx_nhat_ky_created_at")
+  @@index([mucDo, createdAt], map: "idx_nhat_ky_muc_do_created_at")
+  @@index([nguon, createdAt], map: "idx_nhat_ky_nguon_created_at")
+  @@index([requestId], map: "idx_nhat_ky_request_id")
+  @@index([jobId], map: "idx_nhat_ky_job_id")
+  @@index([idTaiKhoan], map: "idx_nhat_ky_tai_khoan")
+  @@map("nhat_ky_he_thong")
+}
+
+model GioiHanTanSuat {
+  khoaBam   String   @id @map("khoa_bam") @db.Char(64)
+  soLan     Int      @default(1) @map("so_lan") @db.UnsignedInt
+  hetHan    DateTime @map("het_han") @db.DateTime(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([hetHan], map: "idx_gioi_han_tan_suat_het_han")
+  @@map("gioi_han_tan_suat")
 }
 
 model truyen_tac_gia_dich {

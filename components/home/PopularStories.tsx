@@ -63,7 +63,7 @@ export default function PopularStories({ topStories, gridStories }: PopularStori
                 <div className="flex items-center gap-3 text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
                   <span className="flex items-center gap-0.5">
                     <Eye className="w-3 h-3" />
-                    {(story.luotXem || 0).toLocaleString()}
+                  {(story.luotXem || 0).toLocaleString("vi-VN")}
                   </span>
                   {story.diemDanhGiaTrungBinh && (
                     <span className="flex items-center gap-0.5">

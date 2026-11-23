@@ -14,13 +14,16 @@ export default async function DashboardLayout({
       className="flex h-screen w-full overflow-hidden bg-background"
       style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif" }}
     >
+      <a href="#admin-main" className="sr-only z-[100] rounded-md bg-background px-4 py-2 text-foreground shadow focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus-visible:outline-2 focus-visible:outline-ring">
+        Bỏ qua điều hướng
+      </a>
       {/* Sidebar - Cố định bên trái */}
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Navbar - Cố định phía trên */}
         <Navbar />
         {/* Content Area - Cuộn độc lập */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <main id="admin-main" className="flex-1 scroll-mt-4 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
         <Toaster

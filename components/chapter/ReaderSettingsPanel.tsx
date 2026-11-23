@@ -47,13 +47,15 @@ const controlStyles = "min-h-11 rounded-xl border border-[var(--reader-border)] 
 export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, settings, onSettingsChange }: ReaderSettingsPanelProps) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const isDark = settings.theme === "dark";
+  const styleVariables = getReaderStyleVariables(settings);
+  const activeTextColor = styleVariables["--reader-content-text"];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
         showCloseButton={false}
-        style={getReaderStyleVariables(settings)}
+        style={styleVariables}
         data-reader-theme={settings.theme}
         className={`${isDark ? "dark" : ""} !w-full !max-w-md gap-0 overflow-y-auto overscroll-contain border-[var(--reader-border)] !bg-[var(--reader-surface)] !text-[var(--reader-text)] motion-reduce:!animate-none motion-reduce:!transition-none`}
         onOpenAutoFocus={(event) => {
@@ -121,6 +123,26 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
           </fieldset>
 
           <fieldset className="space-y-3">
+            <legend className="mb-3 text-sm font-bold">Màu chữ nội dung</legend>
+            <div className="flex items-center gap-3">
+              <label htmlFor="reader-text-color" className={`flex flex-1 items-center justify-between gap-3 ${controlStyles}`}>
+                <span>Tùy chọn</span>
+                <input
+                  id="reader-text-color"
+                  name="reader-text-color"
+                  type="color"
+                  value={activeTextColor}
+                  onChange={(event) => onSettingsChange({ textColor: event.target.value as ReaderSettings["textColor"] })}
+                  className="h-8 w-12 cursor-pointer rounded border border-[var(--reader-border)] bg-transparent p-0.5"
+                />
+              </label>
+              <button type="button" aria-pressed={settings.textColor === "auto"} onClick={() => onSettingsChange({ textColor: "auto" })} className={`${controlStyles} ${settings.textColor === "auto" ? "ring-2 ring-[var(--reader-accent)]" : ""}`}>
+                Theo giao diện
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3">
             <legend className="mb-3 text-sm font-bold">Giãn dòng</legend>
             <div className="grid grid-cols-4 gap-2">
               {readerLineHeights.map((height) => (
@@ -140,7 +162,7 @@ export default function ReaderSettingsPanel({ open, onOpenChange, triggerRef, se
 
           <section aria-label="Xem trước kiểu đọc" className="rounded-xl border border-[var(--reader-border)] bg-[var(--reader-paper)] p-4 text-[var(--reader-text)]">
             <h2 className="mb-3 text-xs font-bold uppercase tracking-wide opacity-70">Xem trước</h2>
-            <p style={{ fontSize: settings.fontSize, lineHeight: settings.lineHeight, fontFamily: getReaderStyleVariables(settings)["--reader-font-family"] }}>
+            <p style={{ color: activeTextColor, fontSize: settings.fontSize, lineHeight: settings.lineHeight, fontFamily: styleVariables["--reader-font-family"] }}>
               Nắng sớm len qua ô cửa, trải những vệt sáng êm dịu lên trang sách. Bạn có thể chọn cách đọc thoải mái nhất cho mình.
             </p>
           </section>

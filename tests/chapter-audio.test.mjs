@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, "..");
 const { NextRequest } = require("next/server");
 
-async function loader(replacements = {}, cwd = root) {
+async function loader(replacements = {}, cwd = root, globals = {}) {
   const modules = new Map();
   async function preload(file) {
     const source = await readFile(file, "utf8");
@@ -37,15 +37,20 @@ async function loader(replacements = {}, cwd = root) {
     const targetModule = { exports: {} };
     loaded.set(file, targetModule.exports);
     vm.runInNewContext(modules.get(file), {
-      module: targetModule, exports: targetModule.exports, Buffer, setTimeout, clearTimeout,
-      process: { cwd: () => cwd }, console: { error() {} },
+      module: targetModule, exports: targetModule.exports, Buffer, Blob, FormData, Response, URL,
+      AbortSignal, fetch, setTimeout, clearTimeout,
+      process: { cwd: () => cwd, env: {} }, console: { error() {} },
       require(name) {
         if (name in replacements) return replacements[name];
         if (name === "server-only") return {};
         if (name.startsWith(".")) return load(path.resolve(path.dirname(file), name + ".ts"));
         if (name.startsWith("@/lib/tts/")) return load(path.join(root, name.slice(2) + ".ts"));
+        if (name === "@/lib/server/rate-limit") {
+          return { checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }), requestIp: () => "127.0.0.1" };
+        }
         return require(name);
       },
+      ...globals,
     });
     return targetModule.exports;
   };
@@ -243,4 +248,53 @@ test("audio cache deduplicates simultaneous generation, persists atomically and 
     const files = await readdir(path.dirname(first.filePath));
     assert.ok(files.every((file) => !file.endsWith(".tmp")));
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("Vercel audio uploads the synthesized Buffer to Cloudinary without writing public files", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "novel-audio-cloudinary-"));
+  const requests = [];
+  class FakeTTS {
+    async setMetadata() {}
+    close() {}
+    rawToStream() { return { audioStream: Readable.from([Buffer.from("fff364c400000003", "hex")]) }; }
+  }
+  const cloudUrl = "https://res.cloudinary.com/review/raw/upload/web-novel/audio/test/chapter.mp3";
+  const fetcher = async (url, options = {}) => {
+    requests.push({ url: String(url), options });
+    if (options.method === "HEAD") return new Response(null, { status: 404 });
+    return Response.json({ secure_url: cloudUrl });
+  };
+  const load = await loader({
+    "msedge-tts": { MsEdgeTTS: FakeTTS, OUTPUT_FORMAT: { AUDIO_24KHZ_48KBITRATE_MONO_MP3: "mp3" } },
+  }, directory, {
+    fetch: fetcher,
+    process: {
+      cwd: () => directory,
+      env: {
+        VERCEL: "1",
+        CLOUDINARY_CLOUD_NAME: "review",
+        CLOUDINARY_API_KEY: "test-key",
+        CLOUDINARY_API_SECRET: "test-secret",
+      },
+    },
+  });
+  try {
+    const result = await load("lib/tts/edge-tts.ts").getChapterAudio({
+      chapterId: 21,
+      storySlug: "test",
+      chapterNumber: 2,
+      title: "Chương hai",
+      content: "Nội dung audio.",
+      voice: "female-warm",
+    });
+    assert.equal(result.remoteUrl, cloudUrl);
+    assert.equal(result.filePath, undefined);
+    assert.equal((await readdir(directory)).length, 0);
+    const upload = requests.find((request) => request.options.method === "POST");
+    assert.equal(upload.url, "https://api.cloudinary.com/v1_1/review/raw/upload");
+    assert.equal(upload.options.body.get("api_key"), "test-key");
+    assert.equal(upload.options.body.get("file").type, "audio/mpeg");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

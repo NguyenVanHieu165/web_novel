@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getStoryDetailPageBySlug } from "@/lib/queries/story-detail.query";
+import { getChapterPath } from "@/lib/reader-navigation";
+import ContinueReadingAction from "@/components/story/detail/ContinueReadingAction";
 import StoryDetailHeader from "@/components/story/detail/StoryDetailHeader";
 import StoryDetailTabs from "@/components/story/detail/StoryDetailTabs";
 
@@ -50,7 +52,15 @@ export default async function StoryDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* 1. Story Header with 3D Tilt Cover & Action Buttons */}
-      <StoryDetailHeader story={story} />
+      <StoryDetailHeader
+        story={story}
+        readingAction={story.firstChapterSlug ? (
+          <ContinueReadingAction
+            storySlug={story.slug}
+            firstChapterHref={getChapterPath(story.slug, story.firstChapterSlug)}
+          />
+        ) : undefined}
+      />
 
       {/* 2. Story Tabs: Synopsis, Chapters, Reviews & Comments */}
       <StoryDetailTabs story={story} />

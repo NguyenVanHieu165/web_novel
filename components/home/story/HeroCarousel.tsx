@@ -1,454 +1,458 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import gsap from "gsap";
-import { Draggable } from "gsap/Draggable";
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import HeroStoryCard, { HeroStoryData } from "./HeroStoryCard";
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(Draggable);
-}
+import HeroStoryCard, { type HeroStoryData } from "./HeroStoryCard";
 
 export interface HeroCarouselProps {
   stories: HeroStoryData[];
-  autoPlayInterval?: number; // Thời gian chuyển slide (giây)
+  autoPlayInterval?: number;
   onActiveStoryChange?: (story: HeroStoryData) => void;
 }
 
-interface CardTiltTweens {
-  rotateX: ReturnType<typeof gsap.quickTo>;
-  rotateY: ReturnType<typeof gsap.quickTo>;
-  glareOpacity: ReturnType<typeof gsap.quickTo>;
+const MAX_SLIDES = 5;
+const SWIPE_THRESHOLD = 40;
+
+interface HeroSlideProps {
+  story: HeroStoryData;
+  index: number;
+  offset: number;
+  isCenter: boolean;
+  isDragging: boolean;
+  dragOffsetX: number;
+  onSelect: (index: number) => void;
 }
 
-export default function Ultimate3DCoverFlow({
+function getOffset(index: number, activeIndex: number, total: number) {
+  let offset = index - activeIndex;
+
+  if (offset > total / 2) offset -= total;
+  if (offset < -total / 2) offset += total;
+
+  return offset;
+}
+
+function getSlideStyle(offset: number, dragOffsetX = 0): CSSProperties {
+  const distance = Math.abs(offset);
+  const direction = Math.sign(offset);
+  const responsiveDistance = `min(${distance === 1 ? "300px" : "400px"}, ${distance === 1 ? "42vw" : "60vw"})`;
+  const translateX =
+    distance === 0
+      ? "0px"
+      : direction < 0
+        ? `calc(0px - ${responsiveDistance})`
+        : responsiveDistance;
+
+  return {
+    gridArea: "stack",
+    transform: `translateX(${translateX}) translateX(${dragOffsetX}px) scale(${distance === 0 ? 1 : distance === 1 ? 0.9 : 0.8}) rotateY(${-offset * 6}deg)`,
+    transformStyle: "preserve-3d",
+    zIndex: distance === 0 ? 100 : distance === 1 ? 50 : 10,
+  };
+}
+
+function HeroSlide({
+  story,
+  index,
+  offset,
+  isCenter,
+  isDragging,
+  dragOffsetX,
+  onSelect,
+}: HeroSlideProps) {
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const glareRef = useRef<HTMLDivElement>(null);
+  const distance = Math.abs(offset);
+  const dimClass =
+    distance === 0
+      ? "bg-transparent"
+      : distance === 1
+        ? "bg-black/25"
+        : "bg-black/50";
+
+  useGSAP(
+    () => {
+      const tilt = tiltRef.current;
+      const glare = glareRef.current;
+      if (!tilt || !glare || !isCenter || isDragging) return;
+
+      const media = gsap.matchMedia();
+      media.add(
+        "(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)",
+        () => {
+          gsap.set(tilt, { transformPerspective: 1000 });
+          const rotateX = gsap.quickTo(tilt, "rotationX", {
+            duration: 0.3,
+            ease: "power2.out",
+          });
+          const rotateY = gsap.quickTo(tilt, "rotationY", {
+            duration: 0.3,
+            ease: "power2.out",
+          });
+          const glareOpacity = gsap.quickTo(glare, "opacity", {
+            duration: 0.2,
+            ease: "power2.out",
+          });
+
+          const resetTilt = (immediate = false) => {
+            if (immediate) {
+              gsap.killTweensOf([tilt, glare]);
+              gsap.set(tilt, { rotationX: 0, rotationY: 0 });
+              gsap.set(glare, { opacity: 0 });
+              return;
+            }
+
+            rotateX(0);
+            rotateY(0);
+            glareOpacity(0);
+          };
+
+          const isInteractiveTarget = (target: EventTarget | null) =>
+            target instanceof Element && target.closest("a, button") !== null;
+
+          const handlePointerMove = (event: PointerEvent) => {
+            if (isInteractiveTarget(event.target)) {
+              resetTilt(true);
+              return;
+            }
+
+            const rect = tilt.getBoundingClientRect();
+            rotateY(((event.clientX - rect.left) / rect.width - 0.5) * 14);
+            rotateX(-((event.clientY - rect.top) / rect.height - 0.5) * 12);
+            glareOpacity(0.55);
+          };
+
+          const handlePointerOver = (event: PointerEvent) => {
+            if (isInteractiveTarget(event.target)) resetTilt(true);
+          };
+          const handlePointerLeave = () => resetTilt();
+
+          tilt.addEventListener("pointermove", handlePointerMove);
+          tilt.addEventListener("pointerover", handlePointerOver);
+          tilt.addEventListener("pointerleave", handlePointerLeave);
+
+          return () => {
+            tilt.removeEventListener("pointermove", handlePointerMove);
+            tilt.removeEventListener("pointerover", handlePointerOver);
+            tilt.removeEventListener("pointerleave", handlePointerLeave);
+          };
+        },
+      );
+
+      return () => media.revert();
+    },
+    {
+      scope: tiltRef,
+      dependencies: [isCenter, isDragging],
+      revertOnUpdate: true,
+    },
+  );
+
+  return (
+    <div
+      className={`relative h-[430px] w-[290px] rounded-2xl ease-out will-change-transform motion-reduce:transition-none sm:h-[480px] sm:w-[330px] md:h-[510px] md:w-[350px] ${
+        isDragging ? "transition-none" : "transition-transform duration-300"
+      }`}
+      style={getSlideStyle(offset, dragOffsetX)}
+    >
+      <div
+        ref={tiltRef}
+        aria-hidden={!isCenter}
+        className={`relative h-full w-full overflow-hidden rounded-2xl border bg-slate-900 transition-colors duration-300 ${
+          isCenter ? "border-white/30" : "border-white/10"
+        }`}
+        style={{
+          boxShadow: isCenter
+            ? "0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 25px rgba(59, 130, 246, 0.25)"
+            : "0 12px 30px -6px rgba(0, 0, 0, 0.6)",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <HeroStoryCard
+          story={story}
+          position={isCenter ? "center" : "hidden"}
+          priority={index === 0}
+        />
+
+        <div
+          ref={glareRef}
+          className="pointer-events-none absolute inset-0 z-30 rounded-2xl opacity-0"
+          style={{
+            background:
+              "linear-gradient(125deg, rgba(255,255,255,0.42), rgba(96,165,250,0.16) 45%, transparent 75%)",
+          }}
+        />
+
+        <div
+          className={`pointer-events-none absolute inset-0 z-20 rounded-2xl transition-colors duration-300 ${dimClass}`}
+        />
+      </div>
+
+      {!isCenter ? (
+        <button
+          type="button"
+          aria-label={`Hiển thị ${story.tenTruyen}`}
+          onClick={() => onSelect(index)}
+          className="absolute inset-0 z-40 cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export default function HeroCarousel({
   stories,
   autoPlayInterval = 5,
   onActiveStoryChange,
 }: HeroCarouselProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dragProxyRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const glareRefs = useRef<(HTMLDivElement | null)[]>([]);
-
+  const carouselStories = useMemo(
+    () => stories.slice(0, MAX_SLIDES),
+    [stories],
+  );
   const [activeIndex, setActiveIndex] = useState(0);
-
-  const progressRef = useRef(0);
-  const snapTweenRef = useRef<gsap.core.Tween | null>(null);
-  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isDraggingRef = useRef(false);
-  const reducedMotionRef = useRef(false);
-  const isHoveredRef = useRef(false);
-  const isFocusedRef = useRef(false);
-  const tiltTweensRef = useRef(new Map<number, CardTiltTweens>());
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isDocumentHidden, setIsDocumentHidden] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const pointerStartXRef = useRef<number | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const pointerIsDownRef = useRef(false);
   const activeStoryChangeRef = useRef(onActiveStoryChange);
+  const total = carouselStories.length;
+  const safeActiveIndex = total ? activeIndex % total : 0;
 
   useEffect(() => {
     activeStoryChangeRef.current = onActiveStoryChange;
   }, [onActiveStoryChange]);
 
-  const total = stories.length;
-
-  /*
-   * 1. HÀM TÍNH TOÁN VÀ CẬP NHẬT GIAO DIỆN 3D DỰA TRÊN PROGRESS
-   */
-  const updateCardTransforms = useCallback(() => {
-    if (!total) return;
-
-    const currentProg = progressRef.current;
-
-    cardRefs.current.forEach((card, index) => {
-      if (!card) return;
-
-      // Khoảng cách tương đối từ card hiện tại tới tâm (có wrap-around vô tận)
-      let offset = index - currentProg;
-      offset =
-        (((((offset % total) + total) % total) + total / 2) % total) -
-        total / 2;
-
-      const absOffset = Math.abs(offset);
-
-      // Card ở xa quá 2.5 đơn vị sẽ được ẩn hoàn toàn để tối ưu render
-      if (absOffset > 2.5) {
-        gsap.set(card, { opacity: 0, pointerEvents: "none", zIndex: 0 });
-        return;
-      }
-
-      // Nội suy giá trị chuyển động mượt mà
-      const xPercent = offset * 68; // Độ dịch ngang
-      const z =
-        -Math.pow(absOffset, 1.2) * 90 +
-        (absOffset < 0.5 ? (1 - absOffset * 2) * 110 : 0);
-      const rotateY = -offset * 18; // Góc xoay cung tròn
-      const scale = Math.max(0.72, 1.15 - absOffset * 0.22);
-      const opacity = Math.max(0, 1 - Math.pow(absOffset / 2.3, 2));
-      const brightness = Math.max(35, 105 - absOffset * 32);
-      const zIndex = Math.round(50 - absOffset * 10);
-
-      gsap.set(card, {
-        xPercent,
-        z,
-        rotateY,
-        scale,
-        opacity,
-        zIndex,
-        filter: `brightness(${brightness}%)`,
-        pointerEvents: absOffset < 0.5 ? "auto" : "none",
-        visibility: "visible",
-      });
-    });
-
-    // Cập nhật indicator dots
-    let active = Math.round(currentProg) % total;
-    if (active < 0) active += total;
-    setActiveIndex(active);
-  }, [total]);
-
-  /*
-   * 2. TỰ ĐỘNG HÍT VÀO VỊ TRÍ GẦN NHẤT (SNAP)
-   */
-  const snapTo = useCallback(
-    (targetIndex: number, duration = 0.65) => {
-      if (snapTweenRef.current) snapTweenRef.current.kill();
-
-      if (total > 0) {
-        const normalizedIndex = ((targetIndex % total) + total) % total;
-        setActiveIndex(normalizedIndex);
-        if (stories[normalizedIndex]) {
-          activeStoryChangeRef.current?.(stories[normalizedIndex]);
-        }
-      }
-
-      snapTweenRef.current = gsap.to(progressRef, {
-        current: targetIndex,
-        duration: reducedMotionRef.current ? 0 : duration,
-        ease: "power3.out",
-        onUpdate: updateCardTransforms,
-      });
-    },
-    [updateCardTransforms, total, stories],
-  );
-
-  /*
-   * 3. AUTO-PLAY TIMER
-   */
-  const stopAutoPlay = useCallback(() => {
-    if (autoPlayTimerRef.current) {
-      clearInterval(autoPlayTimerRef.current);
-      autoPlayTimerRef.current = null;
-    }
-  }, []);
-
-  const startAutoPlay = useCallback(() => {
-    stopAutoPlay();
-    if (total <= 1 || reducedMotionRef.current || document.hidden || isHoveredRef.current || isFocusedRef.current) return;
-
-    autoPlayTimerRef.current = setInterval(() => {
-      if (!isDraggingRef.current) {
-        const nextIndex = Math.round(progressRef.current) + 1;
-        snapTo(nextIndex);
-      }
-    }, Math.max(1, autoPlayInterval) * 1000);
-  }, [total, autoPlayInterval, snapTo, stopAutoPlay]);
+  useEffect(() => {
+    const activeStory = carouselStories[safeActiveIndex];
+    if (activeStory) activeStoryChangeRef.current?.(activeStory);
+  }, [carouselStories, safeActiveIndex]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncAutoPlay = () => {
-      reducedMotionRef.current = media.matches;
-      if (media.matches || document.hidden) {
-        stopAutoPlay();
-        snapTweenRef.current?.kill();
-        progressRef.current = Math.round(progressRef.current);
-        updateCardTransforms();
-      } else startAutoPlay();
-    };
-    reducedMotionRef.current = media.matches;
-    startAutoPlay();
-    media.addEventListener("change", syncAutoPlay);
-    document.addEventListener("visibilitychange", syncAutoPlay);
-    return () => {
-      stopAutoPlay();
-      media.removeEventListener("change", syncAutoPlay);
-      document.removeEventListener("visibilitychange", syncAutoPlay);
-    };
-  }, [startAutoPlay, stopAutoPlay, updateCardTransforms]);
+    const syncMotionPreference = () => setPrefersReducedMotion(media.matches);
+    const syncVisibility = () => setIsDocumentHidden(document.hidden);
 
-  useEffect(() => {
-    const tiltTweens = tiltTweensRef.current;
+    syncMotionPreference();
+    syncVisibility();
+    media.addEventListener("change", syncMotionPreference);
+    document.addEventListener("visibilitychange", syncVisibility);
+
     return () => {
-      snapTweenRef.current?.kill();
-      tiltTweens.forEach(({ rotateX, rotateY, glareOpacity }) => {
-        rotateX.tween.kill();
-        rotateY.tween.kill();
-        glareOpacity.tween.kill();
-      });
-      tiltTweens.clear();
+      media.removeEventListener("change", syncMotionPreference);
+      document.removeEventListener("visibilitychange", syncVisibility);
     };
   }, []);
 
-  /*
-   * 4. GSAP DRAGGABLE TÍCH HỢP CON TRỎ VÀ CHẠM CẢM ỨNG
-   */
-  useGSAP(
-    () => {
-      updateCardTransforms();
-      if (!dragProxyRef.current || total <= 1) return;
+  useEffect(() => {
+    const releasePointer = () => {
+      pointerIsDownRef.current = false;
+    };
 
-      let startProgress = 0;
+    window.addEventListener("pointerup", releasePointer, { passive: true });
+    window.addEventListener("pointercancel", releasePointer, { passive: true });
+    return () => {
+      window.removeEventListener("pointerup", releasePointer);
+      window.removeEventListener("pointercancel", releasePointer);
+    };
+  }, []);
 
-      const draggables = Draggable.create(dragProxyRef.current, {
-        type: "x",
-        trigger: containerRef.current,
-        cursor: "grab",
-        activeCursor: "grabbing",
-        onPress() {
-          stopAutoPlay();
-          if (snapTweenRef.current) snapTweenRef.current.kill();
-          isDraggingRef.current = true;
-          startProgress = progressRef.current;
-        },
-        onDrag() {
-          // Tỉ lệ kéo pixel đổi thành đơn vị di chuyển card
-          const dragSensitivity = 0.003;
-          const delta = (this.x - this.startX) * dragSensitivity;
-          progressRef.current = startProgress - delta;
-          updateCardTransforms();
-        },
-        onDragEnd() {
-          isDraggingRef.current = false;
-          // Tìm index nguyên gần nhất để snap
-          const nearestIndex = Math.round(progressRef.current);
-          snapTo(nearestIndex);
-          startAutoPlay();
-        },
-      });
-
-      const tiltTweens = tiltTweensRef.current;
-      return () => {
-        draggables.forEach((draggable) => draggable.kill());
-        snapTweenRef.current?.kill();
-        tiltTweens.forEach(({ rotateX, rotateY, glareOpacity }) => {
-          rotateX.tween.kill();
-          rotateY.tween.kill();
-          glareOpacity.tween.kill();
-        });
-        tiltTweens.clear();
-        isDraggingRef.current = false;
-      };
+  const selectSlide = useCallback(
+    (index: number) => {
+      if (!total) return;
+      setActiveIndex(((index % total) + total) % total);
     },
-    {
-      scope: containerRef,
-      dependencies: [total, updateCardTransforms, snapTo, startAutoPlay],
-      revertOnUpdate: true,
-    },
+    [total],
   );
 
-  /*
-   * 5. HIỆU ỨNG TILT 3D & ÁNH SÁNG PHẢN QUANG (GLARE) KHI RÊ CHUỘT
-   */
-  const handleMouseMove = (
-    e: React.MouseEvent<HTMLDivElement>,
-    index: number,
-  ) => {
-    const card = cardRefs.current[index];
-    const glare = glareRefs.current[index];
-    if (!card || !glare || isDraggingRef.current || reducedMotionRef.current) return;
+  const showPrevious = useCallback(() => {
+    setActiveIndex((current) => (current - 1 + total) % total);
+  }, [total]);
 
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const showNext = useCallback(() => {
+    setActiveIndex((current) => (current + 1) % total);
+  }, [total]);
 
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    const tiltX = -((y - centerY) / centerY) * 12;
-    const tiltY = ((x - centerX) / centerX) * 14;
-
-    let tilt = tiltTweensRef.current.get(index);
-    if (!tilt) {
-      glare.style.background = "radial-gradient(circle at center, rgba(255,255,255,0.4) 0%, transparent 65%)";
-      tilt = {
-        rotateX: gsap.quickTo(card, "rotationX", { duration: 0.25, ease: "power1.out" }),
-        rotateY: gsap.quickTo(card, "rotationY", { duration: 0.25, ease: "power1.out" }),
-        glareOpacity: gsap.quickTo(glare, "opacity", { duration: 0.2, ease: "power1.out" }),
-      };
-      tiltTweensRef.current.set(index, tilt);
+  useEffect(() => {
+    if (
+      total <= 1 ||
+      isHovered ||
+      isFocused ||
+      isDragging ||
+      isDocumentHidden ||
+      prefersReducedMotion
+    ) {
+      return;
     }
-    tilt.rotateX(tiltX);
-    tilt.rotateY(tiltY);
-    tilt.glareOpacity(0.55);
+
+    const timer = window.setInterval(() => {
+      if (!pointerIsDownRef.current) showNext();
+    }, Math.max(1, autoPlayInterval) * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [
+    autoPlayInterval,
+    isDocumentHidden,
+    isFocused,
+    isDragging,
+    isHovered,
+    prefersReducedMotion,
+    showNext,
+    total,
+  ]);
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    pointerIsDownRef.current = true;
+    if (!(event.target instanceof Element) || event.target.closest("a, button")) return;
+
+    pointerStartXRef.current = event.clientX;
+    activePointerIdRef.current = event.pointerId;
+    setDragOffsetX(0);
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handleMouseLeave = (index: number) => {
-    const card = cardRefs.current[index];
-    const glare = glareRefs.current[index];
-    if (!card || !glare) return;
+  const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (
+      activePointerIdRef.current !== event.pointerId ||
+      pointerStartXRef.current === null
+    ) {
+      return;
+    }
 
-    const tilt = tiltTweensRef.current.get(index);
-    tilt?.rotateX(0);
-    tilt?.rotateY(0);
-    tilt?.glareOpacity(0);
+    const distance = event.clientX - pointerStartXRef.current;
+    setDragOffsetX(Math.max(-120, Math.min(120, distance)));
   };
 
-  const next = () => {
-    stopAutoPlay();
-    snapTo(Math.round(progressRef.current) + 1);
-    startAutoPlay();
-  };
+  const handlePointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.isPrimary) pointerIsDownRef.current = false;
+    if (
+      activePointerIdRef.current !== event.pointerId ||
+      pointerStartXRef.current === null
+    ) {
+      return;
+    }
 
-  const prev = () => {
-    stopAutoPlay();
-    snapTo(Math.round(progressRef.current) - 1);
-    startAutoPlay();
-  };
+    const distance = event.clientX - pointerStartXRef.current;
+    pointerStartXRef.current = null;
+    activePointerIdRef.current = null;
+    setDragOffsetX(0);
+    setIsDragging(false);
 
-  const goTo = (index: number) => {
-    stopAutoPlay();
-    const current = Math.round(progressRef.current);
-    let diff = (index - (current % total) + total) % total;
-    if (diff > total / 2) diff -= total;
-    snapTo(current + diff);
-    startAutoPlay();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (Math.abs(distance) < SWIPE_THRESHOLD) return;
+    if (distance > 0) showPrevious();
+    else showNext();
   };
 
   if (!total) return null;
 
   return (
     <section
-      className="relative w-full select-none overflow-hidden py-14"
-      onMouseEnter={() => { isHoveredRef.current = true; stopAutoPlay(); }}
-      onMouseLeave={() => { isHoveredRef.current = false; startAutoPlay(); }}
-      onFocusCapture={() => { isFocusedRef.current = true; stopAutoPlay(); }}
+      aria-label="Truyện nổi bật"
+      aria-roledescription="carousel"
+      className={`relative grid w-full touch-pan-y select-none place-items-center overflow-hidden py-8 sm:py-10 ${
+        isDragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
+      style={{ gridTemplateAreas: '"stack"', perspective: "1000px" }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setIsFocused(true)}
       onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          isFocusedRef.current = false;
-          startAutoPlay();
-        }
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setIsFocused(false);
       }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => {
+        pointerIsDownRef.current = false;
+        pointerStartXRef.current = null;
+        activePointerIdRef.current = null;
+        setDragOffsetX(0);
+        setIsDragging(false);
+      }}
+      onDragStart={(event) => event.preventDefault()}
     >
-      {/* Proxy element ẩn dùng để GSAP Draggable bắt sự kiện kéo mượt mà */}
-      <div
-        ref={dragProxyRef}
-        className="absolute inset-0 pointer-events-none"
-      />
-
-      {/* Ánh sáng nền Volumetric */}
-      <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-        <div className="h-[340px] w-[600px] rounded-full bg-blue-600/15 blur-[130px]" />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="h-3/4 w-3/4 rounded-full bg-[radial-gradient(circle,rgba(37,99,235,0.18),transparent_68%)]" />
       </div>
 
-      {/* 3D Stage Container */}
-      <div
-        ref={containerRef}
-        className="relative flex h-[440px] w-full items-center justify-center sm:h-[490px] md:h-[550px]"
-        style={{
-          perspective: "1400px",
-          transformStyle: "preserve-3d",
-        }}
-      >
-        {stories.map((story, index) => {
-          const isCenter = index === activeIndex;
+      {carouselStories.map((story, index) => {
+        const offset = getOffset(index, safeActiveIndex, total);
+        const isCenter = offset === 0;
 
-          return (
-            <div
-              key={story.idTruyen}
-              ref={(el) => {
-                cardRefs.current[index] = el;
-              }}
-              onMouseMove={(e) =>
-                isCenter ? handleMouseMove(e, index) : undefined
-              }
-              onMouseLeave={() =>
-                isCenter ? handleMouseLeave(index) : undefined
-              }
-              onClick={() => {
-                if (!isCenter) goTo(index);
-              }}
-              className="absolute top-1/2 -translate-y-1/2 cursor-pointer will-change-[transform,opacity,filter] rounded-2xl"
-              style={{
-                transformStyle: "preserve-3d",
-                borderRadius: "1rem",
-                boxShadow: isCenter
-                  ? "0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 25px rgba(59, 130, 246, 0.25)"
-                  : "0 12px 30px -6px rgba(0, 0, 0, 0.6)",
-                WebkitBoxReflect:
-                  "below 12px linear-gradient(to bottom, transparent 65%, rgba(0, 0, 0, 0.25))",
-              }}
-            >
-              {/* Thẻ bọc có viền sáng viền kính */}
-              <div
-                className={`relative overflow-hidden rounded-2xl border transition-colors duration-500 bg-slate-900 ${
-                  isCenter ? "border-white/30" : "border-white/10"
-                }`}
-                style={{
-                  borderRadius: "1rem",
-                  WebkitMaskImage: "-webkit-radial-gradient(white, black)",
-                }}
-              >
-                <HeroStoryCard
-                  story={story}
-                  position={isCenter ? "center" : "hidden"}
-                  eager={index < 5}
-                />
+        return (
+          <HeroSlide
+            key={story.idTruyen}
+            story={story}
+            index={index}
+            offset={offset}
+            isCenter={isCenter}
+            isDragging={isDragging}
+            dragOffsetX={dragOffsetX}
+            onSelect={selectSlide}
+          />
+        );
+      })}
 
-                {/* Vệt phản quang Holo Glare */}
-                <div
-                  ref={(el) => {
-                    glareRefs.current[index] = el;
-                  }}
-                  className="pointer-events-none absolute inset-0 z-30 opacity-0 transition-opacity rounded-2xl"
-                  style={{ borderRadius: "1rem" }}
-                />
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Nút Previous */}
-        {total > 1 && (
+      {total > 1 ? (
+        <>
           <button
             type="button"
-            onClick={prev}
+            onClick={showPrevious}
             aria-label="Truyện trước"
-            className="absolute left-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-blue-500/50 hover:bg-blue-600/80 active:scale-95 sm:left-8"
+            className="absolute left-2 top-1/2 z-[110] flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-xl transition-[transform,background-color,border-color] duration-300 hover:scale-110 hover:border-blue-500/50 hover:bg-blue-600/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 active:scale-95 motion-reduce:transition-none sm:left-6 sm:size-12"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft aria-hidden="true" className="size-5 sm:size-6" />
           </button>
-        )}
 
-        {/* Nút Next */}
-        {total > 1 && (
           <button
             type="button"
-            onClick={next}
+            onClick={showNext}
             aria-label="Truyện tiếp"
-            className="absolute right-4 top-1/2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-blue-500/50 hover:bg-blue-600/80 active:scale-95 sm:right-8"
+            className="absolute right-2 top-1/2 z-[110] flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-xl transition-[transform,background-color,border-color] duration-300 hover:scale-110 hover:border-blue-500/50 hover:bg-blue-600/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 active:scale-95 motion-reduce:transition-none sm:right-6 sm:size-12"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight aria-hidden="true" className="size-5 sm:size-6" />
           </button>
-        )}
-      </div>
 
-      {/* Dots Indicator */}
-      {total > 1 && (
-        <div className="mt-8 flex justify-center gap-2.5">
-          {stories.map((story, index) => (
-            <button
-              key={story.idTruyen}
-              type="button"
-              onClick={() => goTo(index)}
-              aria-label={`Trang ${index + 1}`}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === activeIndex
-                  ? "w-8 bg-blue-500 shadow-md shadow-blue-500/70"
-                  : "w-2 bg-slate-500/40 hover:bg-slate-300"
-              }`}
-            />
-          ))}
-        </div>
-      )}
+          <div className="absolute bottom-6 left-1/2 z-[110] flex -translate-x-1/2 gap-2.5">
+            {carouselStories.map((story, index) => (
+              <button
+                key={story.idTruyen}
+                type="button"
+                onClick={() => selectSlide(index)}
+                aria-label={`Đi đến truyện ${index + 1}: ${story.tenTruyen}`}
+                aria-current={index === safeActiveIndex ? "true" : undefined}
+                className={`h-2 rounded-full transition-[width,background-color,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 motion-reduce:transition-none ${
+                  index === safeActiveIndex
+                    ? "w-8 bg-blue-500 shadow-md shadow-blue-500/70"
+                    : "w-2 bg-slate-300/60 hover:bg-white"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

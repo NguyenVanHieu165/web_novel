@@ -18,7 +18,7 @@ interface HeroStoryCardProps {
   story: HeroStoryData;
   position: "left" | "center" | "right" | "hidden";
   onClick?: () => void;
-  eager?: boolean;
+  priority?: boolean;
 }
 
 const FALLBACK_COVER =
@@ -28,7 +28,7 @@ export default function HeroStoryCard({
   story,
   position,
   onClick,
-  eager = false,
+  priority = false,
 }: HeroStoryCardProps) {
   const rating = story.diemDanhGiaTrungBinh
     ? parseFloat(story.diemDanhGiaTrungBinh.toString()).toFixed(1)
@@ -40,7 +40,7 @@ export default function HeroStoryCard({
   return (
     <article
       onClick={!isCenter ? onClick : undefined}
-      className="relative h-[430px] w-[290px] overflow-hidden rounded-2xl select-none sm:h-[480px] sm:w-[330px] md:h-[510px] md:w-[350px] bg-slate-900"
+      className="relative h-full w-full select-none overflow-hidden rounded-2xl bg-slate-900"
       style={{
         borderRadius: "1rem",
         WebkitMaskImage: "-webkit-radial-gradient(white, black)",
@@ -53,11 +53,10 @@ export default function HeroStoryCard({
         sizes="(min-width: 768px) 350px, (min-width: 640px) 330px, 290px"
         src={cover}
         alt={story.tenTruyen}
-        className="h-full w-full object-cover select-none pointer-events-none transition-transform duration-700 rounded-2xl"
+        className="pointer-events-none h-full w-full select-none rounded-2xl object-cover transition-transform duration-700"
         style={{ borderRadius: "1rem" }}
-        loading={eager ? "eager" : "lazy"}
+        priority={priority}
         decoding="async"
-        fetchPriority={isCenter ? "high" : "auto"}
       />
 
       {/* 2. Lớp phủ Gradient: Card bên hông mờ nhẹ, card giữa tối dần về đáy để đọc chữ */}
@@ -72,7 +71,7 @@ export default function HeroStoryCard({
 
       {/* 3. Badge "ĐANG HOT" - Luôn hiển thị trên card giữa */}
       {isCenter && (
-        <div className="absolute top-4 left-4 z-20 transition-all duration-300">
+        <div className="absolute left-4 top-4 z-20 transition-[transform,opacity] duration-300">
           <span className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500 to-rose-600 text-white text-[11px] font-bold rounded-full uppercase tracking-wider shadow-md shadow-rose-900/30">
             <Flame className="w-3.5 h-3.5 fill-white" />
             Đang Hot
@@ -91,7 +90,7 @@ export default function HeroStoryCard({
 
       {/* 5. Khối nội dung chi tiết CHỈ HIỆN Ở CARD GIỮA */}
       <div
-        className={`absolute inset-x-0 bottom-0 p-5 sm:p-6 z-20 flex flex-col justify-end transition-all duration-500 ${
+        className={`absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-5 transition-[transform,opacity] duration-500 sm:p-6 ${
           isCenter
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 translate-y-6 pointer-events-none"
@@ -99,7 +98,7 @@ export default function HeroStoryCard({
       >
         {/* Thể loại */}
         {story.genres && story.genres.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
+          <div className="mb-2 flex flex-wrap gap-1.5">
             {story.genres.slice(0, 3).map((genre) => (
               <span
                 key={genre}
@@ -112,7 +111,7 @@ export default function HeroStoryCard({
         )}
 
         {/* Tiêu đề truyện */}
-        <h2 className="text-xl sm:text-2xl font-black text-white leading-snug line-clamp-2 drop-shadow-md">
+        <h2 className="line-clamp-2 text-xl font-black leading-snug text-white drop-shadow-md sm:text-2xl">
           {story.tenTruyen}
         </h2>
 
@@ -125,12 +124,12 @@ export default function HeroStoryCard({
           <span className="text-white/40">•</span>
           <span className="flex items-center gap-1">
             <BookOpen className="w-3.5 h-3.5 text-sky-400" />
-            <span>{(story.soChuong || 0).toLocaleString()} chương</span>
+            <span>{(story.soChuong || 0).toLocaleString("vi-VN")} chương</span>
           </span>
         </div>
 
         {/* Mô tả ngắn */}
-        <p className="mt-2 text-xs text-slate-300 leading-relaxed line-clamp-2 drop-shadow">
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-300 drop-shadow">
           {story.moTa ||
             "Một tác phẩm hấp dẫn với nội dung lôi cuốn độc giả ngay từ những trang đầu tiên."}
         </p>
@@ -139,13 +138,17 @@ export default function HeroStoryCard({
         <div className="flex items-center gap-2.5 mt-4">
           <Link
             href={`/truyen/${story.slug}`}
-            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs sm:text-sm text-center rounded-xl shadow-lg shadow-blue-600/40 transition-all"
+            prefetch={isCenter}
+            tabIndex={isCenter ? undefined : -1}
+            className="flex-1 touch-manipulation rounded-xl bg-blue-600 py-2 text-center text-xs font-bold text-white shadow-lg shadow-blue-600/40 transition-[transform,background-color] hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-95 sm:py-2.5 sm:text-sm"
           >
             Đọc ngay
           </Link>
           <Link
             href={`/truyen/${story.slug}`}
-            className="px-4 py-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white font-medium text-xs sm:text-sm rounded-xl border border-white/20 backdrop-blur-md transition-all text-center"
+            prefetch={isCenter}
+            tabIndex={isCenter ? undefined : -1}
+            className="touch-manipulation rounded-xl border border-white/20 bg-white/15 px-4 py-2 text-center text-xs font-medium text-white backdrop-blur-md transition-[transform,background-color] hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-95 sm:py-2.5 sm:text-sm"
           >
             Chi tiết
           </Link>

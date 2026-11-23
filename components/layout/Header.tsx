@@ -196,7 +196,7 @@ function HeaderContent() {
                       {displayName}
                     </span>
                     <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                      <Coins className="w-2.5 h-2.5" /> {(user.soDuXu ?? 0).toLocaleString()} xu
+                  <Coins className="w-2.5 h-2.5" /> {(user.soDuXu ?? 0).toLocaleString("vi-VN")} xu
                     </span>
                   </div>
                   <ChevronDown
@@ -218,7 +218,7 @@ function HeaderContent() {
                         {displayName}
                       </p>
                       <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[11px] font-semibold">
-                        <Coins className="w-3 h-3" /> Số dư: {(user.soDuXu ?? 0).toLocaleString()} xu
+                    <Coins className="w-3 h-3" /> Số dư: {(user.soDuXu ?? 0).toLocaleString("vi-VN")} xu
                       </div>
                     </div>
 

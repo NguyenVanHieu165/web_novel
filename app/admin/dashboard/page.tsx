@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
         <Card
           title="Tổng lượt xem"
-          value={loading ? "..." : (data?.viewsTotal ?? 0).toLocaleString()}
+          value={loading ? "..." : (data?.viewsTotal ?? 0).toLocaleString("vi-VN")}
           icon={<Eye size={22} className="text-purple-600" />}
           color="purple"
         />
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         <Card
           title="Doanh thu"
           value={
-            loading ? "..." : `${(data?.revenueTotal ?? 0).toLocaleString()}đ`
+            loading ? "..." : `${(data?.revenueTotal ?? 0).toLocaleString("vi-VN")}đ`
           }
           icon={<DollarSign size={22} className="text-orange-600" />}
           color="orange"

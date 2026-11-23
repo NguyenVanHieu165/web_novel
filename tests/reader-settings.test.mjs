@@ -23,11 +23,12 @@ const asPlain = (value) => JSON.parse(JSON.stringify(value));
 
 test("corrupted persistent settings cannot produce invisible or unbounded reader text", () => {
   for (const fontSize of [null, undefined, "", "NaN", Infinity, -8, 0, 999, 18.5, true, []]) {
-    const result = parseReaderSettings({ theme: "made-up-theme", fontSize, fontFamily: "unknown", lineHeight: 0 });
+    const result = parseReaderSettings({ theme: "made-up-theme", fontSize, fontFamily: "unknown", lineHeight: 0, textColor: "url(example.com)" });
     assert.equal(result.fontSize, 18);
     assert.equal(result.theme, "light");
     assert.equal(result.fontFamily, "sans");
     assert.equal(result.lineHeight, 1.8);
+    assert.equal(result.textColor, "auto");
   }
 });
 
@@ -42,10 +43,12 @@ test("versioned compact cookies round-trip every supported theme and text settin
     for (const fontFamily of ["sans", "serif"]) {
       for (const lineHeight of [1.6, 1.8, 2, 2.2]) {
         for (const fontSize of [16, 18, 26]) {
-          const settings = { theme, fontFamily, lineHeight, fontSize, width: "standard" };
-          const encoded = serializeReaderSettingsCookie(settings);
-          assert.ok(encoded.length < 80);
-          assert.deepEqual(asPlain(parseReaderSettingsCookie(encoded)), settings);
+          for (const textColor of ["auto", "#123abc"]) {
+            const settings = { theme, fontFamily, lineHeight, fontSize, width: "standard", textColor };
+            const encoded = serializeReaderSettingsCookie(settings);
+            assert.ok(encoded.length < 96);
+            assert.deepEqual(asPlain(parseReaderSettingsCookie(encoded)), settings);
+          }
         }
       }
     }
@@ -58,6 +61,7 @@ test("unknown cookie versions, malformed values and injected delimiters are igno
     "1:system:18:sans:1.8", "1:dark:18:fantasy:1.8", "1:dark:13:sans:1.8", "1:dark:29:sans:1.8",
     "1:dark:18.5:sans:1.8", "1:dark:018:sans:1.8", "1:dark:NaN:sans:1.8", "1:dark:18:sans:3",
     "1:dark:18:sans:1.8:extra", "1:dark:18:sans:1.8; Path=/", "1:dark:18:sans:1.8\n", "x".repeat(100),
+    "3:dark:18:sans:1.8:standard:#ffffff", "3:dark:18:sans:1.8:standard:fff", "3:dark:18:sans:1.8:standard:javascript",
   ]) assert.equal(parseReaderSettingsCookie(value), null, `Unexpected valid cookie: ${value}`);
 });
 
@@ -68,6 +72,9 @@ test("reader variables follow its chosen theme independently from a global dark 
   assert.equal(dark.colorScheme, "dark");
   assert.notEqual(light["--reader-bg"], dark["--reader-bg"]);
   assert.notEqual(light["--reader-text"], dark["--reader-text"]);
+  const custom = getReaderStyleVariables({ ...defaultReaderSettings, textColor: "#123abc" });
+  assert.equal(custom["--reader-content-text"], "#123abc");
+  assert.equal(custom["--reader-text"], light["--reader-text"]);
   const invalid = getReaderStyleVariables({ theme: "url(example.com)", fontSize: 999, lineHeight: -1 });
   assert.equal(invalid["--reader-font-size"], "18px");
   assert.equal(invalid["--reader-line-height"], "1.8");
@@ -170,7 +177,7 @@ test("server hydration snapshot uses request-scoped cookie seed instead of the d
 });
 
 test("valid SSR cookie takes priority over stale legacy localStorage preferences", () => {
-  const seed = { theme: "dark", fontSize: 22, fontFamily: "serif", lineHeight: 2, width: "standard" };
+  const seed = { ...defaultReaderSettings, theme: "dark", fontSize: 22, fontFamily: "serif", lineHeight: 2 };
   const store = settingsStoreHarness({ cookie: serializeReaderSettingsCookie(seed), storage: { reader_theme: "light" } });
   const reader = store.mount(seed);
   assert.deepEqual(asPlain(reader.settings), seed);
@@ -182,9 +189,9 @@ test("valid SSR cookie takes priority over stale legacy localStorage preferences
 test("legacy preferences migrate to a versioned cookie without discarding font or spacing", () => {
   const store = settingsStoreHarness({ storage: { reader_theme: "sepia", reader_font_size: "24", reader_font_family: "serif", reader_line_height: "2.2" } });
   const reader = store.mount();
-  assert.deepEqual(asPlain(reader.settings), { theme: "sepia", fontSize: 24, fontFamily: "serif", lineHeight: 2.2, width: "standard" });
-  assert.equal(store.storageValues.get(readerSettingsCookieName), "2:sepia:24:serif:2.2:standard");
-  assert.equal(store.cookie(), `${readerSettingsCookieName}=2:sepia:24:serif:2.2:standard`);
+  assert.deepEqual(asPlain(reader.settings), { theme: "sepia", fontSize: 24, fontFamily: "serif", lineHeight: 2.2, width: "standard", textColor: "auto" });
+  assert.equal(store.storageValues.get(readerSettingsCookieName), "3:sepia:24:serif:2.2:standard:auto");
+  assert.equal(store.cookie(), `${readerSettingsCookieName}=3:sepia:24:serif:2.2:standard:auto`);
   assert.match(store.cookieWrites[0], /SameSite=Lax; Secure$/);
   store.unmount();
 });
@@ -195,19 +202,19 @@ test("first hydration subscription migrates legacy settings even before React re
   assert.equal(reader.settings.theme, "light"); // Matches server markup until hydration completes.
   assert.equal(reader.getSnapshot().theme, "dark");
   assert.equal(reader.getSnapshot().fontSize, 23);
-  assert.equal(store.cookie(), `${readerSettingsCookieName}=2:dark:23:sans:1.8:standard`);
+  assert.equal(store.cookie(), `${readerSettingsCookieName}=3:dark:23:sans:1.8:standard:auto`);
   store.unmount();
 });
 
 test("a stale/unknown cookie version cannot override validated legacy preferences", () => {
   const store = settingsStoreHarness({ cookie: "99:light:18:sans:1.8", storage: { reader_theme: "dark", reader_font_size: "20" } });
   assert.equal(store.mount().settings.theme, "dark");
-  assert.match(store.cookie(), /=2:dark:20:sans:1.8:standard$/);
+  assert.match(store.cookie(), /=3:dark:20:sans:1.8:standard:auto$/);
   store.unmount();
 });
 
 test("blocked cookie and localStorage still preserve settings and updates for the current session", () => {
-  const seed = { theme: "dark", fontSize: 20, fontFamily: "sans", lineHeight: 1.8, width: "standard" };
+  const seed = { ...defaultReaderSettings, theme: "dark", fontSize: 20 };
   const store = settingsStoreHarness({ blockStorage: true, blockCookie: true });
   const reader = store.mount(seed);
   assert.deepEqual(asPlain(reader.settings), seed);
@@ -222,13 +229,14 @@ test("cross-tab setting changes notify subscribers, refresh snapshots and preser
   const store = settingsStoreHarness();
   const first = store.mount();
   const second = store.mount();
-  store.dispatchStorage(readerSettingsCookieName, "2:mint:26:serif:2.2:wide");
+  store.dispatchStorage(readerSettingsCookieName, "3:mint:26:serif:2.2:wide:123abc");
   assert.equal(first.notifications(), 1);
   assert.equal(second.notifications(), 1);
   assert.equal(first.getSnapshot().theme, "mint");
   assert.equal(second.getSnapshot().fontSize, 26);
+  assert.equal(first.getSnapshot().textColor, "#123abc");
   assert.equal(first.getServerSnapshot().theme, "light");
-  assert.match(store.cookie(), /=2:mint:26:serif:2.2:wide$/);
+  assert.match(store.cookie(), /=3:mint:26:serif:2.2:wide:123abc$/);
   store.unmount();
   store.dispatchStorage(readerSettingsCookieName, "1:sepia:18:sans:1.8");
   assert.equal(first.notifications(), 1);
@@ -331,6 +339,7 @@ test("width persists across cookies and legacy preferences migrate within new li
   assert.equal(parseReaderSettingsCookie("1:oled:28:serif:2.2").theme, "dark");
   assert.equal(parseReaderSettingsCookie("1:oled:28:serif:2.2").fontSize, 26);
   assert.equal(parseReaderSettingsCookie("1:light:14:sans:1.6").fontSize, 16);
+  assert.equal(parseReaderSettingsCookie("2:mint:18:serif:1.8:wide").textColor, "auto");
   assert.equal(parseReaderSettings({ width: "100vw" }).width, "standard");
   assert.equal(getReaderStyleVariables({ ...defaultReaderSettings, theme: "mint" })["--reader-paper"], "#E8F3EE");
 });

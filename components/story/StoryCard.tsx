@@ -92,6 +92,7 @@ export default function StoryCard({ story }: StoryCardProps) {
     <Link
       ref={cardRef}
       href={`/truyen/${story.slug}`}
+      prefetch={false}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="story-card-item group relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-sm hover:shadow-2xl hover:shadow-blue-500/15 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -160,7 +161,7 @@ export default function StoryCard({ story }: StoryCardProps) {
           <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500">
             <BookOpen className="w-3 h-3" />
             <span className="text-[11px]">
-              {story.soChuong.toLocaleString()} chương
+              {story.soChuong.toLocaleString("vi-VN")} chương
             </span>
           </div>
         )}

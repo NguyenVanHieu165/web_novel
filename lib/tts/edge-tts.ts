@@ -18,7 +18,8 @@ export interface ChapterAudioInput {
   voice: StoryVoice;
 }
 export interface CachedChapterAudio {
-  filePath: string;
+  filePath?: string;
+  remoteUrl?: string;
   fingerprint: string;
   bytes: number;
   cached: boolean;
@@ -28,15 +29,107 @@ export class AudioBusyError extends Error {}
 const inFlight = new Map<string, Promise<CachedChapterAudio>>();
 let activeJobs = 0;
 const maxAudioBytes = 80 * 1024 * 1024;
+type CloudinaryConfig = { cloudName: string; apiKey: string; apiSecret: string };
+
+function safeStorySlug(storySlug: string): string {
+  const normalized = storySlug.normalize("NFC");
+  const safe = normalized.replace(/[^\p{L}\p{N}_-]/gu, "-").slice(0, 120) || "truyen";
+  return safe === normalized && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu.test(safe)
+    ? safe
+    : safe + "-" + createHash("sha256").update(normalized).digest("hex").slice(0, 12);
+}
 
 function cachePath(input: ChapterAudioInput): string {
   // Database slugs are never trusted as filesystem paths.
-  const normalized = input.storySlug.normalize("NFC");
-  const safe = normalized.replace(/[^\p{L}\p{N}_-]/gu, "-").slice(0, 120) || "truyen";
-  const slug = safe === normalized && !/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/iu.test(safe) ? safe :
-    safe + "-" + createHash("sha256").update(normalized).digest("hex").slice(0, 12);
-  return path.join(process.cwd(), "public", "uploads", "audio", slug,
+  return path.join(process.cwd(), "public", "uploads", "audio", safeStorySlug(input.storySlug),
     "chuong-" + input.chapterNumber + "-" + input.voice + ".mp3");
+}
+
+function cloudinaryConfiguration(): CloudinaryConfig | null {
+  let cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  let apiKey = process.env.CLOUDINARY_API_KEY;
+  let apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (process.env.CLOUDINARY_URL) {
+    try {
+      const url = new URL(process.env.CLOUDINARY_URL);
+      if (url.protocol === "cloudinary:") {
+        cloudName ||= url.hostname;
+        apiKey ||= decodeURIComponent(url.username);
+        apiSecret ||= decodeURIComponent(url.password);
+      }
+    } catch {
+      // Incomplete credentials are handled as a configuration error during upload.
+    }
+  }
+
+  return cloudName && /^[a-z0-9_-]+$/iu.test(cloudName) && apiKey && apiSecret
+    ? { cloudName, apiKey, apiSecret }
+    : null;
+}
+
+function cloudinaryPublicId(input: ChapterAudioInput, fingerprint: string): string {
+  const chapter = String(input.chapterNumber).replace(/[^0-9.-]/gu, "-");
+  return `web-novel/audio/${safeStorySlug(input.storySlug)}/chuong-${chapter}-${input.voice}-${fingerprint}.mp3`;
+}
+
+function cloudinaryRawUrl(cloudName: string, publicId: string): string {
+  const encodedId = publicId.split("/").map(encodeURIComponent).join("/");
+  return `https://res.cloudinary.com/${encodeURIComponent(cloudName)}/raw/upload/${encodedId}`;
+}
+
+async function readCloudinaryCache(publicId: string, fingerprint: string): Promise<CachedChapterAudio | null> {
+  const config = cloudinaryConfiguration();
+  if (!config) return null;
+  const remoteUrl = cloudinaryRawUrl(config.cloudName, publicId);
+
+  try {
+    const response = await fetch(remoteUrl, {
+      method: "HEAD",
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    const bytes = Number(response.headers.get("content-length"));
+    if (response.ok && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= maxAudioBytes) {
+      return { remoteUrl, fingerprint, bytes, cached: true };
+    }
+  } catch {
+    // A cache lookup failure is recoverable; synthesis and upload can still proceed.
+  }
+
+  return null;
+}
+
+async function uploadAudioToCloudinary(buffer: Buffer, publicId: string): Promise<string> {
+  const config = cloudinaryConfiguration();
+  if (!config) throw new Error("Cloudinary audio storage is not configured");
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signature = createHash("sha1")
+    .update(`public_id=${publicId}&timestamp=${timestamp}${config.apiSecret}`)
+    .digest("hex");
+  const form = new FormData();
+  form.set("public_id", publicId);
+  form.set("timestamp", timestamp);
+  form.set("api_key", config.apiKey);
+  form.set("signature", signature);
+  form.set("file", new Blob([new Uint8Array(buffer)], { type: "audio/mpeg" }), "chapter.mp3");
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/raw/upload`, {
+    method: "POST",
+    body: form,
+    cache: "no-store",
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!response.ok) throw new Error("Cloudinary audio upload was rejected");
+  const result: unknown = await response.json();
+  if (typeof result !== "object" || result === null || !("secure_url" in result) || typeof result.secure_url !== "string") {
+    throw new Error("Cloudinary returned an invalid audio response");
+  }
+  const url = new URL(result.secure_url);
+  if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com" || !url.pathname.includes("/raw/upload/")) {
+    throw new Error("Cloudinary returned an invalid audio URL");
+  }
+  return url.href;
 }
 
 async function readCache(filePath: string, fingerprint: string): Promise<CachedChapterAudio | null> {
@@ -106,11 +199,16 @@ export async function getChapterAudio(input: ChapterAudioInput): Promise<CachedC
   if (!input.content.trim() || input.content.length > 200_000) throw new Error("Invalid chapter audio length");
   const text = prepareStoryTextForSpeech(input.content, input.title, input.voice);
   const fingerprint = createHash("sha256").update(JSON.stringify([2, input.chapterId, storyVoices[input.voice], text])).digest("hex");
+  const useCloudinary = process.env.VERCEL === "1";
+  const publicId = useCloudinary ? cloudinaryPublicId(input, fingerprint) : null;
   const filePath = cachePath(input);
-  const cached = await readCache(filePath, fingerprint);
+  const cached = publicId
+    ? await readCloudinaryCache(publicId, fingerprint)
+    : await readCache(filePath, fingerprint);
   if (cached) return cached;
 
-  const pending = inFlight.get(filePath);
+  const cacheKey = publicId ?? filePath;
+  const pending = inFlight.get(cacheKey);
   if (pending) {
     const result = await pending;
     return result.fingerprint === fingerprint ? { ...result, cached: true } : getChapterAudio(input);
@@ -118,6 +216,12 @@ export async function getChapterAudio(input: ChapterAudioInput): Promise<CachedC
   if (activeJobs >= 2) throw new AudioBusyError("Audio generation is busy");
   activeJobs++;
   const job = (async () => {
+    if (publicId) {
+      const buffer = await synthesize(text, input.voice);
+      const remoteUrl = await uploadAudioToCloudinary(buffer, publicId);
+      return { remoteUrl, fingerprint, bytes: buffer.length, cached: false };
+    }
+
     const temporary = filePath + "." + randomUUID() + ".tmp";
     try {
       const buffer = await synthesize(text, input.voice);
@@ -131,7 +235,7 @@ export async function getChapterAudio(input: ChapterAudioInput): Promise<CachedC
       await Promise.all([rm(temporary, { force: true }), rm(temporary + ".json", { force: true })]);
     }
   })();
-  inFlight.set(filePath, job);
+  inFlight.set(cacheKey, job);
   try { return await job; }
-  finally { inFlight.delete(filePath); activeJobs--; }
+  finally { inFlight.delete(cacheKey); activeJobs--; }
 }

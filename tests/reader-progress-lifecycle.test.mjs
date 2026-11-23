@@ -8,6 +8,7 @@ import ts from "typescript";
 const require = createRequire(import.meta.url);
 const sources = new Map(await Promise.all([
   ["component", "../components/chapter/ReadingProgress.tsx"],
+  ["@/lib/continue-reading-state", "../lib/continue-reading-state.ts"],
   ["@/lib/reader-progress-state", "../lib/reader-progress-state.ts"],
   ["@/lib/reading-progress", "../lib/reading-progress.ts"],
 ].map(async ([name, path]) => [name, ts.transpileModule(await readFile(new URL(path, import.meta.url), "utf8"), {
@@ -40,7 +41,7 @@ async function mountProgress() {
     ...eventRegistry(), scrollY: 0, innerHeight: 800,
     localStorage: {
       getItem: (key) => values.get(key) ?? null,
-      setItem: (key, value) => { values.set(key, value); localWrites.push(JSON.parse(value)); },
+      setItem: (key, value) => { values.set(key, value); localWrites.push({ key, data: JSON.parse(value) }); },
     },
     setInterval: (callback, delay) => { const id = ++nextId; intervals.set(id, { callback, delay }); return id; },
     clearInterval: (id) => intervals.delete(id),
@@ -86,13 +87,19 @@ async function mountProgress() {
     vm.runInNewContext(sources.get(name), { ...sandbox, module: compiled, exports: compiled.exports, require: load });
     return compiled.exports;
   }
-  const element = load("component").default({ chapterId: 11 });
+  const element = load("component").default({
+    chapterId: 11,
+    storySlug: "story",
+    chapterNumber: 11,
+    chapterSlug: "chapter",
+    chapterTitle: "Chapter 11",
+  });
   element.type(element.props);
   assert.equal(effects.length, 1);
   const cleanup = effects[0]();
   // Let the existing server resume finish before simulating user activity.
   await new Promise((resolve) => setImmediate(resolve));
-  const local = () => JSON.parse([...values.values()][0]).entries[0];
+  const local = () => JSON.parse(values.get("web_novel_reading_progress_v1")).entries[0];
   return {
     window, content, requests, localWrites, local, cleanup,
     scroll: (position) => { window.scrollY = position; window.emit("scroll"); },
@@ -102,14 +109,15 @@ async function mountProgress() {
 
 const puts = (reader) => reader.requests.filter((request) => request.method === "PUT");
 
-test("an untouched resume stays intact and a later departure saves the actual passage", async () => {
+test("opening syncs the untouched resume and a later departure saves the actual passage", async () => {
   const untouched = await mountProgress();
   untouched.window.emit("reader-leaving", { detail: { chapterId: 11, waitUntil: () => {} } });
   untouched.content.isConnected = false;
   untouched.scroll(0);
   untouched.cleanup();
   assert.equal(untouched.local().percent, 70);
-  assert.equal(puts(untouched).length, 0);
+  assert.equal(puts(untouched).length, 1);
+  assert.equal(JSON.parse(puts(untouched)[0].body).percent, 70);
 
   const reader = await mountProgress();
   reader.window.emit("wheel");
@@ -118,16 +126,16 @@ test("an untouched resume stays intact and a later departure saves the actual pa
   reader.window.emit("reader-leaving", { detail: { chapterId: 11, waitUntil: (promise) => pending.push(promise) } });
   assert.equal(pending.length, 1);
   await Promise.all(pending);
-  assert.equal(JSON.parse(puts(reader)[0].body).percent, 50);
-  assert.equal(puts(reader)[0].keepalive, true);
-  assert.equal(puts(reader)[0].headers["X-Reader-Account"], "7");
+  assert.equal(JSON.parse(puts(reader).at(-1).body).percent, 50);
+  assert.equal(puts(reader).at(-1).keepalive, true);
+  assert.equal(puts(reader).at(-1).headers["X-Reader-Account"], "7");
   reader.content.isConnected = false;
   reader.scroll(0);
   reader.cleanup();
   assert.equal(reader.local().percent, 50);
   assert.equal(reader.local().pending, false);
-  assert.equal(puts(reader).length, 1);
-  assert.equal(reader.localWrites.slice(1).every((write) => write.entries[0].percent === 50), true);
+  assert.equal(puts(reader).length, 2);
+  assert.equal(reader.localWrites.filter((write) => write.key === "web_novel_reading_progress_v1").at(-1).data.entries[0].percent, 50);
 });
 
 test("detached passive cleanup discards a dirty scroll instead of measuring the removed article", async () => {
@@ -143,6 +151,6 @@ test("detached passive cleanup discards a dirty scroll instead of measuring the 
   reader.cleanup();
   assert.equal(reader.local().percent, 50);
   assert.equal(reader.local().pending, true);
-  assert.equal(puts(reader).length, 0);
+  assert.equal(puts(reader).length, 1);
 });
 

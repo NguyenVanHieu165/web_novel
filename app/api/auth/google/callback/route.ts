@@ -19,7 +19,7 @@ function stateMatches(expected: string | undefined, received: string | null) { c
 function usernameFrom(email: string) { const base = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_").slice(0, 30) || "reader"; return `${base}_${randomBytes(4).toString("hex")}`.slice(0, 45); }
 
 export async function GET(request: NextRequest) {
-  const rate = checkRateLimit(`google-oauth:${requestIp(request)}`, 20, 5 * 60_000);
+  const rate = await checkRateLimit(`google-oauth:${requestIp(request)}`, 20, 5 * 60_000);
   if (!rate.allowed) return failed(request, "oauth_rate_limited");
   const state = request.nextUrl.searchParams.get("state"), redirect = stateMatches(request.cookies.get("google_oauth_state")?.value, state);
   if (redirect === null) return failed(request, "oauth_state_invalid");

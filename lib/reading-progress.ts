@@ -20,6 +20,7 @@ export const readingHistoryResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(z.object({
     chapterId: z.number().int().positive(),
+    chapterNumber: z.number().nonnegative(),
     chapterTitle: z.string(),
     chapterSlug: z.string(),
     storyTitle: z.string(),

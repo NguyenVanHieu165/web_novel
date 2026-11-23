@@ -1,9 +1,12 @@
+export type ReaderTextColor = "auto" | `#${string}`;
+
 export interface ReaderSettings {
   theme: "light" | "sepia" | "mint" | "dark";
   fontSize: number;
   fontFamily: "sans" | "serif";
   lineHeight: number;
   width: "narrow" | "standard" | "wide";
+  textColor: ReaderTextColor;
 }
 
 export const readerSettingsCookieName = "web_novel_reader_settings";
@@ -13,7 +16,7 @@ export const readerFontSizeMax = 26;
 export const readerLineHeights = [1.6, 1.8, 2, 2.2] as const;
 
 export const defaultReaderSettings: ReaderSettings = Object.freeze({
-  theme: "light", fontSize: 18, fontFamily: "sans", lineHeight: 1.8, width: "standard",
+  theme: "light", fontSize: 18, fontFamily: "sans", lineHeight: 1.8, width: "standard", textColor: "auto",
 });
 
 const readerWidths = { narrow: "38rem", standard: "48rem", wide: "60rem" } as const;
@@ -22,6 +25,11 @@ const parseNumber = (value: unknown): number =>
   typeof value === "number" || (typeof value === "string" && value.trim() !== "")
     ? Number(value)
     : Number.NaN;
+
+const parseTextColor = (value: unknown): ReaderTextColor =>
+  typeof value === "string" && /^#[0-9a-f]{6}$/iu.test(value)
+    ? value.toLowerCase() as ReaderTextColor
+    : "auto";
 
 export function parseReaderSettings(value: unknown): ReaderSettings {
   const source = typeof value === "object" && value !== null && !Array.isArray(value)
@@ -38,23 +46,36 @@ export function parseReaderSettings(value: unknown): ReaderSettings {
     lineHeight: readerLineHeights.some((height) => height === lineHeight)
       ? lineHeight : defaultReaderSettings.lineHeight,
     width: source.width === "narrow" || source.width === "wide" ? source.width : "standard",
+    textColor: parseTextColor(source.textColor),
   };
 }
 
 /** Cookie and local storage contain settings only; unknown versions are ignored. */
 export function parseReaderSettingsCookie(value: string | undefined): ReaderSettings | null {
-  if (!value || value.length > 80) return null;
-  const current = /^2:(light|sepia|mint|dark):(1[6-9]|2[0-6]):(sans|serif):(1\.6|1\.8|2|2\.2):(narrow|standard|wide)$/u;
+  if (!value || value.length > 96) return null;
+  const current = /^3:(light|sepia|mint|dark):(1[6-9]|2[0-6]):(sans|serif):(1\.6|1\.8|2|2\.2):(narrow|standard|wide):(auto|[0-9a-f]{6})$/iu;
+  const previous = /^2:(light|sepia|mint|dark):(1[6-9]|2[0-6]):(sans|serif):(1\.6|1\.8|2|2\.2):(narrow|standard|wide)$/u;
   const legacy = /^1:(light|sepia|dark|oled):(1[4-9]|2[0-8]):(sans|serif):(1\.6|1\.8|2|2\.2)$/u;
-  const match = current.exec(value) ?? legacy.exec(value);
-  if (!match) return null;
-  const [, theme, fontSize, fontFamily, lineHeight, width] = match;
-  return parseReaderSettings({ theme, fontSize, fontFamily, lineHeight, width });
+  const currentMatch = current.exec(value);
+  if (currentMatch) {
+    const [, theme, fontSize, fontFamily, lineHeight, width, textColor] = currentMatch;
+    return parseReaderSettings({ theme, fontSize, fontFamily, lineHeight, width, textColor: textColor === "auto" ? "auto" : `#${textColor}` });
+  }
+  const previousMatch = previous.exec(value);
+  if (previousMatch) {
+    const [, theme, fontSize, fontFamily, lineHeight, width] = previousMatch;
+    return parseReaderSettings({ theme, fontSize, fontFamily, lineHeight, width });
+  }
+  const legacyMatch = legacy.exec(value);
+  if (!legacyMatch) return null;
+  const [, theme, fontSize, fontFamily, lineHeight] = legacyMatch;
+  return parseReaderSettings({ theme, fontSize, fontFamily, lineHeight });
 }
 
 export function serializeReaderSettingsCookie(value: ReaderSettings): string {
   const settings = parseReaderSettings(value);
-  return `2:${settings.theme}:${settings.fontSize}:${settings.fontFamily}:${settings.lineHeight}:${settings.width}`;
+  const textColor = settings.textColor === "auto" ? "auto" : settings.textColor.slice(1);
+  return `3:${settings.theme}:${settings.fontSize}:${settings.fontFamily}:${settings.lineHeight}:${settings.width}:${textColor}`;
 }
 
 export const readerThemeTokens = {
@@ -71,6 +92,7 @@ export function getReaderStyleVariables(value: ReaderSettings) {
     "--reader-bg": tokens.background,
     "--reader-paper": tokens.paper,
     "--reader-text": tokens.text,
+    "--reader-content-text": settings.textColor === "auto" ? tokens.text : settings.textColor,
     "--reader-surface": tokens.surface,
     "--reader-border": tokens.border,
     "--reader-accent": tokens.accent,

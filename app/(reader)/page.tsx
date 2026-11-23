@@ -19,9 +19,20 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "WebNovel – Nền Tảng Đọc Truyện Chữ Đỉnh Cao",
+  title: {
+    absolute: "La Ca Truyện – Nền Tảng Đọc Truyện Chữ Đỉnh Cao",
+  },
   description:
     "Nền tảng đọc truyện chữ trực tuyến miễn phí với hàng nghìn tác phẩm dịch, sáng tác và convert. Trải nghiệm hoạt họa 3D GSAP mượt mà đỉnh cao.",
+  openGraph: {
+    type: "website",
+    locale: "vi_VN",
+    url: "/",
+    siteName: "La Ca Truyện",
+    title: "La Ca Truyện – Nền Tảng Đọc Truyện Chữ Đỉnh Cao",
+    description:
+      "Nền tảng đọc truyện chữ trực tuyến miễn phí với hàng nghìn tác phẩm dịch, sáng tác và convert.",
+  },
 };
 
 export default async function ReaderHomePage() {
@@ -35,12 +46,19 @@ export default async function ReaderHomePage() {
   const popularStories = popular.map((s) => mapStory(s, "hot"));
   const ratedStories = rated.map((s) => mapStory(s));
   const completedStories = completed.map((s) => mapStory(s, "full"));
+  const featuredStory = featured ? mapStory(featured, "hot") : null;
+  const heroStories = featuredStory
+    ? [
+        featuredStory,
+        ...newStories.filter((story) => story.idTruyen !== featuredStory.idTruyen),
+      ].slice(0, 5)
+    : newStories.slice(0, 5);
   const discoveryStories = { latest: newStories, popular: popularStories, rated: ratedStories, completed: completedStories };
   const genreStories = mergeUniqueStories(newStories, popularStories, ratedStories, completedStories);
   const genreLinks = getHomeGenres(mergeUniqueStories(latest, popular, rated, completed));
 
   // Tác phẩm tâm điểm cho Universe Showcase (ưu tiên truyện featured, nếu không lấy truyện mới đầu tiên)
-  const universeStory = featured ? mapStory(featured, "hot") : newStories[0] || null;
+  const universeStory = featuredStory ?? newStories[0] ?? null;
 
   // Danh sách truyện mới cập nhật
   const updatedItems = updated.map(mapRecentlyUpdated);
@@ -48,9 +66,11 @@ export default async function ReaderHomePage() {
   // 3. Render giao diện
   return (
     <div className="space-y-16">
-      {/* 1. Hero Showcase: 3D Cover Flow Carousel with Draggable & Mouse Tilt */}
+      <h1 className="sr-only">La Ca Truyện – Nền tảng đọc truyện chữ trực tuyến</h1>
+
+      {/* 1. Hero Showcase: 5-slide stacked coverflow */}
       <section id="hero-showcase">
-        <HeroStory story={newStories[0] ?? null} stories={newStories} />
+        <HeroStory story={heroStories[0] ?? null} stories={heroStories} />
       </section>
 
       {/* 2. Continue Reading (Shows when logged in with history) */}

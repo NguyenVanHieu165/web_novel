@@ -52,7 +52,16 @@ export default function ReaderView({ data }: ReaderViewProps) {
         <main id="reader-main" tabIndex={-1} className="px-3 pb-36 pt-2 outline-none scroll-mt-28 sm:px-6 md:pr-24 xl:px-24">
           <ReadingDock data={data} panel={panel} onPanelChange={onPanelChange} drawerTriggerRef={drawerTriggerRef} settingsTriggerRef={settingsTriggerRef} />
           <div className="mx-auto max-w-[var(--reader-width)] rounded-xl border border-[var(--reader-border)] bg-[var(--reader-paper)] px-5 py-8 shadow-[0_8px_40px_-12px_rgb(0_0_0/.14)] sm:px-10 sm:py-12">
-          {access.canRead && <ReadingProgress key={chapter.idChuong} chapterId={chapter.idChuong} />}
+          {access.canRead && (
+            <ReadingProgress
+              key={chapter.idChuong}
+              chapterId={chapter.idChuong}
+              storySlug={story.slug}
+              chapterNumber={chapter.chuongSo}
+              chapterSlug={chapter.slug}
+              chapterTitle={chapter.tieuDeChuong}
+            />
+          )}
           <div className="mb-10 space-y-2 border-b border-[var(--reader-border)] pb-6 text-center">
             <p className="text-xs font-semibold uppercase tracking-widest opacity-60">{story.tenTruyen}</p>
             <h1 className="text-xl font-black leading-snug sm:text-2xl md:text-3xl">{chapter.tieuDeChuong}</h1>
@@ -69,6 +78,7 @@ export default function ReaderView({ data }: ReaderViewProps) {
               id="reader-content"
               className="space-y-6 [&>p]:scroll-mt-28 [&>p[data-speaking=true]]:rounded-md [&>p[data-speaking=true]]:bg-[var(--reader-surface)] [&>p[data-speaking=true]]:outline-2 [&>p[data-speaking=true]]:outline-[var(--reader-accent)]"
               style={{
+                color: "var(--reader-content-text)",
                 fontSize: "var(--reader-font-size)",
                 fontFamily: "var(--reader-font-family)",
                 lineHeight: "var(--reader-line-height)",

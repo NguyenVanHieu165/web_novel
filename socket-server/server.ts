@@ -9,10 +9,23 @@ dotenv.config();
 dotenv.config({ path: "../.env" });
 
 const app = express();
+app.disable("x-powered-by");
 
 // Cấu hình các cổng và nguồn đáng tin cậy
 const PORT: number = Number(process.env.PORT) || 3001;
-const ALLOWED_ORIGINS: string[] = (process.env.ALLOWED_ORIGINS || "http://localhost:3000").split(",");
+const REQUIRED_ALLOWED_ORIGINS = [
+    "https://web-novel-ete3.vercel.app",
+    "http://localhost:3000",
+] as const;
+const VERCEL_PREVIEW_ORIGIN = /^https:\/\/web-novel-ete3-.*\.vercel\.app$/;
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+const ALLOWED_ORIGINS: Array<string | RegExp> = [
+    ...new Set([...REQUIRED_ALLOWED_ORIGINS, ...configuredOrigins]),
+    VERCEL_PREVIEW_ORIGIN,
+];
 const SECRET_TOKEN = process.env.INTERNAL_SECRET_TOKEN;
 if (!SECRET_TOKEN) {
     throw new Error("INTERNAL_SECRET_TOKEN is required");
@@ -30,6 +43,14 @@ const io = new Server(httpServer, {
         methods: ["GET", "POST"],
         credentials: true
     }
+});
+
+app.get("/healthz", (_req: Request, res: Response) => {
+    return res.json({ status: "ok", service: "web-novel-realtime", connections: io.engine.clientsCount });
+});
+
+app.get("/readyz", (_req: Request, res: Response) => {
+    return res.json({ status: "ready", service: "web-novel-realtime" });
 });
 
 io.use(async (socket, next) => {
@@ -77,4 +98,18 @@ app.post("/api/trigger-notification", (req: Request<Record<string, never>, unkno
 
 // Khởi chạy server
 httpServer.listen(PORT, () => {
+    console.info(`[realtime] listening on port ${PORT}`);
 });
+
+let shuttingDown = false;
+function shutdown(signal: string) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.info(`[realtime] received ${signal}, closing connections`);
+    io.close(() => {
+        httpServer.close(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+}
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));

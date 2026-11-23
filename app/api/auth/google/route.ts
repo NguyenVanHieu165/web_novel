@@ -12,7 +12,7 @@ function baseUrl(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const rate = checkRateLimit(`google-oauth:${requestIp(request)}`, 10, 5 * 60_000);
+  const rate = await checkRateLimit(`google-oauth:${requestIp(request)}`, 10, 5 * 60_000);
   if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) return NextResponse.redirect(new URL("/dang-nhap?error=oauth_unavailable", request.nextUrl.origin));

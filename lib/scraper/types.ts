@@ -23,6 +23,7 @@ export type ImportJob = {
   phase?: "metadata" | "catalogue" | "chapters" | "waiting" | "finished";
   sourceHost?: string; sourceUrl?: string; sourceName?: string; options?: ImportOptions;
   errorCode?: string; retryAt?: number; warning?: string; catalogueComplete?: boolean; sourceTotalChapters?: number;
+  requestId?: string;
   issues?: Array<{ chapter?: number; code: string; reason: string }>;
 };
 export const terminal = (status: JobStatus) => ["completed", "partial", "cancelled", "failed", "interrupted"].includes(status);

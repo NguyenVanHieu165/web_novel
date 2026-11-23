@@ -23,7 +23,8 @@ function harness({ authorized = true, available = true, failRead = false, failCr
     noiDung: `Comment ${index + 1}`,
     likeCount: null,
     createdAt: new Date("2026-11-19T00:00:00Z"),
-    taiKhoan: { tenTaiKhoan: "reader", matKhau: "must-not-leak", email: "private@example.test", hoSoCaNhan: { ho_ten: "Reader Name", anh: null } },
+    chuong: null,
+    taiKhoan: { tenTaiKhoan: "reader", matKhau: "must-not-leak", email: "private@example.test", hoSoCaNhan: { ho_ten: "Reader Name", anh: null }, vaiTroNguoiDung: [] },
   }));
   comments.push({ ...comments[0], idBinhLuan: 32, idChuong: 12, noiDung: "Chapter-specific spoiler" });
   comments.push({ ...comments[0], idBinhLuan: 33, idBinhLuanCha: 1, noiDung: "Reply" });
@@ -44,6 +45,8 @@ function harness({ authorized = true, available = true, failRead = false, failCr
         return available && where.slug === "sample-story" ? { idTruyen: 5 } : null;
       },
     },
+    chuong: { async findFirst() { return { idChuong: 12 }; } },
+    likeBinhLuan: { async findMany() { return []; } },
     binhLuan: {
       async findFirst({ where }) {
         assert.equal(where.idTRUYEN, 5);
@@ -75,13 +78,25 @@ function harness({ authorized = true, available = true, failRead = false, failCr
       if (name === "@/lib/server/public-cache") return { revalidatePublicStoryDetails() {} };
       if (name === "@/lib/server/studio-ownership") return { getStoryOwner: async (_tx, id) => { assert.equal(id, 5); return ownerId ? { ownerId, authorId: 2 } : null; } };
       if (name === "@/lib/server/auth-session") return {
-        async requireUser() {
+        async authenticateUser() {
+          return authorized
+            ? { authorized: true, user: { idTaiKhoan: 7, roles: ["user"] } }
+            : { authorized: false };
+        },
+        async requireUser(request) {
+          const origin = request.headers.get("origin");
+          if ((origin && origin !== request.nextUrl.origin) || request.headers.get("sec-fetch-site") === "cross-site") {
+            return { authorized: false, response: NextResponse.json({ success: false }, { status: 403 }) };
+          }
           authCalls += 1;
           return authorized
             ? { authorized: true, user: { idTaiKhoan: 7, roles: ["user"] } }
             : { authorized: false, response: NextResponse.json({ success: false }, { status: 401 }) };
         },
       };
+      if (name === "@/lib/server/rate-limit") {
+        return { checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }), requestIp: () => "127.0.0.1" };
+      }
       return require(name);
     },
   });

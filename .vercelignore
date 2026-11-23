@@ -1,0 +1,14 @@
+/socket-server/
+
+*.sql
+*.zip
+
+/backup/
+/backups/
+**/backup/
+**/backups/
+
+/test/
+/tests/
+**/*.test.*
+**/*.spec.*

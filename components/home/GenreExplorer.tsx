@@ -56,7 +56,7 @@ export default function GenreExplorer() {
 
             {/* Count */}
             <span className="text-[10px] text-slate-400 dark:text-zinc-500">
-              {genre.count.toLocaleString()} truyện
+                {genre.count.toLocaleString("vi-VN")} truyện
             </span>
           </Link>
         ))}

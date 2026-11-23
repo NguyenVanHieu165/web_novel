@@ -29,7 +29,7 @@ function HeroStoryCarousel({ stories }: { stories: HeroStoryData[] }) {
       {activeStory?.anhBia && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center -z-10 overflow-hidden">
           <div
-            className="h-[430px] w-[290px] sm:h-[480px] sm:w-[330px] md:h-[510px] md:w-[350px] rounded-3xl opacity-35 blur-[90px] sm:blur-[130px] transition-all duration-1000 ease-out scale-110"
+            className="h-[430px] w-[290px] scale-105 rounded-3xl opacity-25 blur-[48px] transition-opacity duration-500 ease-out sm:h-[480px] sm:w-[330px] sm:blur-[72px] md:h-[510px] md:w-[350px]"
             style={{
               backgroundImage: `url(${activeStory.anhBia})`,
               backgroundSize: "cover",

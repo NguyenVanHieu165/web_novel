@@ -90,10 +90,5 @@ const getCachedHomeData = unstable_cache(async () => {
 export async function getHomeData() {
   // Hosting adapters may evaluate modules at build time; defer database reads.
   if (process.env.NEXT_PHASE === "phase-production-build") return emptyHomeData();
-  try {
-    return await getCachedHomeData();
-  } catch (error) {
-    console.error("[getHomeData] Error fetching home data:", error);
-    return emptyHomeData();
-  }
+  return getCachedHomeData();
 }

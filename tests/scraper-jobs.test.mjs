@@ -70,11 +70,13 @@ test("first readable chapter uses atomic story creation and never creates metada
   assert.equal(calls, 1); assert.equal((await getJob(locked, 44)).errorCode, "NO_READABLE_CHAPTERS");
 });
 test("checkpoint failure aborts and settles siblings before marking terminal", async t => {
-  const f = await fixture(t, 8); let writes = 0, inFlight = 0;
+  const f = await fixture(t, 8); let writes = 0, inFlight = 0; const systemLogs = [];
   const broken = { ...f.store, async write(record) { if (++writes === 4) throw Error("disk full"); return f.store.write(record); } };
   f.services.storeChapter = async (_db, _id, ref) => { inFlight++; await new Promise(r => setTimeout(r, ref.number === 1 ? 1 : 30)); f.saved.add(ref.number); inFlight--; return true; };
-  const id = await createJob(44, options, broken); await runJob(id, f.services);
+  const id = await createJob(44, options, broken, { requestId: "f1f3327e-bf89-4a88-8120-19bb50f9ae7f", async writeLog(entry) { systemLogs.push(entry); } }); await runJob(id, f.services);
   const result = await getJob(id, 44); assert.equal(result.status, "failed"); assert.equal(result.errorCode, "CHECKPOINT_FAILED"); assert.equal(inFlight, 0);
+  assert.equal(result.requestId, "f1f3327e-bf89-4a88-8120-19bb50f9ae7f");
+  assert.ok(systemLogs.some(entry => entry.code === "CHECKPOINT_FAILED" && entry.jobId === id && entry.details.operation === "write"));
   const count = f.saved.size; await new Promise(r => setTimeout(r, 40)); assert.equal(f.saved.size, count);
 });
 test("fresh requests also respect durable source cooldown instead of resetting rate limits", async t => {

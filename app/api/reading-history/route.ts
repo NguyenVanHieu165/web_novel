@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/server/auth-session";
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).max(100_000).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
+  storySlug: z.string().trim().min(1).max(300).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -16,14 +17,15 @@ export async function GET(request: NextRequest) {
     const parsed = querySchema.safeParse({
       page: request.nextUrl.searchParams.get("page") ?? undefined,
       limit: request.nextUrl.searchParams.get("limit") ?? undefined,
+      storySlug: request.nextUrl.searchParams.get("storySlug") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json({ success: false, message: "Tham số lịch sử đọc không hợp lệ" }, { status: 400 });
     }
-    const { page, limit } = parsed.data;
+    const { page, limit, storySlug } = parsed.data;
     const where = {
       idTaiKhoan: auth.user.idTaiKhoan,
-      chuong: { isDeleted: false, truyen: { isDeleted: false } },
+      chuong: { isDeleted: false, truyen: { isDeleted: false, ...(storySlug ? { slug: storySlug } : {}) } },
     };
     const [rows, total] = await Promise.all([
       prisma.tienDoDoc.findMany({
@@ -38,6 +40,7 @@ export async function GET(request: NextRequest) {
           chuong: {
             select: {
               idChuong: true,
+              chuongSo: true,
               tieuDeChuong: true,
               slug: true,
               truyen: { select: { tenTruyen: true, slug: true, anhBia: true } },
@@ -51,6 +54,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: rows.map((row) => ({
         chapterId: row.chuong.idChuong,
+        chapterNumber: Number(row.chuong.chuongSo),
         chapterTitle: row.chuong.tieuDeChuong,
         chapterSlug: row.chuong.slug,
         storyTitle: row.chuong.truyen.tenTruyen,

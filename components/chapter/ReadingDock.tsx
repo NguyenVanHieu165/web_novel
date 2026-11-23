@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, Headphones, List, Settings2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, Headphones, House, List, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ChapterDetailData } from "@/lib/mappers/chapter.mapper";
 import { measureReadingProgress } from "@/lib/reader-progress-state";
@@ -14,7 +14,8 @@ import { AudioPlayerSkeleton } from "@/components/common/InteractionSkeleton";
 
 const ChapterAudioPlayer = dynamic(() => import("@/components/reading/ChapterAudioPlayer"), { ssr: false, loading: AudioPlayerSkeleton });
 
-const control = "grid size-10 shrink-0 place-items-center rounded-full transition-colors hover:bg-[var(--reader-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--reader-accent)] disabled:cursor-not-allowed disabled:opacity-30 md:size-11";
+const control = "grid size-9 shrink-0 place-items-center rounded-full transition-colors hover:bg-[var(--reader-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--reader-accent)] disabled:cursor-not-allowed disabled:opacity-30 md:size-11";
+const controlIcon = "size-4 md:size-5";
 const surface = "border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-text)] shadow-lg shadow-black/10";
 
 export default function ReadingDock({ data, drawerTriggerRef, settingsTriggerRef, panel, onPanelChange }: {
@@ -25,11 +26,9 @@ export default function ReadingDock({ data, drawerTriggerRef, settingsTriggerRef
   onPanelChange: (panel: "contents" | "settings" | "speech" | null) => void;
 }) {
   const { chapter, story, prevChapter, nextChapter, access } = data;
-  const [collapsed, setCollapsed] = useState(false);
   const [bookmark, setBookmark] = useState<number | null>(null);
   const percentRef = useRef<HTMLOutputElement>(null);
   const storageKey = `web-novel:bookmark:v1:${chapter.idChuong}`;
-  const toggleRef = useRef<HTMLButtonElement>(null);
   const speechTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -106,26 +105,23 @@ export default function ReadingDock({ data, drawerTriggerRef, settingsTriggerRef
         <span>Đã lưu một đoạn trong chương này.</span>
         <button type="button" onClick={resume} className="min-h-11 rounded-lg px-3 font-semibold hover:underline focus-visible:outline-2">Tới đoạn đã lưu</button>
       </aside>}
-      <div className={`fixed inset-x-2 bottom-[max(.75rem,env(safe-area-inset-bottom))] z-40 flex justify-center transition-transform duration-300 motion-reduce:transition-none md:inset-x-auto md:bottom-auto md:right-4 md:top-1/2 md:max-h-[calc(100dvh-2rem)] md:-translate-y-1/2 md:overflow-y-auto md:rounded-full ${panel || collapsed ? "" : "max-md:group-data-[reader-chrome=hidden]/reader-chrome:translate-y-[calc(100%+2rem)] max-md:focus-within:!translate-y-0"}`}>
-        <div className={`flex max-w-full items-start gap-1 md:flex-col md:items-center md:gap-3 ${collapsed ? "ml-auto" : ""}`}>
-          <nav aria-label="Công cụ đọc" className={`flex max-w-full flex-wrap items-center justify-center rounded-3xl p-1 md:flex-col md:flex-nowrap md:rounded-full md:p-1.5 ${surface}`}>
-            <button ref={toggleRef} type="button" aria-expanded={!collapsed} aria-label={collapsed ? "Mở rộng công cụ đọc" : "Thu gọn công cụ đọc"} className={control} onClick={() => { setCollapsed(!collapsed); toggleRef.current?.focus(); }}>
-              {collapsed ? <ChevronLeft className="size-5" aria-hidden="true" /> : <ChevronRight className="size-5" aria-hidden="true" />}
-            </button>
-            {!collapsed && <>
-              <button ref={drawerTriggerRef} type="button" aria-label="Mục lục chương" aria-haspopup="dialog" aria-expanded={panel === "contents"} className={control} onClick={() => onPanelChange("contents")}><List className="size-5" aria-hidden="true" /></button>
-              <button ref={settingsTriggerRef} type="button" aria-label="Cài đặt đọc" aria-haspopup="dialog" aria-expanded={panel === "settings"} className={control} onClick={() => onPanelChange("settings")}><Settings2 className="size-5" aria-hidden="true" /></button>
-              <button ref={speechTriggerRef} type="button" disabled={!access.canRead} aria-label="Nghe đọc truyện" aria-expanded={panel === "speech"} className={control} onClick={() => onPanelChange(panel === "speech" ? null : "speech")}><Headphones className="size-5" aria-hidden="true" /></button>
-              {prevChapter ? <ReaderNavigationLink href={getChapterPath(story.slug, prevChapter.slug)} aria-label="Chương trước" title={prevChapter.tieuDeChuong} className={control}><ChevronLeft className="size-5" aria-hidden="true" /></ReaderNavigationLink> : <button type="button" disabled aria-label="Đang ở chương đầu" className={control}><ChevronLeft className="size-5" aria-hidden="true" /></button>}
-              {nextChapter ? <ReaderNavigationLink href={getChapterPath(story.slug, nextChapter.slug)} aria-label="Chương sau" title={nextChapter.tieuDeChuong} className={control}><ChevronRight className="size-5" aria-hidden="true" /></ReaderNavigationLink> : <button type="button" disabled aria-label="Đang ở chương cuối" className={control}><ChevronRight className="size-5" aria-hidden="true" /></button>}
-              <div className="flex w-full items-center justify-center border-t border-[var(--reader-border)] md:w-auto md:flex-col">
-                <button type="button" aria-label="Lên đầu chương" className={control} onClick={() => scrollTo(false)}><ArrowUp className="size-5" aria-hidden="true" /></button>
-                <output ref={percentRef} aria-label="Tiến độ đọc chương" aria-live="off" className="min-w-11 py-1 text-center text-xs font-semibold tabular-nums">0%</output>
-                <button type="button" aria-label="Xuống cuối chương" className={control} onClick={() => scrollTo(true)}><ArrowDown className="size-5" aria-hidden="true" /></button>
-              </div>
-            </>}
+      <div className={`fixed inset-x-0 bottom-0 z-40 flex justify-center transition-transform duration-300 motion-reduce:transition-none md:inset-x-auto md:bottom-auto md:right-4 md:top-1/2 md:max-h-[calc(100dvh-2rem)] md:-translate-y-1/2 md:overflow-y-auto md:rounded-full ${panel ? "" : "max-md:group-data-[reader-chrome=hidden]/reader-chrome:translate-y-[calc(100%+2rem)] max-md:focus-within:!translate-y-0"}`}>
+        <div className="flex w-full items-stretch gap-0 md:w-auto md:flex-col md:items-center md:gap-3">
+          <nav aria-label="Công cụ đọc" className={`flex w-full max-w-full flex-wrap items-center justify-around rounded-none p-1 pb-[max(.25rem,env(safe-area-inset-bottom))] md:w-auto md:flex-col md:flex-nowrap md:justify-center md:rounded-full md:p-1.5 ${surface}`}>
+            <ReaderNavigationLink href="/" aria-label="Về trang chủ" title="Trang chủ" className={control}><House className={controlIcon} aria-hidden="true" /></ReaderNavigationLink>
+            <button ref={drawerTriggerRef} type="button" aria-label="Mục lục chương" aria-haspopup="dialog" aria-expanded={panel === "contents"} className={control} onClick={() => onPanelChange("contents")}><List className={controlIcon} aria-hidden="true" /></button>
+            <button ref={settingsTriggerRef} type="button" aria-label="Cài đặt đọc" aria-haspopup="dialog" aria-expanded={panel === "settings"} className={control} onClick={() => onPanelChange("settings")}><Settings2 className={controlIcon} aria-hidden="true" /></button>
+            <button ref={speechTriggerRef} type="button" disabled={!access.canRead} aria-label="Nghe đọc truyện" aria-expanded={panel === "speech"} className={control} onClick={() => onPanelChange(panel === "speech" ? null : "speech")}><Headphones className={controlIcon} aria-hidden="true" /></button>
+            {prevChapter ? <ReaderNavigationLink href={getChapterPath(story.slug, prevChapter.slug)} aria-label="Chương trước" title={prevChapter.tieuDeChuong} className={control}><ChevronLeft className={controlIcon} aria-hidden="true" /></ReaderNavigationLink> : <button type="button" disabled aria-label="Đang ở chương đầu" className={control}><ChevronLeft className={controlIcon} aria-hidden="true" /></button>}
+            {nextChapter ? <ReaderNavigationLink href={getChapterPath(story.slug, nextChapter.slug)} aria-label="Chương sau" title={nextChapter.tieuDeChuong} className={control}><ChevronRight className={controlIcon} aria-hidden="true" /></ReaderNavigationLink> : <button type="button" disabled aria-label="Đang ở chương cuối" className={control}><ChevronRight className={controlIcon} aria-hidden="true" /></button>}
+            <button type="button" disabled={!access.canRead} aria-label="Đánh dấu đoạn đang đọc" title="Đánh dấu đoạn đang đọc" className={`${control} md:hidden`} onClick={saveBookmark}><Bookmark className={controlIcon} aria-hidden="true" /></button>
+            <div className="flex w-full items-center justify-center border-t border-[var(--reader-border)] md:w-auto md:flex-col">
+              <button type="button" aria-label="Lên đầu chương" className={control} onClick={() => scrollTo(false)}><ArrowUp className={controlIcon} aria-hidden="true" /></button>
+              <output ref={percentRef} aria-label="Tiến độ đọc chương" aria-live="off" className="min-w-11 py-1 text-center text-xs font-semibold tabular-nums">0%</output>
+              <button type="button" aria-label="Xuống cuối chương" className={control} onClick={() => scrollTo(true)}><ArrowDown className={controlIcon} aria-hidden="true" /></button>
+            </div>
           </nav>
-          {!collapsed && <button type="button" disabled={!access.canRead} aria-label="Đánh dấu đoạn đang đọc" title="Đánh dấu đoạn đang đọc" className={`${control} ${surface}`} onClick={saveBookmark}><Bookmark className="size-5" aria-hidden="true" /></button>}
+          <button type="button" disabled={!access.canRead} aria-label="Đánh dấu đoạn đang đọc" title="Đánh dấu đoạn đang đọc" className={`${control} ${surface} max-md:hidden`} onClick={saveBookmark}><Bookmark className={controlIcon} aria-hidden="true" /></button>
         </div>
       </div>
       {panel === "speech" && access.canRead && <ChapterAudioPlayer data={data} onClose={closeSpeech} />}

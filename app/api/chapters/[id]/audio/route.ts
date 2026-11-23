@@ -58,15 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!content?.noiDung?.trim()) return errorResponse("Nội dung chương đang được cập nhật.", 404);
     if (content.noiDung.length > 200_000) return errorResponse("Chương quá dài để tạo audio trong một lần.", 422);
     if (!stream) {
-      const rate = checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
-      if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { ...privateHeaders, "Retry-After": String(rate.retryAfter) } });
-    }
-    if (!stream) {
-      const rate = checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
-      if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { ...privateHeaders, "Retry-After": String(rate.retryAfter) } });
-    }
-    if (!stream) {
-      const rate = checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
+      const rate = await checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
       if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { ...privateHeaders, "Retry-After": String(rate.retryAfter) } });
     }
     const result = await getChapterAudio({
@@ -88,8 +80,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       "Content-Disposition": 'inline; filename="chapter-' + id + "-" + voice + '.mp3"',
     };
     if (range.partial) headers["Content-Range"] = "bytes " + range.start + "-" + range.end + "/" + result.bytes;
-    const body = request.method === "HEAD" ? null :
-      Readable.toWeb(createReadStream(result.filePath, { start: range.start, end: range.end })) as ReadableStream<Uint8Array>;
+    let body: ReadableStream<Uint8Array> | null = null;
+    if (request.method !== "HEAD") {
+      if (result.remoteUrl) {
+        const upstream = await fetch(result.remoteUrl, {
+          headers: range.partial ? { Range: `bytes=${range.start}-${range.end}` } : undefined,
+          cache: "no-store",
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!upstream.ok || !upstream.body || (range.partial && upstream.status !== 206)) {
+          throw new Error("Cloudinary audio stream failed");
+        }
+        body = upstream.body;
+      } else if (result.filePath) {
+        body = Readable.toWeb(createReadStream(result.filePath, { start: range.start, end: range.end })) as ReadableStream<Uint8Array>;
+      } else {
+        throw new Error("Audio storage result is missing");
+      }
+    }
     return new NextResponse(body, { status: range.partial ? 206 : 200, headers });
   } catch (error) {
     if (error instanceof AudioBusyError) {

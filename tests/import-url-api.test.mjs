@@ -22,6 +22,8 @@ function fixture({ authorized = true, owner = 7, networkError, resumeError, read
     vm.runInNewContext(code, { exports: record.exports, module: record, require(name) {
       if (name === "next/server") return { NextResponse, after: work => deferred.push(work) };
       if (name === "@/lib/server/public-cache") return { revalidatePublicStories: (...args) => invalidations.push(args) };
+      if (name === "@/lib/api") return { getRequestId: () => "11111111-1111-4111-8111-111111111111" };
+      if (name === "@/lib/server/system-log") return { writeSystemLog: async entry => calls.push(["system-log", entry]) };
       if (name === "@/lib/server/auth-session") return { requireAdmin: async () => authorized ? { authorized: true, user: { idTaiKhoan: owner } } : { authorized: false, response: NextResponse.json({ message: "Unauthorized" }, { status: 403 }) } };
       if (name === "@/lib/scraper/types") return { importUrlSchema };
       if (name === "@/lib/scraper/errors") return { importErrorCode, importErrorMessage };

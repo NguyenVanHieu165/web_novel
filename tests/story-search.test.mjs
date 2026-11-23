@@ -201,7 +201,7 @@ test("story queries select card metadata, never chapter content, and use stable 
   assert.equal(app.queries[0].select.chuong, undefined);
   assert.equal(app.queries[0].select.truyenTheLoai.select.theLoai.select.tenTheLoai, true);
   assert.deepEqual(app.queries[0].where.truyenTheLoai, { some: { idTheLoai: 7 } });
-  assert.equal(app.queries[0].where.OR[3].truyen_tac_gia_dich.some.tac_gia_dich.ten.contains, "name");
+  assert.equal(app.queries[0].where.OR[1].truyen_tac_gia_dich.some.tac_gia_dich.ten.contains, "name");
 });
 
 test("chapter count ranges have correct strict boundaries and no overlapping endpoints", async () => {

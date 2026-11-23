@@ -162,6 +162,7 @@ test("Vercel job creation uses the database store without initializing a filesys
     "./errors": {}, "./media": {}, "./storage": {},
     "./checkpoints": { checkpointStore() { throw Error("EROFS"); } },
     "./database-checkpoints": app.api, "./types": app.types,
+    "../server/system-log-sanitizer": { safeErrorDiagnostic: error => ({ name: error?.name || "Error" }) },
   }, { Buffer, structuredClone, process: { env: { VERCEL: "1" } } });
   const id = await jobs.createJob(7, record().options);
   assert.equal((await jobs.getJob(id, 7)).status, "queued");

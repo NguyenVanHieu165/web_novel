@@ -1,24 +1,18 @@
 import "server-only";
 
-type Entry = { count: number; expiresAt: number };
-const entries = new Map<string, Entry>();
-let lastCleanup = 0;
+import { prisma } from "@/lib/prisma";
+import { checkRateLimitWithDatabase, hashRateLimitKey, type RateLimitResult } from "@/lib/server/rate-limit-core";
 
-export function checkRateLimit(key: string, limit: number, windowMs: number, now = Date.now()) {
-  if (now - lastCleanup >= 60_000) {
-    for (const [name, entry] of entries) if (entry.expiresAt <= now) entries.delete(name);
-    lastCleanup = now;
-  }
-  const current = entries.get(key);
-  if (!current || current.expiresAt <= now) {
-    entries.set(key, { count: 1, expiresAt: now + windowMs });
-    return { allowed: true, retryAfter: 0 };
-  }
-  if (current.count >= limit) {
-    return { allowed: false, retryAfter: Math.max(1, Math.ceil((current.expiresAt - now) / 1000)) };
-  }
-  current.count++;
-  return { allowed: true, retryAfter: 0 };
+export { hashRateLimitKey };
+export type { RateLimitResult };
+
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+  now = Date.now(),
+): Promise<RateLimitResult> {
+  return checkRateLimitWithDatabase(prisma, key, limit, windowMs, now);
 }
 
 export function requestIp(request: Request) {

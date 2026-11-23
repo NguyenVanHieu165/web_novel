@@ -6,7 +6,7 @@ import { checkRateLimit, requestIp } from "@/lib/server/rate-limit";
 import { setSessionCookie } from "@/lib/server/auth-cookie";
 
 export async function POST(req: NextRequest) {
-  const rate = checkRateLimit(`login:${requestIp(req)}`, 10, 5 * 60_000);
+  const rate = await checkRateLimit(`login:${requestIp(req)}`, 10, 5 * 60_000);
   if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
   try {
     const body = await req.json();

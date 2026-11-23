@@ -65,6 +65,7 @@ test("admin writes require admin authorization, same origin and notification own
 
 function uiHarness(file, imports = {}, globals = {}) {
   const states = [], slots = [], effects = [], bus = new EventTarget();
+  bus.location = { origin: "http://localhost" };
   let index = 0, dirty = false;
   const same = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
   const react = {

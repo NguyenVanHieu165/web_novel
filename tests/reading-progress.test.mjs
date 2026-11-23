@@ -82,7 +82,7 @@ function harness({ authorized = true, free = true, purchased = false, roles = ["
     viTriDoc: 300,
     phanTramDoc: "32.50",
     ngayDocCuoi: new Date("2026-11-19T00:00:00Z"),
-    chuong: { idChuong: 11, tieuDeChuong: "Chương mười một", slug: "chuong-11", truyen: { tenTruyen: "Tác phẩm", slug: "tac-pham", anhBia: "/cover.webp" } },
+    chuong: { idChuong: 11, chuongSo: "11.0", tieuDeChuong: "Chương mười một", slug: "chuong-11", truyen: { tenTruyen: "Tác phẩm", slug: "tac-pham", anhBia: "/cover.webp" } },
   };
   const replacements = {
     "@/lib/prisma": { prisma },
@@ -234,12 +234,22 @@ test("history returns only own bounded metadata with numeric progress", async ()
   assert.equal(result.status, 200);
   assert.equal(result.cache, "private, no-store");
   assert.equal(result.data.data[0].percent, 32.5);
+  assert.equal(result.data.data[0].chapterNumber, 11);
   assert.equal(result.data.data[0].storySlug, "tac-pham");
   assert.equal(result.data.data[0].storyCover, "/cover.webp");
   assert.equal("noiDung" in result.data.data[0], false);
   assert.equal(app.lastRead.history.where.idTaiKhoan, 7);
   assert.equal(app.lastRead.history.take, 10);
   assert.equal(app.lastRead.history.skip, 10);
+  assert.equal(app.lastRead.history.where.chuong.truyen.slug, undefined);
+});
+
+test("history can target one story for continue-reading reconciliation", async () => {
+  const app = harness();
+  const result = await app.history("?storySlug=tac-pham&limit=1");
+  assert.equal(result.status, 200);
+  assert.equal(app.lastRead.history.take, 1);
+  assert.equal(app.lastRead.history.where.chuong.truyen.slug, "tac-pham");
 });
 
 test("invalid history pages and excessive page sizes fail without an unbounded query", async () => {

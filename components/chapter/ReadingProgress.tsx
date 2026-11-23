@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { writeContinueReading } from "@/lib/continue-reading-state";
 import { progressResponseSchema } from "@/lib/reading-progress";
 import {
   classifyReaderScroll, createProgressSaveQueue, measureReadingProgress, progressScope,
@@ -11,13 +12,22 @@ import {
 
 interface ReaderLeavingDetail { chapterId?: number; waitUntil?: (promise: Promise<void>) => void }
 interface ProgressActions { resume: (point: ProgressPoint) => void; restart: () => void; retry: () => void }
-
-export default function ReadingProgress({ chapterId }: { chapterId: number }) {
-  const { user } = useAuth();
-  return <ChapterProgress key={`${chapterId}:${user?.idTaiKhoan ?? "guest"}`} chapterId={chapterId} accountId={user?.idTaiKhoan} />;
+interface ReadingProgressProps {
+  chapterId: number;
+  storySlug: string;
+  chapterNumber: number;
+  chapterSlug: string;
+  chapterTitle: string;
 }
 
-function ChapterProgress({ chapterId, accountId }: { chapterId: number; accountId?: number }) {
+export default function ReadingProgress(props: ReadingProgressProps) {
+  const { user } = useAuth();
+  return <ChapterProgress key={`${props.chapterId}:${user?.idTaiKhoan ?? "guest"}`} {...props} accountId={user?.idTaiKhoan} />;
+}
+
+function ChapterProgress({
+  chapterId, storySlug, chapterNumber, chapterSlug, chapterTitle, accountId,
+}: ReadingProgressProps & { accountId?: number }) {
   const barRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<ProgressActions | null>(null);
   const [resume, setResume] = useState<ProgressPoint | null>(null);
@@ -55,6 +65,10 @@ function ChapterProgress({ chapterId, accountId }: { chapterId: number; accountI
     const persist = (point: ProgressPoint, pending: boolean) => {
       local = { ...point, scope, chapterId, pending, updatedAt: Date.now() };
       writeLocalProgress(storage, local);
+      writeContinueReading(storage, {
+        storySlug, chapterId, chapterNumber, chapterSlug, chapterTitle,
+        position: local.position, percent: local.percent, updatedAt: local.updatedAt,
+      });
     };
     const queue = createProgressSaveQueue({
       persist,
@@ -147,12 +161,8 @@ function ChapterProgress({ chapterId, accountId }: { chapterId: number; accountI
         serverLoaded = true;
         const candidate = selectResumeProgress(data, local);
         if (!interacted && candidate && candidate.percent > 0) setResume(candidate);
-        if (!interacted && candidate && "pending" in candidate && candidate.pending && local) queue.enqueue(local);
-        if (!interacted && candidate && !candidate.pending && data.updatedAt !== null) {
-          local = { position: candidate.position, percent: candidate.percent, scope, chapterId, pending: false, updatedAt: Date.parse(data.updatedAt) };
-          writeLocalProgress(storage, local);
-        }
-        if (data.updatedAt === null && !candidate && !interacted) record(measure());
+        if (!interacted && candidate) queue.enqueue(candidate);
+        if (!interacted && !candidate) record(measure());
         await flush();
       } catch (err) {
         if (!active || controller.signal.aborted) return;
@@ -191,7 +201,12 @@ function ChapterProgress({ chapterId, accountId }: { chapterId: number; accountI
       },
       retry: () => { if (serverLoaded || queue.hasPending()) void flush(); else void loadServerProgress(); },
     };
-    measure();
+    const measuredPoint = measure();
+    const openedPoint = local ?? measuredPoint;
+    writeContinueReading(storage, {
+      storySlug, chapterId, chapterNumber, chapterSlug, chapterTitle,
+      position: openedPoint.position, percent: openedPoint.percent, updatedAt: Date.now(),
+    });
     void loadServerProgress();
     const interval = window.setInterval(() => { void flush(); }, 5000);
     const localInterval = window.setInterval(captureUserScroll, 250);
@@ -234,7 +249,7 @@ function ChapterProgress({ chapterId, accountId }: { chapterId: number; accountI
       document.removeEventListener("click", onLinkClick, { capture: true });
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [chapterId, accountId]);
+  }, [chapterId, storySlug, chapterNumber, chapterSlug, chapterTitle, accountId]);
 
   return (
     <>

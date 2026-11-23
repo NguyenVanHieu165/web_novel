@@ -16,6 +16,7 @@ const modules = {
   "@/lib/server/reader-wallet": "lib/server/reader-wallet.ts",
   "@/schemas/reader-account.schema": "schemas/reader-account.schema.ts",
   "@/schemas/reader-wallet.schema": "schemas/reader-wallet.schema.ts",
+  "./auth.schema": "schemas/auth.schema.ts",
   profile: "app/api/profile/route.ts",
   password: "app/api/profile/password/route.ts",
   topUp: "app/api/wallet/top-up/route.ts",
@@ -33,6 +34,7 @@ function loadHandlers(prisma, { idTaiKhoan = 7, environment = "development", sig
   function load(name) {
     if (name === "server-only") return {};
     if (name === "@/lib/prisma") return { prisma };
+    if (name === "@/lib/cloudinary") return { uploadImageToCloudinary: async (value) => value };
     if (name === "@/lib/server/auth-session") {
       return {
         requireUser: async () => signedIn

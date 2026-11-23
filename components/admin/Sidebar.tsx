@@ -19,6 +19,7 @@ import {
   Bell,
   Loader2,
   ShieldCheck,
+  ScrollText,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -142,6 +143,7 @@ const Sidebar = () => {
     { name: "Người dùng", href: "/admin/users", icon: Users },
     { name: "Phân quyền", href: "/admin/permissions", icon: ShieldCheck },
     { name: "Thông báo", href: "/admin/notifications", icon: Bell },
+    { name: "Nhật ký hệ thống", href: "/admin/system-logs", icon: ScrollText },
     { name: "Cài đặt", href: "/admin/settings", icon: Settings },
   ];
 
