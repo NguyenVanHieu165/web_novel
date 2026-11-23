@@ -5,6 +5,7 @@ import { revalidatePublicStoryDetails } from "@/lib/server/public-cache";
 import { authenticateUser, requireUser } from "@/lib/server/auth-session";
 import { getStoryOwner } from "@/lib/server/studio-ownership";
 import { checkRateLimit, requestIp } from "@/lib/server/rate-limit";
+import { isSameOriginRequest } from "@/lib/server/same-origin";
 
 const paramsSchema = z.object({ slug: z.string().trim().min(1).max(300) });
 const querySchema = z.object({ page: z.coerce.number().int().min(1).max(1_000_000).default(1), limit: z.coerce.number().int().min(1).max(50).default(15), replyTo: z.coerce.number().int().positive().optional(), chapterId: z.coerce.number().int().positive().optional() });
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest, { params }: Context) {
 }
 
 export async function POST(request: NextRequest, { params }: Context) {
+  if (!isSameOriginRequest(request)) return NextResponse.json({ success: false, message: "Yêu cầu bình luận không hợp lệ." }, { status: 403 });
   const auth = await requireUser(request); if (!auth.authorized) return auth.response;
   const rate = await checkRateLimit(`comment:${auth.user.idTaiKhoan}:${requestIp(request)}`, 8, 60_000); if (!rate.allowed) return NextResponse.json({ success: false, message: "Bạn gửi bình luận quá nhanh." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
   const parsedParams = paramsSchema.safeParse(await params), body = bodySchema.safeParse(await request.json().catch(() => null));

@@ -8,6 +8,7 @@ import { mapChapterDetail } from "@/lib/mappers/chapter.mapper";
 import ReaderView from "@/components/chapter/ReaderView";
 import { normalizeVietnameseText } from "@/lib/vietnamese-text";
 import CommentSection from "@/components/comments/LazyCommentSection";
+import { getChapterPath } from "@/lib/reader-navigation";
 
 interface PageProps {
   params: Promise<{
@@ -64,5 +65,5 @@ export default async function ChapterReaderPage({ params }: PageProps) {
     });
   }
 
-  return <><ReaderView key={data.chapter.idChuong} data={data} /><div className="mx-auto max-w-3xl px-4 pb-12"><CommentSection storySlug={data.story.slug} chapterId={data.chapter.idChuong} /></div></>;
+  return <><ReaderView key={data.chapter.idChuong} data={data} /><div className="mx-auto max-w-3xl px-4 pb-12"><CommentSection storySlug={data.story.slug} chapterId={data.chapter.idChuong} redirectPath={getChapterPath(data.story.slug, data.chapter.slug)} /></div></>;
 }

@@ -31,6 +31,18 @@ let activeJobs = 0;
 const maxAudioBytes = 80 * 1024 * 1024;
 type CloudinaryConfig = { cloudName: string; apiKey: string; apiSecret: string };
 
+function prepareChapterAudio(input: Pick<ChapterAudioInput, "chapterId" | "title" | "content" | "voice">) {
+  const text = prepareStoryTextForSpeech(input.content, input.title, input.voice);
+  const fingerprint = createHash("sha256")
+    .update(JSON.stringify([2, input.chapterId, storyVoices[input.voice], text]))
+    .digest("hex");
+  return { text, fingerprint };
+}
+
+export function chapterAudioFingerprint(input: Pick<ChapterAudioInput, "chapterId" | "title" | "content" | "voice">): string {
+  return prepareChapterAudio(input).fingerprint;
+}
+
 function safeStorySlug(storySlug: string): string {
   const normalized = storySlug.normalize("NFC");
   const safe = normalized.replace(/[^\p{L}\p{N}_-]/gu, "-").slice(0, 120) || "truyen";
@@ -197,8 +209,7 @@ async function synthesize(text: string, voice: StoryVoice): Promise<Buffer> {
 
 export async function getChapterAudio(input: ChapterAudioInput): Promise<CachedChapterAudio> {
   if (!input.content.trim() || input.content.length > 200_000) throw new Error("Invalid chapter audio length");
-  const text = prepareStoryTextForSpeech(input.content, input.title, input.voice);
-  const fingerprint = createHash("sha256").update(JSON.stringify([2, input.chapterId, storyVoices[input.voice], text])).digest("hex");
+  const { text, fingerprint } = prepareChapterAudio(input);
   const useCloudinary = process.env.VERCEL === "1";
   const publicId = useCloudinary ? cloudinaryPublicId(input, fingerprint) : null;
   const filePath = cachePath(input);

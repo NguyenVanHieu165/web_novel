@@ -1,0 +1,39 @@
+{
+  "rules": [
+    {
+      "path": "app/api/**/*.ts",
+      "rule": "Verify Zod or equivalent runtime validation, server-side authentication and resource authorization, same-origin protection for mutations, safe error responses, bounded queries, and atomic transactions for wallet or ownership changes. Reject client-supplied identity, price, balance, and ownership fields.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "lib/prisma.ts",
+      "rule": "Verify Prisma client reuse, adapter configuration, secret handling, server-only boundaries, and production-safe logging. Do not recommend changing the database provider or connection configuration without concrete evidence.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "lib/server/**/*.ts",
+      "rule": "Check authentication and authorization boundaries, same-origin mutation protection, ownership scoping, sensitive error redaction, rate-limit key safety, transaction boundaries, concurrency behavior, and bounded database access.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "rule": "Check that uniqueness constraints, relations, indexes, decimal and money fields support the actual query and transaction patterns. Do not propose migrations or provider changes without concrete query evidence.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "components/chapter/**/*.tsx",
+      "rule": "Preserve all --reader-* theme variables and reader behavior. Check keyboard navigation, visible focus, aria labels for icon controls, dialog focus restoration, reduced motion, safe-area layouts, and avoid rebuilding the chapter text tree when appearance settings change.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "components/reading/**/*.tsx",
+      "rule": "Check accessible media controls, cancellation and cleanup, stale async response protection, Media Session integration, theme-variable inheritance through portals, and unnecessary React re-renders.",
+      "merge_system_rule": true
+    },
+    {
+      "path": "components/**/*.tsx",
+      "rule": "Prefer existing components/ui and components/shared primitives. Check semantic HTML, keyboard access, visible focus, stable component identity, Server Component boundaries, and avoid unnecessary client state or memoization.",
+      "merge_system_rule": true
+    }
+  ]
+}

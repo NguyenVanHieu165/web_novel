@@ -8,9 +8,21 @@ import ts from "typescript";
 const require = createRequire(import.meta.url);
 const { NextRequest, NextResponse } = require("next/server");
 const source = await readFile(new URL("../app/api/truyen/[slug]/comments/route.ts", import.meta.url), "utf8");
-const compiled = ts.transpileModule(source, {
+const compile = (input) => ts.transpileModule(input, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
+const compiled = compile(source);
+const sameOriginSource = await readFile(new URL("../lib/server/same-origin.ts", import.meta.url), "utf8");
+const sameOriginModule = { exports: {} };
+vm.runInNewContext(compile(sameOriginSource), {
+  module: sameOriginModule,
+  exports: sameOriginModule.exports,
+  require(name) { if (name === "server-only") return {}; return require(name); },
+});
+const protectedMutationSources = {
+  DELETE: compile(await readFile(new URL("../app/api/comments/[id]/route.ts", import.meta.url), "utf8")),
+  LIKE: compile(await readFile(new URL("../app/api/comments/[id]/like/route.ts", import.meta.url), "utf8")),
+};
 
 function harness({ authorized = true, available = true, failRead = false, failCreate = false, ownerId = null } = {}) {
   const comments = Array.from({ length: 31 }, (_, index) => ({
@@ -77,17 +89,14 @@ function harness({ authorized = true, available = true, failRead = false, failCr
       if (name === "@/lib/prisma") return { prisma };
       if (name === "@/lib/server/public-cache") return { revalidatePublicStoryDetails() {} };
       if (name === "@/lib/server/studio-ownership") return { getStoryOwner: async (_tx, id) => { assert.equal(id, 5); return ownerId ? { ownerId, authorId: 2 } : null; } };
+      if (name === "@/lib/server/same-origin") return sameOriginModule.exports;
       if (name === "@/lib/server/auth-session") return {
         async authenticateUser() {
           return authorized
             ? { authorized: true, user: { idTaiKhoan: 7, roles: ["user"] } }
             : { authorized: false };
         },
-        async requireUser(request) {
-          const origin = request.headers.get("origin");
-          if ((origin && origin !== request.nextUrl.origin) || request.headers.get("sec-fetch-site") === "cross-site") {
-            return { authorized: false, response: NextResponse.json({ success: false }, { status: 403 }) };
-          }
+        async requireUser() {
           authCalls += 1;
           return authorized
             ? { authorized: true, user: { idTaiKhoan: 7, roles: ["user"] } }
@@ -112,6 +121,35 @@ function harness({ authorized = true, available = true, failRead = false, failCr
       });
       const response = await routeModule.exports[method](request, { params: Promise.resolve({ slug }) });
       return { status: response.status, body: await response.json() };
+    },
+  };
+}
+
+function protectedMutationHarness(compiledRoute, method, url) {
+  let authCalls = 0;
+  const routeModule = { exports: {} };
+  vm.runInNewContext(compiledRoute, {
+    module: routeModule,
+    exports: routeModule.exports,
+    console: { error() {} },
+    require(name) {
+      if (name === "@/lib/prisma") return { prisma: {} };
+      if (name === "@/lib/server/public-cache") return { revalidatePublicStoryDetails() {} };
+      if (name === "@/lib/server/studio-ownership") return { getStoryOwner: async () => null };
+      if (name === "@/lib/server/same-origin") return sameOriginModule.exports;
+      if (name === "@/lib/server/auth-session") return {
+        async requireUser() {
+          authCalls += 1;
+          return { authorized: false, response: NextResponse.json({ success: false }, { status: 401 }) };
+        },
+      };
+      return require(name);
+    },
+  });
+  return {
+    get authCalls() { return authCalls; },
+    async request(headers) {
+      return routeModule.exports[method](new NextRequest(url, { method, headers }), { params: Promise.resolve({ id: "1" }) });
     },
   };
 }
@@ -151,6 +189,19 @@ test("cross-origin posting is rejected before authentication or creation", async
     assert.equal((await app.request({ method: "POST", headers })).status, 403);
     assert.equal(app.authCalls, 0);
     assert.equal(app.createdData, undefined);
+  }
+});
+
+test("delete and like routes use the real same-origin guard before authentication", async () => {
+  for (const headers of [{ origin: "https://attacker.example" }, { "sec-fetch-site": "cross-site" }]) {
+    for (const [compiledRoute, method, url] of [
+      [protectedMutationSources.DELETE, "DELETE", "https://webnovel.example/api/comments/1"],
+      [protectedMutationSources.LIKE, "POST", "https://webnovel.example/api/comments/1/like"],
+    ]) {
+      const app = protectedMutationHarness(compiledRoute, method, url);
+      assert.equal((await app.request(headers)).status, 403);
+      assert.equal(app.authCalls, 0);
+    }
   }
 });
 

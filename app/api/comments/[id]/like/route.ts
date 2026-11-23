@@ -3,9 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicStoryDetails } from "@/lib/server/public-cache";
 import { requireUser } from "@/lib/server/auth-session";
+import { isSameOriginRequest } from "@/lib/server/same-origin";
 
 const paramsSchema = z.object({ id: z.coerce.number().int().positive() });
 export async function POST(request: NextRequest, { params }: { params: Promise<unknown> }) {
+  if (!isSameOriginRequest(request)) return NextResponse.json({ success: false, message: "Yêu cầu thích bình luận không hợp lệ." }, { status: 403 });
   const auth = await requireUser(request); if (!auth.authorized) return auth.response;
   const parsed = paramsSchema.safeParse(await params); if (!parsed.success) return NextResponse.json({ success: false, message: "Bình luận không hợp lệ." }, { status: 400 });
   try {

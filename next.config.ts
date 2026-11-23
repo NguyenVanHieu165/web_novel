@@ -6,7 +6,10 @@ const sharpRuntimeFiles = [
 ];
 
 const nextConfig: NextConfig = {
-  images: { remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" }] },
+  images: { remotePatterns: [
+    { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
+    { protocol: "https", hostname: "qr.sepay.vn", pathname: "/img" },
+  ] },
   outputFileTracingIncludes: {
     "/api/admin/stories/import-url": sharpRuntimeFiles,
     "/api/admin/stories/import-url/**": sharpRuntimeFiles,

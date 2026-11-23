@@ -93,11 +93,11 @@ test("range parser supports Safari suffix and open ranges, rejects unsatisfiable
   }
 });
 
-async function routeHarness({ price = 0, free = true, user = null, purchased = false, cached = true, available = true, body = "Nội dung" } = {}) {
+async function routeHarness({ price = 0, free = true, user = null, purchased = false, cached = true, available = true, body = "Nội dung", rateAllowed = true } = {}) {
   const directory = await mkdtemp(path.join(tmpdir(), "novel-audio-route-"));
   const filePath = path.join(directory, "audio.mp3");
   await writeFile(filePath, Buffer.alloc(100, 7));
-  const calls = { audio: 0, content: 0, purchase: 0, chapter: 0 };
+  const calls = { audio: 0, content: 0, purchase: 0, chapter: 0, rate: 0 };
   const fingerprint = "a".repeat(64);
   const prisma = {
     chuong: { async findFirst(query) {
@@ -116,9 +116,10 @@ async function routeHarness({ price = 0, free = true, user = null, purchased = f
   const load = await loader({
     "@/lib/prisma": { prisma },
     "@/lib/server/auth-session": { requireUser: async () => user ? { authorized: true, user } : { authorized: false } },
-    "@/lib/tts/edge-tts": { AudioBusyError: class extends Error {}, getChapterAudio: async () => {
+    "@/lib/tts/edge-tts": { AudioBusyError: class extends Error {}, chapterAudioFingerprint: () => fingerprint, getChapterAudio: async () => {
       calls.audio++; return { filePath, bytes: 100, fingerprint, cached };
     } },
+    "@/lib/server/rate-limit": { checkRateLimit: async () => { calls.rate++; return { allowed: rateAllowed, retryAfter: 10 }; }, requestIp: () => "127.0.0.1" },
   });
   const handler = load("app/api/chapters/[id]/audio/route.ts");
   return {
@@ -136,7 +137,7 @@ test("VIP cache and Range access are denied before reading content for guests an
   for (const setup of [{ free: false }, { price: 10 }, { free: false, user: { idTaiKhoan: 7, roles: [] } }]) {
     const app = await routeHarness(setup);
     try {
-      for (const query of ["", "?stream=1&voice=male-deep"]) {
+      for (const query of ["", "?stream=1&voice=male-deep&v=" + "a".repeat(64)]) {
         assert.equal((await app.request(query, { range: "bytes=0-1" })).status, 403);
       }
       assert.equal(app.calls.audio, 0);
@@ -154,15 +155,16 @@ test("free, purchased and admin chapters return protected URLs and exact byte ra
       assert.equal(metadata.status, 200);
       assert.equal(result.cached, true);
       assert.match(result.audioUrl, /^\/api\/chapters\/11\/audio\?/u);
-      const stream = await app.request("?stream=1", { range: "bytes=10-19" });
+      const streamQuery = new URL(result.audioUrl, "http://localhost").search;
+      const stream = await app.request(streamQuery, { range: "bytes=10-19" });
       assert.equal(stream.status, 206);
       assert.equal(stream.headers.get("content-range"), "bytes 10-19/100");
       assert.equal(stream.headers.get("cache-control"), "private, no-store");
       assert.equal(stream.headers.get("content-type"), "audio/mpeg");
       assert.equal((await stream.arrayBuffer()).byteLength, 10);
-      assert.equal((await app.request("?stream=1", { range: "bytes=200-" })).status, 416);
+      assert.equal((await app.request(streamQuery, { range: "bytes=200-" })).status, 416);
       assert.equal((await app.request("?stream=1&v=" + "b".repeat(64))).status, 409);
-      const head = await app.request("?stream=1", { method: "HEAD" });
+      const head = await app.request(streamQuery, { method: "HEAD" });
       assert.equal((await head.arrayBuffer()).byteLength, 0);
     } finally { await app.close(); }
   }
@@ -172,6 +174,7 @@ test("input validation and missing chapters never trigger synthesis", async () =
   const app = await routeHarness();
   try {
     assert.equal((await app.request("?voice=invalid")).status, 400);
+    assert.equal((await app.request("?stream=1")).status, 400);
     assert.equal((await app.request("", { id: "../file" })).status, 400);
     assert.equal((await app.request("", { id: "0" })).status, 400);
     assert.equal(app.calls.chapter, 0);
@@ -179,6 +182,15 @@ test("input validation and missing chapters never trigger synthesis", async () =
   const missing = await routeHarness({ available: false });
   try { assert.equal((await missing.request()).status, 404); assert.equal(missing.calls.audio, 0); }
   finally { await missing.close(); }
+});
+
+test("valid stream requests are rate limited before audio resolution", async () => {
+  const app = await routeHarness({ rateAllowed: false });
+  try {
+    assert.equal((await app.request("?stream=1&v=" + "a".repeat(64))).status, 429);
+    assert.equal(app.calls.rate, 1);
+    assert.equal(app.calls.audio, 0);
+  } finally { await app.close(); }
 });
 
 test("proxy refuses direct, encoded and case-varied public audio paths without auth work", async () => {

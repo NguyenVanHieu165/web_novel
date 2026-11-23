@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AccountThemeToggle from "@/components/account/AccountThemeToggle";
-import DemoTopUpForm from "@/components/account/DemoTopUpForm";
+import WalletTopUp from "@/components/account/WalletTopUp";
 import type { lich_su_giao_dich_loai } from "@/app/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireReaderPage } from "@/lib/server/reader-page";
-import { isDemoTopUpEnabled } from "@/lib/server/reader-wallet";
+import { topUpPackages } from "@/lib/server/topup-packages";
 import { walletPageSchema } from "@/schemas/reader-wallet.schema";
-import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderTitle } from "@/components/shared/page-header";
+import { PageHeader, PageHeaderActions, PageHeaderContent, PageHeaderDescription, PageHeaderTitle } from "@/components/shared/page-header";
 import { EmptyState, EmptyStateDescription, EmptyStateTitle } from "@/components/shared/empty-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink } from "@/components/ui/pagination";
 
@@ -31,52 +32,87 @@ const transactionLabels: Record<lich_su_giao_dich_loai, string> = {
   khuyen_mai: "Khuyến mãi",
   rut_tien: "Rút tiền",
 };
-function pageHref(page: number) {
-  return page === 1 ? "/vi-xu#lich-su-giao-dich" : `/vi-xu?page=${page}#lich-su-giao-dich`;
+
+function transactionLabel(type: lich_su_giao_dich_loai, amount: number) {
+  return type === "mua_chuong" && amount > 0 ? "Doanh thu chương" : transactionLabels[type];
 }
 
-export default async function WalletPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function pageHref(page: number, cursor: number, direction: "next" | "prev") {
+  const query = new URLSearchParams({ page: String(page), cursor: String(cursor), direction });
+  return `/vi-xu?${query.toString()}#lich-su-giao-dich`;
+}
+
+type WalletSearchParams = {
+  page?: string | string[];
+  cursor?: string | string[];
+  direction?: string | string[];
+};
+
+export default async function WalletPage({ searchParams }: { searchParams: Promise<WalletSearchParams> }) {
   const user = await requireReaderPage("/vi-xu");
-  const query = walletPageSchema.safeParse((await searchParams).page);
+  const rawSearch = await searchParams;
+  const pageQuery = walletPageSchema.safeParse(firstParam(rawSearch.page));
+  const cursorQuery = walletPageSchema.safeParse(firstParam(rawSearch.cursor));
+  const direction = firstParam(rawSearch.direction) === "prev" ? "prev" : "next";
   const where = { idTaiKhoan: user.idTaiKhoan };
   const [wallet, total] = await Promise.all([
     prisma.viTien.findUnique({ where, select: { soDuXu: true } }),
     prisma.lichSuGiaoDich.count({ where }),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const page = Math.min(query.success ? query.data : 1, totalPages);
-  const entries = total === 0 ? [] : await prisma.lichSuGiaoDich.findMany({
-    where,
-    orderBy: [{ createdAt: "desc" }, { idLichSuGiaoDich: "desc" }],
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    select: { idLichSuGiaoDich: true, loai: true, createdAt: true, so_xu_thay_doi: true, soDuTruoc: true, soDuSau: true },
-  });
+  const page = Math.min(pageQuery.success ? pageQuery.data : 1, totalPages);
+  const select = { idLichSuGiaoDich: true, loai: true, createdAt: true, so_xu_thay_doi: true, soDuTruoc: true, soDuSau: true } as const;
+  const rows = total === 0
+    ? []
+    : cursorQuery.success
+      ? await prisma.lichSuGiaoDich.findMany({
+          where: {
+            ...where,
+            idLichSuGiaoDich: direction === "prev" ? { gt: cursorQuery.data } : { lt: cursorQuery.data },
+          },
+          orderBy: { idLichSuGiaoDich: direction === "prev" ? "asc" : "desc" },
+          take: pageSize + 1,
+          select,
+        })
+      : await prisma.lichSuGiaoDich.findMany({
+          where,
+          orderBy: { idLichSuGiaoDich: "desc" },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          select,
+        });
+  if (cursorQuery.success && rows.length > pageSize) rows.pop();
+  const entries = direction === "prev" && cursorQuery.success ? rows.reverse() : rows;
+  const firstEntry = entries[0];
+  const lastEntry = entries.at(-1);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader>
-        <PageHeaderContent><PageHeaderTitle>Ví Xu</PageHeaderTitle></PageHeaderContent>
+        <PageHeaderContent>
+          <PageHeaderTitle>Ví Xu</PageHeaderTitle>
+          <PageHeaderDescription>Quản lý số dư, nạp xu và theo dõi toàn bộ giao dịch của bạn.</PageHeaderDescription>
+        </PageHeaderContent>
         <PageHeaderActions><AccountThemeToggle /></PageHeaderActions>
       </PageHeader>
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card className="border-primary/25 bg-primary/5">
-          <CardHeader><CardTitle id="balance-heading" className="text-sm text-primary">Số dư hiện tại</CardTitle></CardHeader>
-          <CardContent aria-labelledby="balance-heading" className="space-y-3">
+
+      <Card className="border-primary/25 bg-primary/5">
+        <CardHeader>
+          <CardTitle id="balance-heading" className="text-sm text-primary">Số Dư Hiện Tại</CardTitle>
+          <CardDescription>Số xu khả dụng để mở khóa chương và sử dụng các tính năng trả phí.</CardDescription>
+        </CardHeader>
+        <CardContent aria-labelledby="balance-heading" className="space-y-3">
           <p className="text-3xl font-bold tabular-nums sm:text-4xl">{number.format(wallet?.soDuXu ?? 0)} <span className="text-xl">xu</span></p>
           {!wallet && <Alert variant="info"><AlertDescription>Tài khoản chưa có ví xu.</AlertDescription></Alert>}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle id="top-up-heading" className="text-lg">Nạp xu</CardTitle>
-          <CardDescription>{isDemoTopUpEnabled() ? "Nạp xu mô phỏng để thử mở khóa chương VIP." : "Nạp xu chưa khả dụng."}</CardDescription></CardHeader>
-          <CardContent aria-labelledby="top-up-heading">
-          {isDemoTopUpEnabled() ? (
-            <DemoTopUpForm key={user.idTaiKhoan} />
-          ) : null}
-          </CardContent>
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
+
+      <WalletTopUp key={user.idTaiKhoan} packages={Object.values(topUpPackages)} />
+
       <Card>
         <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2">
           <CardTitle id="lich-su-giao-dich" className="scroll-mt-24 text-lg">Lịch sử giao dịch</CardTitle>
@@ -90,7 +126,7 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
             {entries.map((entry) => (
               <li key={entry.idLichSuGiaoDich} className="grid gap-2 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="space-y-1">
-                  <p className="font-medium">{transactionLabels[entry.loai]}</p>
+                  <Badge variant={entry.so_xu_thay_doi < 0 ? "warning" : "success"}>{transactionLabel(entry.loai, entry.so_xu_thay_doi)}</Badge>
                   {entry.createdAt && <time className="text-muted-foreground"
                     dateTime={entry.createdAt.toISOString()}>{date.format(entry.createdAt)}</time>}
                 </div>
@@ -108,9 +144,9 @@ export default async function WalletPage({ searchParams }: { searchParams: Promi
         )}
         {totalPages > 1 && (
           <Pagination aria-label="Phân trang giao dịch"><PaginationContent>
-            {page > 1 && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page - 1)} prefetch={false}>Trang trước</Link></PaginationLink></PaginationItem>}
+            {page > 1 && firstEntry && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page - 1, firstEntry.idLichSuGiaoDich, "prev")} prefetch={false}>Trang trước</Link></PaginationLink></PaginationItem>}
             <PaginationItem><span aria-current="page" className="px-3 text-sm tabular-nums">Trang {page} / {totalPages}</span></PaginationItem>
-            {page < totalPages && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page + 1)} prefetch={false}>Trang sau</Link></PaginationLink></PaginationItem>}
+            {page < totalPages && lastEntry && <PaginationItem><PaginationLink asChild size="default"><Link href={pageHref(page + 1, lastEntry.idLichSuGiaoDich, "next")} prefetch={false}>Trang sau</Link></PaginationLink></PaginationItem>}
           </PaginationContent></Pagination>
         )}
         </CardContent>

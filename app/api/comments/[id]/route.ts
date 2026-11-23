@@ -3,9 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { revalidatePublicStoryDetails } from "@/lib/server/public-cache";
 import { requireUser } from "@/lib/server/auth-session";
+import { isSameOriginRequest } from "@/lib/server/same-origin";
 import { getStoryOwner } from "@/lib/server/studio-ownership";
 const paramsSchema = z.object({ id: z.coerce.number().int().positive() });
 export async function DELETE(request: NextRequest, { params }: { params: Promise<unknown> }) {
+  if (!isSameOriginRequest(request)) return NextResponse.json({ success: false, message: "Yêu cầu xóa bình luận không hợp lệ." }, { status: 403 });
   const auth = await requireUser(request); if (!auth.authorized) return auth.response;
   const parsed = paramsSchema.safeParse(await params); if (!parsed.success) return NextResponse.json({ success: false, message: "Bình luận không hợp lệ." }, { status: 400 });
   const comment = await prisma.binhLuan.findFirst({ where: { idBinhLuan: parsed.data.id, OR: [{ isDeleted: false }, { isDeleted: null }] }, select: { idBinhLuan: true, idTaiKhoan: true, idTRUYEN: true, truyen: { select: { slug: true } } } });

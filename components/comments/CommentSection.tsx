@@ -12,18 +12,19 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Comment = { idBinhLuan: number; noiDung: string; likeCount: number; createdAt: string; authorName: string; isAuthor: boolean; isAdmin: boolean; isLiked: boolean; isOwn: boolean; chapterNumber: number | null };
 type ApiPage = { success: true; data: Comment[]; meta: { total: number } };
-type Props = { storySlug: string; chapterId?: number; className?: string };
+type Props = { storySlug: string; chapterId?: number; redirectPath?: string; className?: string };
 
-export default function CommentSection({ storySlug, chapterId, className = "" }: Props) {
+export default function CommentSection({ storySlug, chapterId, redirectPath, className = "" }: Props) {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replies, setReplies] = useState<Record<number, Comment[]>>({});
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const endpoint = `/api/truyen/${encodeURIComponent(storySlug)}/comments${chapterId ? `?chapterId=${chapterId}` : ""}`;
-  const redirect = chapterId ? `/truyen/${storySlug}` : `/truyen/${storySlug}`;
+  const redirect = redirectPath ?? `/truyen/${encodeURIComponent(storySlug)}`;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,10 +40,14 @@ export default function CommentSection({ storySlug, chapterId, className = "" }:
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!text.trim()) return;
-    const response = await fetch(`/api/truyen/${encodeURIComponent(storySlug)}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ noiDung: text, chapterId, replyTo: replyTo ?? undefined }) });
-    if (!response.ok) { setError("Không thể đăng bình luận."); return; }
-    setText(""); setReplyTo(null); await load();
+    event.preventDefault(); if (submitting || !text.trim()) return;
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/truyen/${encodeURIComponent(storySlug)}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ noiDung: text, chapterId, replyTo: replyTo ?? undefined }) });
+      if (!response.ok) { setError("Không thể đăng bình luận."); return; }
+      setText(""); setReplyTo(null); await load();
+    } catch { setError("Không thể đăng bình luận.");
+    } finally { setSubmitting(false); }
   };
   const toggleLike = async (id: number) => {
     const response = await fetch(`/api/comments/${id}/like`, { method: "POST" });
@@ -69,7 +74,7 @@ export default function CommentSection({ storySlug, chapterId, className = "" }:
       <Textarea id="chapter-comment-content" name="comment" value={text} onChange={event => setText(event.target.value)} maxLength={1000} rows={3} placeholder={replyTo ? "Viết phản hồi…" : "Viết bình luận…"} />
       <div className="flex justify-between gap-3">
         {replyTo ? <Button type="button" variant="ghost" onClick={() => setReplyTo(null)}>Hủy trả lời</Button> : <span />}
-        <Button type="submit" disabled={!text.trim()}><Send aria-hidden="true" />Gửi</Button>
+        <Button type="submit" disabled={submitting || !text.trim()}><Send aria-hidden="true" />{submitting ? "Đang gửi…" : "Gửi"}</Button>
       </div>
     </form> : <Alert><AlertDescription><Link href={`/dang-nhap?redirect=${encodeURIComponent(redirect)}`} className="font-semibold underline underline-offset-4">Đăng nhập</Link> để tham gia bình luận.</AlertDescription></Alert>}
     {loading ? <p role="status" className="text-sm text-muted-foreground">Đang tải bình luận…</p> : error ? <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert> : comments.length === 0 ? <p className="text-sm text-muted-foreground">Chưa có bình luận nào.</p> : <div className="space-y-3">{comments.map(comment => <Card key={comment.idBinhLuan} className="gap-0 bg-[var(--reader-paper,var(--card))] p-3 py-3 text-[var(--reader-text,var(--card-foreground))]">

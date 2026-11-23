@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/server/auth-session";
-import { AudioBusyError, getChapterAudio } from "@/lib/tts/edge-tts";
+import { AudioBusyError, chapterAudioFingerprint, getChapterAudio } from "@/lib/tts/edge-tts";
 import { parseAudioRange } from "@/lib/tts/http-range";
 import { voiceSchema } from "@/lib/tts/voices";
 import { checkRateLimit, requestIp } from "@/lib/server/rate-limit";
@@ -16,6 +16,8 @@ const inputSchema = z.object({
   voice: voiceSchema.default("female-warm"),
   stream: z.literal("1").optional(),
   v: z.string().regex(/^[a-f0-9]{64}$/u).optional(),
+}).superRefine((input, context) => {
+  if (input.stream && !input.v) context.addIssue({ code: "custom", path: ["v"], message: "Fingerprint audio là bắt buộc." });
 });
 const privateHeaders = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 function errorResponse(message: string, status: number) {
@@ -57,19 +59,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
     if (!content?.noiDung?.trim()) return errorResponse("Nội dung chương đang được cập nhật.", 404);
     if (content.noiDung.length > 200_000) return errorResponse("Chương quá dài để tạo audio trong một lần.", 422);
-    if (!stream) {
-      const rate = await checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
-      if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { ...privateHeaders, "Retry-After": String(rate.retryAfter) } });
-    }
-    const result = await getChapterAudio({
+    const audioInput = {
       chapterId: id, chapterNumber: Number(chapter.chuongSo), title: chapter.tieuDeChuong,
       storySlug: chapter.truyen.slug, content: content.noiDung, voice,
-    });
+    };
+    if (stream && v !== chapterAudioFingerprint(audioInput)) return errorResponse("Chương đã thay đổi. Hãy tải lại audio.", 409);
+    const rate = await checkRateLimit(`audio:${requestIp(request)}`, 15, 60_000);
+    if (!rate.allowed) return NextResponse.json({ success: false, message: "Thử lại sau ít phút." }, { status: 429, headers: { ...privateHeaders, "Retry-After": String(rate.retryAfter) } });
+    const result = await getChapterAudio(audioInput);
     if (!stream) {
       const audioUrl = "/api/chapters/" + id + "/audio?voice=" + voice + "&stream=1&v=" + result.fingerprint;
       return NextResponse.json({ audioUrl, cached: result.cached }, { headers: privateHeaders });
     }
-    if (v && v !== result.fingerprint) return errorResponse("Chương đã thay đổi. Hãy tải lại audio.", 409);
+    if (v !== result.fingerprint) return errorResponse("Chương đã thay đổi. Hãy tải lại audio.", 409);
     const range = parseAudioRange(request.headers.get("range"), result.bytes);
     if (!range) {
       return new NextResponse(null, { status: 416, headers: { ...privateHeaders, "Content-Range": "bytes */" + result.bytes } });

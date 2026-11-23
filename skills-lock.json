@@ -56,6 +56,14 @@
       "skillPath": "skills/gsap-utils/SKILL.md",
       "computedHash": "d05b56284eea0118d481b8c673aff27cae66199282995bfe78315785f561002d"
     },
+    "open-code-review-delegate": {
+      "source": "alibaba/open-code-review",
+      "commit": "e74f2c6bd4422bd1e12d257d1725bcce1d6b9ddd",
+      "sourceType": "github",
+      "skillPath": "skills/open-code-review-delegate/SKILL.md",
+      "computedHash": "d3e445be2d49015039f3f03a304baa2816f6d8ed83afff635e240b0ba8b68861",
+      "installMode": "copy"
+    },
     "project-architect": {
       "source": "ersinkoc/project-architect",
       "commit": "220653ca9a0c47f8bf3f0c2cc35f9faf688e4169",
