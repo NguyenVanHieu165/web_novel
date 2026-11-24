@@ -28,6 +28,7 @@ interface StoryReviewsProps {
 }
 
 const pageSize = 15;
+type DisplayComment = Omit<CommentItemData, "idBinhLuan" | "replyTo"> & { idBinhLuan: number | string; replyTo?: number | null; isPending?: boolean };
 
 export default function StoryReviews({
   storyId,
@@ -39,7 +40,7 @@ export default function StoryReviews({
 }: StoryReviewsProps) {
   const { user } = useAuth();
   const [commentText, setCommentText] = useState("");
-  const [commentList, setCommentList] = useState<CommentItemData[]>(comments);
+  const [commentList, setCommentList] = useState<DisplayComment[]>(comments);
   const [activeSubTab, setActiveSubTab] = useState<"reviews" | "comments">("reviews");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(comments.length);
@@ -65,7 +66,7 @@ export default function StoryReviews({
         const parsed = commentsPageSchema.safeParse(await response.json());
         if (!response.ok || !parsed.success) throw new Error("Không thể tải bình luận. Vui lòng thử lại.");
         if (controller.signal.aborted) return;
-        setCommentList(parsed.data.data);
+        setCommentList(current => [...current.filter(item => item.isPending), ...parsed.data.data]);
         setTotal(parsed.data.meta.total);
         setTotalPage(parsed.data.meta.totalPage);
         setCommentsError(null);
@@ -89,15 +90,31 @@ export default function StoryReviews({
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (postInFlight.current || requiresLogin || !commentText.trim()) return;
+    const content = commentText.trim();
+    if (postInFlight.current || requiresLogin || !content) return;
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimistic: DisplayComment = {
+      idBinhLuan: tempId,
+      noiDung: content,
+      likeCount: 0,
+      createdAt: "Vừa xong",
+      authorName: user?.hoTen || user?.tenTaiKhoan || "Bạn",
+      authorAvatar: user?.anh ?? null,
+      isStoryAuthor: false,
+      replyTo: null,
+      isPending: true,
+    };
     postInFlight.current = true;
     setPosting(true);
     setPostError(null);
+    setCommentText("");
+    setCommentList(previous => [optimistic, ...previous]);
+    setTotal(previous => previous + 1);
     try {
       const response = await fetch(`/api/truyen/${encodeURIComponent(storySlug)}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noiDung: commentText.trim() }),
+        body: JSON.stringify({ noiDung: content }),
       });
       const payload: unknown = await response.json();
       const parsed = createdCommentSchema.safeParse(payload);
@@ -106,13 +123,12 @@ export default function StoryReviews({
         const error = errorResponseSchema.safeParse(payload);
         throw new Error(error.success ? error.data.message : "Không thể đăng bình luận. Vui lòng thử lại.");
       }
-      setCommentText("");
-      setCommentList((previous) => [parsed.data.data, ...previous].slice(0, pageSize));
-      setTotal((previous) => previous + 1);
-      setPage(1);
-      setRefreshVersion((previous) => previous + 1);
+      setCommentList(previous => previous.map(item => item.idBinhLuan === tempId ? parsed.data.data : item));
       toast.success("Đã đăng bình luận của bạn.");
     } catch (error) {
+      setCommentList(previous => previous.filter(item => item.idBinhLuan !== tempId));
+      setTotal(previous => Math.max(0, previous - 1));
+      setCommentText(content);
       setPostError(error instanceof Error ? error.message : "Không thể đăng bình luận. Vui lòng thử lại.");
     } finally {
       postInFlight.current = false;
@@ -279,7 +295,7 @@ export default function StoryReviews({
 
           {/* Comments List */}
           <div className="space-y-3" aria-busy={commentsLoading}>
-            {commentsLoading ? (
+            {commentsLoading && commentList.length === 0 ? (
               <p role="status" className="py-8 text-center text-sm text-muted-foreground">Đang tải bình luận…</p>
             ) : commentsError ? (
               <ErrorState><div><ErrorStateTitle>Không thể tải bình luận</ErrorStateTitle><ErrorStateDescription>{commentsError}</ErrorStateDescription><ErrorStateActions><Button
@@ -310,6 +326,7 @@ export default function StoryReviews({
                       <h4 className="text-xs font-bold">
                         {comm.authorName}
                         {comm.isStoryAuthor && <Badge variant="warning" className="ml-2 rounded text-[10px]">Tác giả</Badge>}
+                        {comm.isPending && <Badge variant="secondary" className="ml-2 rounded text-[10px]">Đang gửi…</Badge>}
                       </h4>
                       <p className="text-[10px] text-muted-foreground">
                         {comm.createdAt}
@@ -329,7 +346,7 @@ export default function StoryReviews({
                 <p className="whitespace-pre-wrap break-words pl-10 text-xs leading-relaxed text-muted-foreground sm:text-sm">
                   {comm.noiDung}
                 </p>
-                <StoryCommentReplies storySlug={storySlug} parentId={comm.idBinhLuan} />
+                {!comm.isPending && typeof comm.idBinhLuan === "number" && <StoryCommentReplies storySlug={storySlug} parentId={comm.idBinhLuan} />}
                 </CardContent>
               </Card>
             ))}
