@@ -12,7 +12,13 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 });
 vm.runInThisContext("(function (exports, require) { " + compiled.outputText + "\n})")(current.exports, require);
-const { statisticsFilters, statisticsPoints, statisticsWindow } = current.exports;
+const {
+  statisticsFilters,
+  statisticsPoints,
+  statisticsQuery,
+  statisticsWindow,
+  statisticsWindowQuery,
+} = current.exports;
 
 test("dashboard defaults to revenue from the first day of the current Vietnam month through today", () => {
   const filters = statisticsFilters.parse({});
@@ -35,6 +41,28 @@ test("revenue points group revenue and successful invoice counts in the same buc
     { from: "2026-11-02", to: "2026-11-08", value: 30000, billCount: 3 },
     { from: "2026-11-09", to: "2026-11-09", value: 0, billCount: 0 },
   ]);
+});
+
+test("dashboard cards reuse the chart date window without refetching for metric or grouping changes", () => {
+  const filters = statisticsFilters.parse({
+    metric: "users",
+    range: "custom",
+    group: "week",
+    from: "2026-11-01",
+    to: "2026-11-24",
+  });
+  assert.equal(
+    statisticsQuery(filters),
+    "metric=users&range=custom&group=week&from=2026-11-01&to=2026-11-24",
+  );
+  assert.equal(
+    statisticsWindowQuery(filters),
+    "range=custom&from=2026-11-01&to=2026-11-24",
+  );
+  assert.equal(
+    statisticsWindowQuery({ ...filters, metric: "revenue", group: "month" }),
+    statisticsWindowQuery(filters),
+  );
 });
 
 test("relative ranges use the Vietnam calendar at UTC midnight boundaries", () => {

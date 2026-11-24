@@ -1,6 +1,12 @@
 import { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { statisticsPoints, statisticsWindow, type StatisticsFilters, type StatisticsReport } from "@/lib/admin-statistics";
+import {
+  statisticsPoints,
+  statisticsWindow,
+  type DashboardOverview,
+  type StatisticsFilters,
+  type StatisticsReport,
+} from "@/lib/admin-statistics";
 
 const active = Prisma.sql`(is_deleted = 0 OR is_deleted IS NULL)`;
 const sources = {
@@ -26,4 +32,53 @@ export async function getStatisticsReport(filters: StatisticsFilters): Promise<S
   const values = new Map(rows.map((row) => [row.day, Number(row.value)]));
   const bills = includeBills ? new Map(rows.map((row) => [row.day, Number(row.billCount ?? 0)])) : undefined;
   return { from, to, group, points: statisticsPoints({ from, to, group }, values, bills) };
+}
+
+export async function getDashboardOverview(filters: StatisticsFilters): Promise<DashboardOverview> {
+  const { from, to, start, end } = statisticsWindow(filters);
+  const createdAt = { gte: start, lt: end };
+  const [useTotal, truyensTotal, chuongsTotal, views, revenue] = await Promise.all([
+    prisma.taiKhoan.count({
+      where: {
+        createdAt,
+        OR: [{ isDeleted: false }, { isDeleted: null }],
+      },
+    }),
+    prisma.truyen.count({
+      where: {
+        createdAt,
+        OR: [{ isDeleted: false }, { isDeleted: null }],
+      },
+    }),
+    prisma.chuong.count({
+      where: {
+        createdAt,
+        OR: [{ isDeleted: false }, { isDeleted: null }],
+      },
+    }),
+    prisma.truyen.aggregate({
+      _sum: { luotXem: true },
+      where: {
+        createdAt,
+        OR: [{ isDeleted: false }, { isDeleted: null }],
+      },
+    }),
+    prisma.hoaDonNap.aggregate({
+      _sum: { soTienVnd: true },
+      where: {
+        createdAt,
+        trang_thai: "success",
+      },
+    }),
+  ]);
+
+  return {
+    useTotal,
+    truyensTotal,
+    chuongsTotal,
+    viewsTotal: Number(views._sum.luotXem ?? 0),
+    revenueTotal: Number(revenue._sum.soTienVnd ?? 0),
+    from,
+    to,
+  };
 }

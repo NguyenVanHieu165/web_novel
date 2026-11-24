@@ -60,6 +60,37 @@ export type StatisticsReport = {
   group: Exclude<StatisticsFilters["group"], "auto">;
   points: { from: string; to: string; value: number; billCount?: number }[];
 };
+export type DashboardOverview = {
+  useTotal: number;
+  truyensTotal: number;
+  chuongsTotal: number;
+  viewsTotal: number;
+  revenueTotal: number;
+  from: string;
+  to: string;
+};
+
+export function statisticsQuery(filters: StatisticsFilters) {
+  const params = new URLSearchParams({
+    metric: filters.metric,
+    range: filters.range,
+    group: filters.group,
+  });
+  if (filters.range === "custom" && filters.from && filters.to) {
+    params.set("from", filters.from);
+    params.set("to", filters.to);
+  }
+  return params.toString();
+}
+
+export function statisticsWindowQuery(filters: StatisticsFilters) {
+  const params = new URLSearchParams({ range: filters.range });
+  if (filters.range === "custom" && filters.from && filters.to) {
+    params.set("from", filters.from);
+    params.set("to", filters.to);
+  }
+  return params.toString();
+}
 
 export function statisticsWindow(filters: StatisticsFilters, now = new Date()) {
   const today = dayTime(dayKey(now.getTime() + vietnamOffsetMs));

@@ -8,6 +8,7 @@ import {
   metricLabels,
   rangeLabels,
   statisticsFilters,
+  statisticsQuery,
   statisticsWindow,
   type StatisticsFilters,
   type StatisticsReport,
@@ -34,13 +35,7 @@ export default function Chart() {
   const query = Object.fromEntries(search);
   const parsed = statisticsFilters.safeParse(query);
   const filters = parsed.success ? parsed.data : statisticsFilters.parse({});
-  const params = new URLSearchParams({ metric: filters.metric, range: filters.range, group: filters.group });
-  if (filters.range === "custom" && filters.from && filters.to) {
-    params.set("from", filters.from);
-    params.set("to", filters.to);
-  }
-
-  const reportQuery = params.toString();
+  const reportQuery = statisticsQuery(filters);
   const [attempt, setAttempt] = useState(0);
   const requestKey = `${reportQuery}|${attempt}`;
   const [result, setResult] = useState<ReportResult>();
