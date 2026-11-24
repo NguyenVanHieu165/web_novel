@@ -4,7 +4,7 @@ import type { BackgroundJob, PrismaClient } from "@/app/generated/prisma/client"
 import { enqueueBackgroundJob, getOwnedBackgroundJob, requestBackgroundJobCancellation } from "@/lib/server/background-jobs";
 import { prisma } from "@/lib/prisma";
 import { ImportSourceError, type ImportJob, type ImportOptions } from "@/lib/scraper/types";
-import { createInitialImportState } from "@/socket-server/importer/state";
+import { createInitialImportState } from "@/lib/scraper/state";
 import { importNovelJobPayloadSchema, importNovelResultSchema } from "@/schemas/background-job.schema";
 import type { ImportNovelJobPayload } from "@/schemas/background-job.schema";
 

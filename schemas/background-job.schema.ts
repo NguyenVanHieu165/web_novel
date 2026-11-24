@@ -6,8 +6,8 @@ export {
   importNovelResultSchema,
   type ImportNovelJobPayload,
   type ImportNovelResult,
-} from "@/socket-server/jobs/schemas/import-novel";
-import { importNovelJobPayloadSchema } from "@/socket-server/jobs/schemas/import-novel";
+} from "@/schemas/import-novel-job.schema";
+import { importNovelJobPayloadSchema } from "@/schemas/import-novel-job.schema";
 
 export const backgroundJobIdSchema = z.string().uuid();
 export const backgroundJobTypeSchema = z.enum(backgroundJobTypes);
