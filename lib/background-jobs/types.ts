@@ -1,4 +1,4 @@
-export const backgroundJobTypes = ["system.noop"] as const;
+export const backgroundJobTypes = ["system.noop", "IMPORT_NOVEL"] as const;
 export type BackgroundJobType = (typeof backgroundJobTypes)[number];
 
 export const backgroundJobStatuses = [

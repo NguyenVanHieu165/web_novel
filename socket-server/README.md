@@ -11,11 +11,17 @@ Socket.IO phải chạy trên một dịch vụ Node.js duy trì kết nối lâ
 - `PORT`: cổng do nền tảng cung cấp; mặc định `3001`.
 - `DATABASE_URL`: chuỗi kết nối TiDB/MySQL dùng riêng cho worker; TiDB Cloud phải bật TLS.
 - `WORKER_ENABLED`: đặt `true` để supervisor chạy worker cùng Socket.IO.
+- `CLOUDINARY_URL` hoặc bộ `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` /
+  `CLOUDINARY_API_SECRET`: dùng để lưu bìa và ảnh chương của job `IMPORT_NOVEL`.
 
 Worker mặc định chạy một job, lease 90 giây và heartbeat 20 giây. Có thể điều chỉnh bằng
 `JOB_CONCURRENCY`, `JOB_LEASE_MS`, `JOB_HEARTBEAT_MS`, `JOB_POLL_MS` và
 `JOB_IDLE_POLL_MS`. Giữ `JOB_CONCURRENCY=1` cho giai đoạn đầu để không làm nghẽn
 CPU/RAM của realtime service.
+
+Worker hỗ trợ `system.noop` và `IMPORT_NOVEL`. Tiến độ import được ghi theo đợt vào
+`background_jobs.result`; yêu cầu hủy trong TiDB được kiểm tra khoảng mỗi giây, độc lập
+với chu kỳ heartbeat gia hạn lease.
 
 Ứng dụng Next.js cần cấu hình:
 

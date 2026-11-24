@@ -10,5 +10,5 @@
     "outDir": "./dist",
     "rootDir": "./"
   },
-  "include": ["server.ts", "worker.ts", "jobs/**/*.ts"]
+  "include": ["server.ts", "worker.ts", "jobs/**/*.ts", "importer/**/*.ts"]
 }

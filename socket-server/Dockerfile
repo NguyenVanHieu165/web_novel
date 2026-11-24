@@ -5,6 +5,7 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY auth ./auth
 COPY handlers ./handlers
+COPY importer ./importer
 COPY jobs ./jobs
 COPY rooms ./rooms
 COPY server.ts ./

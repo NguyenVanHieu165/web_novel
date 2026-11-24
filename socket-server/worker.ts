@@ -3,7 +3,7 @@ import type { Pool, PoolConnection } from "mariadb";
 import { loadWorkerConfig } from "./jobs/config";
 import { createJobPool } from "./jobs/database";
 import { safeJobErrorDetails } from "./jobs/errors";
-import { jobHandlers } from "./jobs/handlers";
+import { createJobHandlers } from "./jobs/handlers";
 import { JobRepository } from "./jobs/repository";
 import { JobRunner } from "./jobs/runner";
 
@@ -30,7 +30,7 @@ async function main() {
   const config = loadWorkerConfig();
   const pool = createJobPool(config.database);
   const repository = new JobRepository(pool, config.leaseMs);
-  const runner = new JobRunner(repository, jobHandlers, config);
+  const runner = new JobRunner(repository, createJobHandlers(pool), config);
   let shuttingDown = false;
 
   const shutdown = (signal: string) => {

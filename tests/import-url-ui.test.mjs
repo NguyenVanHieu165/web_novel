@@ -59,6 +59,6 @@ test("an interrupted identification has no misleading zero-of-zero progress and 
   assert.match(html, /Tiếp tục chương còn thiếu/);
   assert.match(html, /LoHi/);
   assert.match(html, /Phạm vi: tối đa 7 chương/);
-  assert.match(html, /Phiên dài có thể chia theo thời gian chạy/);
+  assert.match(html, /Truyện dài tiếp tục chạy trên Render/);
   assert.doesNotMatch(html, /Đã hoàn tất phạm vi import|đã lấy đủ tất cả/i);
 });

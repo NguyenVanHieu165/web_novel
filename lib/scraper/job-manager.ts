@@ -1,15 +1,15 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma";
 import { sourceClient } from "./network";
 import { scrapeChapter, scrapeStory } from "./adapters";
-import { chapterContent } from "./normalizer";
 import { importErrorCode, importErrorMessage } from "./errors";
-import { downloadImage, optionalImage } from "./media";
+import { downloadImage } from "./media";
 import { createImportStoryWithChapter, ensureImportDatabase, existingImportChapterNumbers, findImportStory, storeImportChapter } from "./storage";
 import { checkpointStore } from "./checkpoints";
 import { databaseCheckpointStore } from "./database-checkpoints";
-import { ImportSourceError, SourceBlockedError, SourceLockedError, SourceRateLimitError, terminal, type ImportJob, type ImportOptions } from "./types";
+import { ImportSourceError, terminal, type ImportJob, type ImportOptions } from "./types";
 import { safeErrorDiagnostic } from "../server/system-log-sanitizer";
+import { executeImportNovel, type ImportStorage } from "../../socket-server/importer/executor";
 
 type Store = ReturnType<typeof checkpointStore> & { shared?: boolean };
 type ImportLogEntry = {
@@ -116,147 +116,82 @@ export async function resumeJob(id: string, owner: number, context: JobContext =
 type RunServices = {
   db: typeof prisma; scrapeStory: typeof scrapeStory; scrapeChapter: typeof scrapeChapter;
   createStory: typeof createImportStoryWithChapter; storeChapter: typeof storeImportChapter; findStory: typeof findImportStory;
-  client: ReturnType<typeof sourceClient>; budgetMs: number;
+  client: ReturnType<typeof sourceClient>; budgetMs: number; downloadImage: typeof downloadImage;
 };
 export async function runJob(id: string, overrides: Partial<RunServices> = {}) {
   const job = jobs.get(id); if (!job || terminal(job.state.status) || job.running) return;
   job.running = true;
-  const { state, options, controller } = job;
-  const updateIssue = (error: unknown, chapter?: number) => {
-    const issue = { chapter, code: importErrorCode(error), reason: importErrorMessage(error).slice(0, 1200) };
-    state.issues ??= []; state.issues.push(issue); if (state.issues.length > 50) state.issues.shift();
-    log(job, `${chapter == null ? "Nguồn" : `Chương ${chapter}`}: ${issue.reason}`);
+  const services = {
+    db: prisma,
+    scrapeStory,
+    scrapeChapter,
+    createStory: createImportStoryWithChapter,
+    storeChapter: storeImportChapter,
+    findStory: findImportStory,
+    budgetMs: process.env.VERCEL ? 40_000 : 240_000,
+    downloadImage,
+    ...overrides,
   };
-  let workingPhase: ImportJob["phase"] = "metadata";
-  const client = overrides.client ?? sourceClient(controller.signal, {
-    waiting(retryAt, reason) {
-      if (controller.signal.aborted) return;
-      state.phase = "waiting"; state.retryAt = Math.max(state.retryAt ?? 0, retryAt); log(job, reason);
-      void persist(job).catch(error => { state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); controller.abort(error); });
+  const storage: ImportStorage = {
+    ensureDatabase: () => ensureImportDatabase(services.db),
+    findStory: (story, sourceUrl) => services.findStory(services.db, story, sourceUrl),
+    existingChapterNumbers: (storyId) => existingImportChapterNumbers(services.db, storyId),
+    createStoryWithChapter: (story, sourceUrl, cover, chapter, content) =>
+      services.createStory(services.db, story, sourceUrl, cover, chapter, content),
+    storeChapter: (storyId, chapter, content, skipExisting) =>
+      services.storeChapter(services.db, storyId, chapter, content, skipExisting),
+    async refreshChapterCount(storyId) {
+      const count = await services.db.chuong.count({ where: { idTruyen: storyId } });
+      await services.db.truyen.update({ where: { idTruyen: storyId }, data: { soChuong: count } });
     },
-    resumed() { if (state.phase === "waiting") { state.phase = workingPhase; state.retryAt = undefined; log(job, "Đã hết thời gian chờ, đang tiếp tục."); } },
-  }, undefined, options.url);
-  const services = { db: prisma, scrapeStory, scrapeChapter, createStory: createImportStoryWithChapter, storeChapter: storeImportChapter, findStory: findImportStory, budgetMs: process.env.VERCEL ? 40_000 : 240_000, ...overrides, client };
-  const db = services.db;
-  let heartbeatWork = Promise.resolve();
-  const heartbeat = job.store.shared ? setInterval(() => {
-    heartbeatWork = heartbeatWork.then(async () => {
-      if (terminal(state.status)) return;
-      const saved = await job.store.read(id, job.owner);
-      if (terminal(state.status)) return;
-      if (saved?.state.status === "cancelling" && !controller.signal.aborted) {
-        state.status = "cancelling"; controller.abort(new Error("Admin hủy import."));
-      }
-      if (!controller.signal.aborted) await persist(job);
-    }).catch(error => {
-      state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); controller.abort(error);
-    });
-  }, 2000) : undefined;
-  const budget = setTimeout(() => {
-    state.errorCode = "TIME_BUDGET"; state.error = "Đã lưu tiến độ trước giới hạn thời gian chạy. Bấm tiếp tục để lấy các chương còn thiếu.";
-    controller.abort(new Error("TIME_BUDGET"));
-  }, services.budgetMs);
-  let storyId: number | undefined;
+  };
+  const client = services.client;
+
   try {
-    controller.signal.throwIfAborted(); state.status = "running"; state.phase = "metadata";
-    await ensureImportDatabase(db); log(job, "Đã xác nhận database web_truyen. Đang đọc thông tin và toàn bộ mục lục…");
-    state.phase = workingPhase = "catalogue"; await persist(job);
-    const story = await services.scrapeStory(options.url, client, options.maxChapters);
-    story.slug = story.slug.slice(0, 220) || `truyen-${createHash("sha256").update(options.url).digest("hex").slice(0, 16)}`;
-    if (!story.chapters.length) throw new ImportSourceError("Không tìm thấy liên kết chương công khai. Nguồn có thể cần adapter riêng.", "NO_CHAPTERS");
-    state.storyTitle = story.title.slice(0, 255); state.totalChapters = story.chapters.length; state.sourceName = story.sourceName;
-    state.catalogueComplete = story.catalogueComplete; state.sourceTotalChapters = story.sourceTotalChapters;
-    state.warning = story.warnings?.join(" ").slice(0, 3000);
-    if (!options.maxChapters && story.catalogueComplete !== true) state.warning = [state.warning, "Chưa xác nhận mục lục chứa toàn bộ chương của nguồn; kết quả sẽ được đánh dấu một phần."].filter(Boolean).join(" ");
-    let local = await services.findStory(db, story, options.url);
-    state.cover = local?.anhBia || undefined; storyId = local?.idTruyen; state.storyId = storyId; state.storySlug = local?.slug;
-    const existing = local ? await existingImportChapterNumbers(db, local.idTruyen) : new Set<number>();
-    const counted = () => { state.downloadedImages++; };
-    let missingImages = false;
-    let cursor = 0; state.phase = workingPhase = "chapters"; await persist(job);
-    async function bodyFor(index: number, slug: string) {
-      const ref = story.chapters[index];
-      if (options.skipExisting && existing.has(ref.number)) { state.skippedChapters++; return null; }
-      const html = await services.scrapeChapter(ref, client);
-      const content = await chapterContent(html, async (src, alt) => {
-        if (!options.downloadImages) return null;
-        const url = await optionalImage(() => downloadImage(src, ref.url, `chapters/${slug}`, client, counted), () => {
-          missingImages = true; updateIssue(new ImportSourceError("Không tải được một ảnh minh họa. Đã giữ phần chữ; có thể cập nhật lại chương khi ảnh nguồn hoạt động.", "IMAGE_FAILED"), ref.number);
-        });
-        if (!url) return null;
-        return `<img src="${url}" alt="${alt.replace(/[<>"&]/g, "")}" />`;
-      });
-      if (content.length < 50 && !content.includes('<img src="')) throw new ImportSourceError("Nội dung quá ngắn hoặc không nhận diện được toàn văn; không lưu bản xem thử.", "INCOMPLETE_CONTENT");
-      return content;
-    }
-    async function failed(error: unknown, number: number, chapterIndex: number) {
-      if (controller.signal.aborted) return;
-      console.error("[import-chapter-error]", chapterIndex, error);
-      updateIssue(error, number);
-      if (error instanceof SourceBlockedError) {
-        state.error = importErrorMessage(error); state.errorCode = importErrorCode(error);
-        if (error instanceof SourceRateLimitError) state.retryAt = Math.max(state.retryAt ?? 0, error.retryAt);
-        controller.abort(error); return;
-      }
-      if (error instanceof SourceLockedError) { state.lockedChapters++; state.skippedChapters++; if (!options.skipLocked) { state.error = error.message; state.errorCode = "SOURCE_LOCKED"; controller.abort(error); } }
-      else state.failedChapters++;
-    }
-    while (!local && cursor < story.chapters.length && !controller.signal.aborted) {
-      const index = cursor++, ref = story.chapters[index];
-      try {
-        const content = await bodyFor(index, story.slug); if (!content) continue;
-        const cover = story.cover ? await optionalImage(() => downloadImage(story.cover!, options.url, "covers", client, counted), () => log(job, "Không tải được bìa nguồn; nội dung vẫn được nhập.")) : null;
-        controller.signal.throwIfAborted();
-        local = await services.createStory(db, story, options.url, cover || "", ref, content);
-        state.cover = cover || undefined; storyId = local.idTruyen; state.storyId = storyId; state.storySlug = local.slug; state.savedChapters++;
-        log(job, `Đã lưu chương ${ref.number}.`);
-      } catch (error) { await failed(error, ref.number, index); }
-      finally { state.processedChapters++; await persist(job); }
-    }
-    if (local && !controller.signal.aborted) {
-      const target = local;
-      log(job, `${story.title}: ${state.totalChapters} chương trong phạm vi import${options.maxChapters ? ` (giới hạn ${options.maxChapters})` : " (toàn bộ mục lục tìm thấy)"}.`);
-      const workers = await Promise.allSettled(Array.from({ length: CHAPTER_CONCURRENCY }, async () => {
-        try {
-        while (cursor < story.chapters.length && !controller.signal.aborted) {
-          const index = cursor++, ref = story.chapters[index];
-          try {
-            const content = await bodyFor(index, target.slug); controller.signal.throwIfAborted();
-            if (content) {
-              if (await services.storeChapter(db, target.idTruyen, ref, content, options.skipExisting)) { state.savedChapters++; log(job, `Đã lưu chương ${ref.number}.`); }
-              else state.skippedChapters++;
-            }
-          } catch (error) { await failed(error, ref.number, index); }
-          finally { state.processedChapters++; await persist(job); }
-        }
-        } catch (error) {
-          // A coordinator failure must stop siblings before the job becomes terminal.
-          state.error = importErrorMessage(error); state.errorCode = importErrorCode(error);
-          controller.abort(error); throw error;
-        }
-      }));
-      const rejected = workers.find((result): result is PromiseRejectedResult => result.status === "rejected");
-      if (rejected) throw rejected.reason;
-    }
-    if (controller.signal.aborted) state.status = state.errorCode === "TIME_BUDGET" ? "interrupted" : state.error ? "failed" : "cancelled";
-    else if (!local) throw new ImportSourceError("Không có chương toàn văn đọc được. Không tạo truyện rỗng; xem lý do từng chương trong nhật ký.", "NO_READABLE_CHAPTERS");
-    else state.status = state.failedChapters || missingImages || !options.maxChapters && story.catalogueComplete !== true ? "partial" : "completed";
-  } catch (error) {
-    state.status = controller.signal.aborted ? state.errorCode === "TIME_BUDGET" ? "interrupted" : state.error ? "failed" : "cancelled" : "failed";
-    if (state.status === "failed") { state.error = importErrorMessage(error); state.errorCode = importErrorCode(error); if (error instanceof SourceRateLimitError) state.retryAt = Math.max(state.retryAt ?? 0, error.retryAt); updateIssue(error); }
-    if (state.status === "failed" && state.errorCode !== "CHECKPOINT_FAILED") await systemLog(job.context, {
-      level: "error", source: "story-import", code: state.errorCode ?? "IMPORT_FAILED",
-      message: state.error ?? "Phiên import thất bại.", details: { phase: state.phase, cause: safeErrorDiagnostic(error) },
-      requestId: job.context.requestId, jobId: state.id, actorId: job.owner,
+    const result = await executeImportNovel({
+      jobId: id,
+      userId: job.owner,
+      options: job.options,
+      requestId: job.context.requestId,
+      signal: job.controller.signal,
+      async report(state) {
+        job.state = state;
+        job.updated = Date.now();
+        await persist(job);
+      },
+    }, {
+      storage,
+      downloadImage: services.downloadImage,
+      scrapeStory: services.scrapeStory,
+      scrapeChapter: services.scrapeChapter,
+      createClient: client ? () => client : undefined,
+      chapterConcurrency: CHAPTER_CONCURRENCY,
+      budgetMs: services.budgetMs,
     });
-    if (state.storyTitle === "Đang nhận diện truyện…") state.storyTitle = `Nguồn: ${new URL(options.url).hostname}`;
-  } finally {
-    clearTimeout(budget); clearInterval(heartbeat); await heartbeatWork; state.phase = "finished";
-    if (storyId) {
-      try { const count = await db.chuong.count({ where: { idTruyen: storyId } }); await db.truyen.update({ where: { idTruyen: storyId }, data: { soChuong: count } }); }
-      catch { state.status = "partial"; state.errorCode = "STATISTICS_FAILED"; state.error = "Chương đã lưu nhưng chưa cập nhật được thống kê truyện."; }
+    job.state = result;
+    if (result.status === "failed") {
+      await systemLog(job.context, {
+        level: "error", source: "story-import", code: result.errorCode ?? "IMPORT_FAILED",
+        message: result.error ?? "Phiên import thất bại.", details: { phase: result.phase },
+        requestId: job.context.requestId, jobId: result.id, actorId: job.owner,
+      });
     }
-    log(job, `Kết thúc: ${state.savedChapters} chương lưu, ${state.skippedChapters} bỏ qua, ${state.failedChapters} lỗi chương.`);
-    try { await persist(job); } finally { job.running = false; }
+  } catch (error) {
+    if (!terminal(job.state.status)) {
+      job.state.status = job.controller.signal.aborted ? "cancelled" : "failed";
+      job.state.phase = "finished";
+      job.state.error ??= importErrorMessage(error);
+      job.state.errorCode ??= importErrorCode(error);
+      await persist(job);
+    }
+    if (job.state.status === "failed" && job.state.errorCode !== "CHECKPOINT_FAILED") {
+      await systemLog(job.context, {
+        level: "error", source: "story-import", code: job.state.errorCode ?? "IMPORT_FAILED",
+        message: job.state.error ?? "Phiên import thất bại.", details: { phase: job.state.phase, cause: safeErrorDiagnostic(error) },
+        requestId: job.context.requestId, jobId: job.state.id, actorId: job.owner,
+      });
+    }
+  } finally {
+    job.running = false;
   }
 }

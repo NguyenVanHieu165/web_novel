@@ -132,13 +132,18 @@ export class JobRepository {
     return rows[0].status === "cancel_requested" ? "cancel_requested" : rows[0].status === "running" ? "running" : "lost";
   }
 
-  async updateProgress(jobId: string, workerId: string, progress: number) {
+  async updateProgress(jobId: string, workerId: string, progress: number, result?: unknown) {
     const safeProgress = Math.max(0, Math.min(100, Math.trunc(progress)));
-    const result = await this.pool.query<UpsertResult>(`
-      UPDATE background_jobs SET progress = ?
-      WHERE id = ? AND locked_by = ? AND status = 'running'
-    `, [safeProgress, jobId, workerId]);
-    if (result.affectedRows !== 1) throw new Error("Background job lease was lost");
+    const updated = result === undefined
+      ? await this.pool.query<UpsertResult>(`
+          UPDATE background_jobs SET progress = ?
+          WHERE id = ? AND locked_by = ? AND status IN ('running', 'cancel_requested')
+        `, [safeProgress, jobId, workerId])
+      : await this.pool.query<UpsertResult>(`
+          UPDATE background_jobs SET progress = ?, result = ?
+          WHERE id = ? AND locked_by = ? AND status IN ('running', 'cancel_requested')
+        `, [safeProgress, JSON.stringify(result), jobId, workerId]);
+    if (updated.affectedRows !== 1) throw new Error("Background job lease was lost");
   }
 
   async complete(jobId: string, workerId: string, result: unknown) {

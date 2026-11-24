@@ -81,7 +81,7 @@ export function ImportProgress({ job, children }: { job: ImportJob; children: Re
     {!!job.issues?.length && <details className="rounded-md border p-3 text-sm"><summary className="cursor-pointer focus-visible:outline-2">Chi tiết chương chưa lấy được</summary><ul className="mt-2 list-disc space-y-2 pl-5">{job.issues.slice(0, 10).map((issue, i) => <li key={i} className="break-words">{issue.chapter !== undefined ? `Chương ${issue.chapter}: ` : ""}{issue.reason}</li>)}</ul>{job.issues.length > 10 && <p className="mt-2 text-xs text-muted-foreground">Còn {job.issues.length - 10} mục khác trong nhật ký.</p>}</details>}
     <div ref={logRef} onScroll={() => { const el = logRef.current; if (el) followLogs.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }} role="log" aria-live="off" tabIndex={0} aria-label="Nhật ký import" className="h-40 overflow-auto overscroll-contain rounded-md border bg-muted/40 p-3 text-xs focus-visible:outline-2">{job.logs.length ? job.logs.map((line, i) => <p key={i} className="mb-1 break-words [content-visibility:auto]">{line}</p>) : <p className="text-muted-foreground">Đang chờ nhật ký…</p>}</div>
     {children}
-    <p className="text-xs text-muted-foreground">Đóng cửa sổ vẫn giữ tiến trình trên server. Phiên dài có thể chia theo thời gian chạy; dùng “Tiếp tục chương còn thiếu” để nối tiếp từ dữ liệu đã lưu mà không tải lại chương đã có.</p>
+    <p className="text-xs text-muted-foreground">Đóng cửa sổ vẫn giữ tiến trình trên Background Worker. Truyện dài tiếp tục chạy trên Render; nếu phiên bị gián đoạn, dùng “Tiếp tục chương còn thiếu” để nối tiếp mà không tải lại chương đã có.</p>
   </div>;
 }
 

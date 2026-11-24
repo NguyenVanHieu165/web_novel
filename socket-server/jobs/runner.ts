@@ -11,14 +11,21 @@ type RunnerConfig = {
   idlePollMs: number;
 };
 
+const CONTROL_POLL_MS = 1_000;
+
 function wait(delayMs: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(signal.reason);
-    const timer = setTimeout(resolve, delayMs);
-    signal.addEventListener("abort", () => {
+    const abort = () => {
       clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
       reject(signal.reason);
-    }, { once: true });
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 
@@ -92,11 +99,17 @@ export class JobRunner {
     this.stopController.signal.addEventListener("abort", stopJob, { once: true });
 
     const heartbeat = (async () => {
+      let nextHeartbeatAt = Date.now() + this.config.heartbeatMs;
       while (!heartbeatStop.signal.aborted) {
-        try { await wait(this.config.heartbeatMs, heartbeatStop.signal); }
+        const delay = Math.max(0, Math.min(CONTROL_POLL_MS, nextHeartbeatAt - Date.now()));
+        try { await wait(delay, heartbeatStop.signal); }
         catch { break; }
         try {
-          const state = await this.repository.heartbeat(job.id, workerId);
+          const heartbeatDue = Date.now() >= nextHeartbeatAt;
+          const state = heartbeatDue
+            ? await this.repository.heartbeat(job.id, workerId)
+            : await this.repository.controlStatus(job.id, workerId);
+          if (heartbeatDue) nextHeartbeatAt = Date.now() + this.config.heartbeatMs;
           if (state === "cancel_requested") {
             cancelRequested = true;
             jobController.abort(new Error("Job cancellation requested"));
@@ -120,7 +133,7 @@ export class JobRunner {
       const result = await handler(job.payload, {
         job,
         signal: jobController.signal,
-        reportProgress: (progress) => this.repository.updateProgress(job.id, workerId, progress),
+        reportProgress: (progress, snapshot) => this.repository.updateProgress(job.id, workerId, progress, snapshot),
       });
       const state = await this.repository.heartbeat(job.id, workerId);
       if (state === "lost") {
@@ -132,7 +145,18 @@ export class JobRunner {
         await this.repository.cancel(job.id, workerId);
         return;
       }
-      await this.repository.complete(job.id, workerId, result);
+      const completed = await this.repository.complete(job.id, workerId, result);
+      if (!completed) {
+        const finalState = await this.repository.controlStatus(job.id, workerId).catch(() => "lost" as const);
+        if (finalState === "cancel_requested") {
+          cancelRequested = true;
+          await this.repository.cancel(job.id, workerId);
+          console.info("[background-worker]", { event: "cancelled", jobId: job.id, type: job.type });
+        } else {
+          leaseLost = true;
+        }
+        return;
+      }
       console.info("[background-worker]", { event: "completed", jobId: job.id, type: job.type });
     } catch (error) {
       if (leaseLost) return;

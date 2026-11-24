@@ -24,7 +24,7 @@ export type ClaimedJob = {
 export type JobHandlerContext = {
   job: ClaimedJob;
   signal: AbortSignal;
-  reportProgress(progress: number): Promise<void>;
+  reportProgress(progress: number, result?: unknown): Promise<void>;
 };
 
 export type JobHandler = (payload: unknown, context: JobHandlerContext) => Promise<unknown>;

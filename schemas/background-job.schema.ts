@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { backgroundJobStatuses, backgroundJobTypes } from "@/lib/background-jobs/types";
+export {
+  importNovelJobPayloadSchema,
+  importNovelOptionsSchema,
+  importNovelResultSchema,
+  type ImportNovelJobPayload,
+  type ImportNovelResult,
+} from "@/socket-server/jobs/schemas/import-novel";
+import { importNovelJobPayloadSchema } from "@/socket-server/jobs/schemas/import-novel";
 
 export const backgroundJobIdSchema = z.string().uuid();
 export const backgroundJobTypeSchema = z.enum(backgroundJobTypes);
@@ -22,6 +30,10 @@ export const enqueueBackgroundJobSchema = z.discriminatedUnion("type", [
   enqueueOptionsSchema.extend({
     type: z.literal("system.noop"),
     payload: noopJobPayloadSchema,
+  }),
+  enqueueOptionsSchema.extend({
+    type: z.literal("IMPORT_NOVEL"),
+    payload: importNovelJobPayloadSchema,
   }),
 ]);
 
