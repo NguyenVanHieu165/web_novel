@@ -14,7 +14,7 @@ import { AudioPlayerSkeleton } from "@/components/common/InteractionSkeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const ChapterAudioPlayer = dynamic(() => import("@/components/reading/ChapterAudioPlayer"), { ssr: false, loading: AudioPlayerSkeleton });
+const ChapterAudioPlayer = dynamic(() => import("@/components/chapter/ChapterAudioPlayer"), { ssr: false, loading: AudioPlayerSkeleton });
 
 const control = "size-9 shrink-0 rounded-full text-[var(--reader-text)] hover:bg-[var(--reader-bg)] hover:text-[var(--reader-text)] focus-visible:border-[var(--reader-accent)] focus-visible:ring-[var(--reader-accent)]/40 disabled:opacity-30 md:size-11";
 const controlIcon = "size-4 md:size-5";

@@ -850,3 +850,11 @@ node --import ./socket-server/node_modules/tsx/dist/loader.mjs scripts/normalize
 - Suite toàn bộ: **393 tests, 385 Passed, 0 Failed, 8 MySQL integration Skipped**.
 - File thay đổi: `app/admin/dashboard/page.tsx`, `app/api/admin/dashboard/overview/route.ts`, `components/admin/Chart.tsx`, `lib/admin-statistics.ts`, `services/statisticsService.ts`, `tests/admin-statistics.test.mjs` và `PROJECT_PROGRESS.md`.
 - Commit `b72bf05` đã đưa thay đổi Dashboard lên `main`; Vercel báo deployment hoàn tất thành công. Chỉ lần cập nhật `PROJECT_PROGRESS.md` này còn ở workspace, chưa commit hoặc push.
+
+## 2026-11-24 — TTS audio streaming qua socket-server
+
+- Bổ sung bộ chia đoạn tiếng Việt 1.000–1.400 ký tự, cache MP3 LRU trong RAM (80 MB, TTL 20 phút, single-flight), endpoints meta/chunk có xác minh JWT và kiểm tra tài khoản/quyền mở khóa chương trong TiDB. Không thêm bảng/migration, không lưu audio lên ổ cứng hoặc Cloudinary.
+- Thêm player cho trình đọc với hai giọng Edge, tốc độ 0.75x–2x, điều khiển theo đoạn, prefetch đoạn kế tiếp và Media Session. Luồng trình duyệt đi qua API proxy same-origin để chuyển HttpOnly JWT cookie an toàn tới socket-server.
+- `npx tsc --noEmit`, `npm run lint`, `npm run build --prefix socket-server`, test mới TTS 3/3 và bộ test hiện có `chapter-audio` 11/11: Passed. `npm test` tổng suite: 245 passed, 26 failed do esbuild Linux/Windows không tương thích trong node_modules được mount, 7 skipped. Root `npm run build` không chạy qua Prisma generate do registry binaries.prisma.sh trả HTTP 403.
+- Sau khi người dùng cài `msedge-tts@2.1.1`, `npm run build` trong `socket-server`, root TypeScript/lint và 14 test liên quan audio/TTS đều Passed. NPM báo install scripts của `esbuild` và `msedge-tts` chưa được duyệt; build hiện tại vẫn qua, nhưng chưa xác minh Docker clean install.
+- Root `npm run build` tiếp tục bị chặn ở `prisma generate` do registry checksum HTTP 403; toàn bộ `npm test` chạy 278 bài: 245 Passed, 26 Failed bởi esbuild Windows/Linux mismatch trong workspace `node_modules`, 7 Skipped. Cần chạy full suite/root build trên môi trường phụ thuộc tương thích và registry-accessible trước khi phát hành.
