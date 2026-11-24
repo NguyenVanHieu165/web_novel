@@ -3,6 +3,8 @@ import test from "node:test";
 import { enqueueBackgroundJob, requestBackgroundJobCancellation, wakeBackgroundWorker } from "../lib/server/background-jobs.ts";
 import { backgroundJobDiagnosticSchema } from "../schemas/background-job.schema.ts";
 import { loadWorkerConfig } from "../socket-server/jobs/config.ts";
+import { buildJobPoolOptions } from "../socket-server/jobs/database.ts";
+import { safeJobErrorDetails } from "../socket-server/jobs/errors.ts";
 import { jobHandlers } from "../socket-server/jobs/handlers/index.ts";
 import { JobRunner } from "../socket-server/jobs/runner.ts";
 
@@ -197,4 +199,36 @@ test("worker config requires database settings and a safe heartbeat ratio", () =
   assert.equal(loadWorkerConfig(base).database.connectionLimit, 3);
   assert.throws(() => loadWorkerConfig({}), /DATABASE_URL/);
   assert.throws(() => loadWorkerConfig({ ...base, JOB_HEARTBEAT_MS: "50000" }), /Heartbeat/);
+});
+
+test("worker converts Prisma TiDB URLs into explicit TLS pool options", () => {
+  const config = loadWorkerConfig({
+    DATABASE_URL: "mysql://worker%40team:p%40ss%3Aword@gateway01.ap-southeast-1.prod.aws.tidbcloud.com/web_novel?sslaccept=strict",
+  });
+  const options = buildJobPoolOptions(config.database);
+
+  assert.equal(options.host, "gateway01.ap-southeast-1.prod.aws.tidbcloud.com");
+  assert.equal(options.port, 4_000);
+  assert.equal(options.user, "worker@team");
+  assert.equal(options.password, "p@ss:word");
+  assert.equal(options.database, "web_novel");
+  assert.equal(options.connectionLimit, 3);
+  assert.equal(options.acquireTimeout, 20_000);
+  assert.equal(options.connectTimeout, 15_000);
+  assert.deepEqual(options.ssl, { rejectUnauthorized: true });
+});
+
+test("worker enables TLS for supported URL flags without logging credentials", () => {
+  for (const query of ["sslaccept=strict", "ssl-mode=VERIFY_IDENTITY", "ssl=true"]) {
+    const config = loadWorkerConfig({ DATABASE_URL: `mysql://worker:secret@db.example.com/jobs?${query}` });
+    assert.deepEqual(buildJobPoolOptions(config.database).ssl, { rejectUnauthorized: true });
+  }
+
+  const failure = new Error("pool failed to retrieve a connection", {
+    cause: new Error("password=super-secret mysql://worker:super-secret@db.example.com/jobs"),
+  });
+  const details = safeJobErrorDetails(failure);
+  assert.equal(details.error, "pool failed to retrieve a connection");
+  assert.equal(details.cause.includes("super-secret"), false);
+  assert.match(details.cause, /\[redacted\]/u);
 });
