@@ -2,6 +2,10 @@
 
 Socket.IO phải chạy trên một dịch vụ Node.js duy trì kết nối lâu dài; không triển khai chung vào Vercel Functions.
 
+Kết nối không có cookie được nhận như guest và không tham gia room tài khoản, admin hoặc biên tập.
+Realtime server giữ bộ đếm kết nối trong RAM và mở `GET /internal/online-stats`; request nội bộ
+phải gửi `x-internal-token` khớp `INTERNAL_SECRET_TOKEN`.
+
 ## Biến môi trường bắt buộc
 
 - `JWT_SECRET`: giống ứng dụng Next.js để xác thực cookie phiên.
@@ -22,6 +26,8 @@ CPU/RAM của realtime service.
 Worker hỗ trợ `system.noop` và `IMPORT_NOVEL`. Tiến độ import được ghi theo đợt vào
 `background_jobs.result`; yêu cầu hủy trong TiDB được kiểm tra khoảng mỗi giây, độc lập
 với chu kỳ heartbeat gia hạn lease.
+
+Housekeeping của worker xóa nhật ký `CHAPTER_VIEW` cũ hơn 90 ngày mỗi ngày một lần.
 
 Ứng dụng Next.js cần cấu hình:
 
@@ -51,6 +57,7 @@ Sau khi triển khai, xác nhận:
 4. `ALLOWED_ORIGINS` chỉ chứa các origin web được tin cậy.
 5. Admin gọi `POST /api/admin/background-jobs/diagnostics`, sau đó đọc job tại
    `GET /api/admin/background-jobs/{jobId}` và nhận trạng thái `completed`.
+6. `GET /internal/online-stats` chỉ trả dữ liệu khi có header `x-internal-token` hợp lệ.
 
 Sau khi enqueue, Next.js gọi `/api/internal/jobs/wake` bằng `INTERNAL_SECRET_TOKEN`.
 Endpoint này giúp đánh thức Render; TiDB vẫn giữ job nếu wake request timeout hoặc service

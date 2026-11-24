@@ -13,12 +13,19 @@ const compiled = ts.transpileModule(source, {
 });
 vm.runInThisContext("(function (exports, require) { " + compiled.outputText + "\n})")(current.exports, require);
 const {
+  dashboardViewTotal,
   statisticsFilters,
   statisticsPoints,
   statisticsQuery,
   statisticsWindow,
   statisticsWindowQuery,
 } = current.exports;
+
+test("dashboard view totals use chapter-view logs and only fall back before logging exists", () => {
+  assert.equal(dashboardViewTotal(14, true, 900), 14);
+  assert.equal(dashboardViewTotal(0, true, 900), 0);
+  assert.equal(dashboardViewTotal(0, false, 900), 900);
+});
 
 test("dashboard defaults to revenue from the first day of the current Vietnam month through today", () => {
   const filters = statisticsFilters.parse({});

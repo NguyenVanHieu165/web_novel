@@ -6,6 +6,7 @@ import { safeJobErrorDetails } from "./jobs/errors";
 import { createJobHandlers } from "./jobs/handlers";
 import { JobRepository } from "./jobs/repository";
 import { JobRunner } from "./jobs/runner";
+import { runWorkerHousekeeping } from "./worker/housekeeping";
 
 dotenv.config();
 dotenv.config({ path: "../.env" });
@@ -31,12 +32,14 @@ async function main() {
   const pool = createJobPool(config.database);
   const repository = new JobRepository(pool, config.leaseMs);
   const runner = new JobRunner(repository, createJobHandlers(pool), config);
+  const housekeepingController = new AbortController();
   let shuttingDown = false;
 
   const shutdown = (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
     console.info("[background-worker]", { event: "shutdown", signal });
+    housekeepingController.abort();
     runner.stop(signal);
   };
   process.once("SIGTERM", () => shutdown("SIGTERM"));
@@ -44,7 +47,13 @@ async function main() {
 
   try {
     await verifyDatabaseConnection(pool);
-    await runner.start();
+    const housekeeping = runWorkerHousekeeping(pool, housekeepingController.signal);
+    try {
+      await runner.start();
+    } finally {
+      housekeepingController.abort();
+      await housekeeping;
+    }
   } finally {
     await pool.end();
   }

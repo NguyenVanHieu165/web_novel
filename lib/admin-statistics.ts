@@ -60,15 +60,26 @@ export type StatisticsReport = {
   group: Exclude<StatisticsFilters["group"], "auto">;
   points: { from: string; to: string; value: number; billCount?: number }[];
 };
+export type OnlineStats = {
+  totalConnections: number;
+  authenticatedUsers: number;
+  guestConnections: number;
+  updatedAt: string;
+};
 export type DashboardOverview = {
   useTotal: number;
   truyensTotal: number;
   chuongsTotal: number;
   viewsTotal: number;
   revenueTotal: number;
+  onlineStats: OnlineStats | null;
   from: string;
   to: string;
 };
+
+export function dashboardViewTotal(chapterViews: number, hasChapterViewLogs: boolean, legacyViews: number) {
+  return hasChapterViewLogs ? chapterViews : legacyViews;
+}
 
 export function statisticsQuery(filters: StatisticsFilters) {
   const params = new URLSearchParams({

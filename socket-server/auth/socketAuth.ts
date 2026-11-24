@@ -32,8 +32,8 @@ export async function confirmSocketAdministrator(socket: Socket, session: Socket
   }
 }
 
-export function monitorSocketAdministrator(socket: Socket, session: SocketSession) {
-  if (!session.roles.includes("admin")) return;
+export function monitorSocketAdministrator(socket: Socket, session: SocketSession | null | undefined) {
+  if (!session?.roles.includes("admin")) return;
   const timer = setInterval(() => {
     void confirmSocketAdministrator(socket, session).then((allowed) => {
       if (!allowed) socket.disconnect(true);
@@ -58,12 +58,12 @@ function readCookie(cookieHeader: string | undefined, name: string) {
   return null;
 }
 
-export async function authenticateSocket(socket: Socket): Promise<SocketSession> {
+export async function authenticateSocket(socket: Socket): Promise<SocketSession | null> {
+  const token = readCookie(socket.handshake.headers.cookie, "token");
+  if (!token) return null;
+
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET is required");
-
-  const token = readCookie(socket.handshake.headers.cookie, "token");
-  if (!token) throw new Error("Authentication required");
 
   const { payload } = await jwtVerify(
     token,

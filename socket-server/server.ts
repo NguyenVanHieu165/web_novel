@@ -5,6 +5,7 @@ import { Server, Socket } from "socket.io";
 import cors from "cors";
 import { z } from "zod";
 import { authenticateSocket, confirmSocketAdministrator, monitorSocketAdministrator, type SocketSession } from "./auth/socketAuth";
+import { isInternalStatsRequestAuthorized, OnlinePresenceTracker } from "./onlineStats";
 
 dotenv.config();
 dotenv.config({ path: "../.env" });
@@ -38,6 +39,7 @@ app.use(cors({
 app.use(express.json());
 const wakeJobSchema = z.object({ jobId: z.string().uuid() }).strict();
 const httpServer = createServer(app);
+const onlinePresence = new OnlinePresenceTracker();
 const io = new Server(httpServer, {
     maxHttpBufferSize: 256 * 1024,
     cors: {
@@ -55,13 +57,21 @@ app.get("/readyz", (_req: Request, res: Response) => {
     return res.json({ status: "ready", service: "web-novel-realtime" });
 });
 
+app.get("/internal/online-stats", (req: Request, res: Response) => {
+    if (!isInternalStatsRequestAuthorized(req.headers["x-internal-token"], SECRET_TOKEN)) {
+        return res.status(401).json({ success: false, message: "Unauthorized token" });
+    }
+    return res.set("Cache-Control", "no-store").json(onlinePresence.snapshot());
+});
+
 io.use(async (socket, next) => {
     try {
         const session = await authenticateSocket(socket);
-        if (session.roles.includes("admin") && !await confirmSocketAdministrator(socket, session)) {
+        if (session?.roles.includes("admin") && !await confirmSocketAdministrator(socket, session)) {
             return next(new Error("Unauthorized"));
         }
         socket.data.session = session;
+        socket.data.userId = session?.idTaiKhoan ?? null;
         next();
     } catch {
         next(new Error("Unauthorized"));
@@ -73,7 +83,10 @@ import { registerCollaborativeHandlers } from "./handlers/collaborative";
 
 // Quản lý các kết nối Socket.IO
 io.on("connection", (socket: Socket) => {
-    monitorSocketAdministrator(socket, socket.data.session as SocketSession);
+    const session = socket.data.session as SocketSession | null;
+    onlinePresence.connect(socket.id, session?.idTaiKhoan ?? null);
+    socket.once("disconnect", () => onlinePresence.disconnect(socket.id));
+    monitorSocketAdministrator(socket, session);
 
     // Đăng ký các Handler
     registerNotificationHandlers(io, socket);

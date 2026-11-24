@@ -9,6 +9,7 @@ import ReaderView from "@/components/chapter/ReaderView";
 import { normalizeVietnameseText } from "@/lib/vietnamese-text";
 import CommentSection from "@/components/comments/LazyCommentSection";
 import { getChapterPath } from "@/lib/reader-navigation";
+import { chapterViewLogData } from "@/lib/chapter-view-log";
 
 interface PageProps {
   params: Promise<{
@@ -54,13 +55,21 @@ export default async function ChapterReaderPage({ params }: PageProps) {
 
   if (data.access.canRead) {
     after(async () => {
-      try {
-        await prisma.$transaction([
+      const [counterResult, logResult] = await Promise.allSettled([
+        prisma.$transaction([
           prisma.chuong.update({ where: { idChuong: data.chapter.idChuong }, data: { luotXem: { increment: 1 } } }),
           prisma.truyen.update({ where: { idTruyen: data.story.idTruyen }, data: { luotXem: { increment: 1 } } }),
-        ]);
-      } catch (error) {
-        console.error("Không thể cập nhật lượt đọc chương", error);
+        ]),
+        prisma.nhatKyHeThong.create({
+          data: chapterViewLogData(data.chapter.idChuong, data.story.idTruyen),
+          select: { idNhatKy: true },
+        }),
+      ]);
+      if (counterResult.status === "rejected") {
+        console.error("Không thể cập nhật lượt đọc chương", counterResult.reason);
+      }
+      if (logResult.status === "rejected") {
+        console.error("Không thể ghi nhật ký lượt đọc chương", logResult.reason);
       }
     });
   }

@@ -792,3 +792,61 @@ node --import ./socket-server/node_modules/tsx/dist/loader.mjs scripts/normalize
 ### Phase 6 — Notes
 
 - Hướng dẫn sử dụng, quyền sở hữu và giới hạn: `docs/STUDIO.md`. Truyện crawl cũ không tự gán chủ sở hữu. Ví dùng số nguyên nên chương giá 5 xu trả tác giả 3 xu. Nháp thiết bị không đồng bộ máy khác. Realtime vẫn cần gateway Socket.IO hoạt động; inbox DB đã được kiểm thử.
+
+## 2026-11-24: Chuyển Import URL sang TiDB queue và Render worker
+
+### Mục tiêu và kiến trúc
+
+- Dùng bảng `background_jobs` đã có trên TiDB làm durable queue. Next.js chỉ xác thực, enqueue và đọc trạng thái; `socket-server` trên Render nhận và thực thi job `IMPORT_NOVEL`.
+- Giữ Socket.IO và worker trong cùng container nhưng chạy thành hai process riêng qua supervisor. Worker mặc định xử lý một job để không làm nghẽn CPU hoặc RAM của dịch vụ realtime.
+- Không thêm Redis, Outbox hoặc migration mới trong lượt này. Không chạy migration hay câu lệnh thay đổi schema trên production.
+
+### Triển khai worker
+
+- Thêm payload và result schema chặt cho `IMPORT_NOVEL`: URL HTTP/HTTPS công khai, tùy chọn giới hạn chương, tải ảnh, bỏ chương đã có, bỏ chương khóa, chủ sở hữu và request ID.
+- Worker nhận `AbortSignal`, kiểm tra yêu cầu hủy trong TiDB khoảng mỗi giây và xử lý đúng race giữa hủy với hoàn tất. Lease, heartbeat và retry tiếp tục dùng cơ chế queue chung.
+- Tiến độ 0–100 và snapshot chi tiết được ghi theo đợt vào `background_jobs.progress` và `background_jobs.result`: số chương đã lưu, bỏ qua, khóa, lỗi, issues, story ID, slug, nguồn và cooldown.
+- Executor trên Render không còn time budget 40 giây của Vercel. Import truyện dài có thể chạy đến khi hoàn tất, bị hủy hoặc gặp lỗi nguồn có thể hành động.
+- Giữ chống server-side request forgery (SSRF), DNS/IP pinning, kiểm tra từng redirect, chống trùng chương, transaction chương/nội dung, cooldown nguồn và phân loại lỗi an toàn.
+- Ảnh bìa và ảnh chương được kiểm tra URL công khai rồi tải lên Cloudinary. Worker không ghi media runtime vào `public`.
+- Thêm `cheerio` và `ipaddr.js` trực tiếp vào package `socket-server`; Docker build tiếp tục dùng context `socket-server`.
+
+### Cập nhật API và giao diện Admin
+
+- `POST /api/admin/stories/import-url` bỏ `after()` và job trong RAM. Route kiểm tra Admin, same-origin, URL/cooldown, enqueue vào TiDB rồi trả HTTP 202 cùng `jobId`.
+- `GET` và `DELETE /api/admin/stories/import-url/[jobId]` dùng owner scope trong TiDB. DELETE gửi yêu cầu hủy bền vững; POST tiếp tục giữ control khôi phục của giao diện nhưng tạo job mới với `skipExisting=true`.
+- Định dạng response `ImportJob` được giữ tương thích để modal Admin tiếp tục hiển thị tiến độ, lỗi, retry và link truyện.
+
+### Kết nối TiDB và sửa deployment
+
+- MariaDB pool parse `DATABASE_URL` thành host, port, user, password và database riêng. Kết nối TiDB Cloud bật Transport Layer Security (TLS) khi host hoặc query yêu cầu SSL, với `connectionLimit=3`, `acquireTimeout=20000` và `connectTimeout=15000`.
+- Log lỗi kết nối hiển thị cause đã redacted; không in password, token hoặc connection string.
+- Vercel từng lỗi vì `.vercelignore` loại `socket-server/` trong khi mã Next.js re-export module từ thư mục đó. Đã chuyển contract/state phía Next về `schemas/import-novel-job.schema.ts` và `lib/scraper/state.ts`; toàn bộ `app/`, `components/`, `lib/` và `schemas/` không còn import runtime Render.
+- Thêm regression test xác nhận `.vercelignore` vẫn chặn `socket-server/` và mã Next.js không tạo lại dependency ngược. Render tiếp tục tự chứa runtime trong build context hiện tại.
+
+### Xác minh và phát hành
+
+- Worker handler được test cho progress theo đợt, hủy giữa chừng, retry, race hoàn tất/hủy, Cloudinary, TLS và redaction.
+- Suite sau khi sửa boundary Vercel: **392 tests, 384 Passed, 0 Failed, 8 MySQL integration Skipped**. Lint, TypeScript, Next.js production build và `socket-server` build đều Passed.
+- Commit `330affd` triển khai `IMPORT_NOVEL` worker. Commit `2e51cb9` sửa boundary Vercel.
+- Vercel production build commit `2e51cb9` đã vượt Turbopack, TypeScript, 78/78 static pages và chuyển trạng thái **Ready** tại [Web Novel production](https://web-novel-ete3.vercel.app).
+- Chưa chạy import truyện dài end-to-end trên production trong lượt xác minh này. Cần theo dõi Render logs và thử một truyện ngắn trước khi dùng cho lô lớn.
+
+## 2026-11-24: Đồng bộ thẻ Dashboard với bộ lọc biểu đồ
+
+### Thay đổi
+
+- Bốn thẻ Dashboard dùng cùng khoảng ngày trong URL với biểu đồ. Thay đổi khoảng thời gian hoặc ngày tùy chọn sẽ hủy request cũ và tải số liệu mới.
+- Thay đổi riêng chỉ số biểu đồ hoặc cách gom ngày/tuần/tháng không gọi lại overview vì tổng theo kỳ không đổi.
+- API `GET /api/admin/dashboard/overview` dùng cùng `statisticsFilters` và `statisticsWindow` với `/api/statistics`. Mốc ngày tiếp tục tính theo múi giờ Việt Nam.
+- Các truy vấn người dùng, truyện, chương, lượt xem và doanh thu chạy song song. Người dùng, truyện và chương soft-delete không được tính; doanh thu chỉ gồm hóa đơn nạp thành công.
+- Đổi nhãn thẻ thành `Truyện mới`, `Người dùng mới`, `Lượt xem truyện mới` và `Doanh thu` để phản ánh phạm vi thời gian.
+- Hệ thống chưa lưu sự kiện cho từng lượt xem. Thẻ lượt xem hiện cộng `luot_xem` của các truyện được tạo trong kỳ; muốn đo lượt xem phát sinh trong kỳ cần thêm bảng sự kiện riêng.
+
+### Xác minh và trạng thái phát hành
+
+- Test mới xác nhận overview tái sử dụng đúng custom date window và không refetch khi chỉ đổi metric/group.
+- `npx tsc --noEmit`: Passed. `npm run lint`: Passed. `npm run build`: Passed.
+- Suite toàn bộ: **393 tests, 385 Passed, 0 Failed, 8 MySQL integration Skipped**.
+- File thay đổi: `app/admin/dashboard/page.tsx`, `app/api/admin/dashboard/overview/route.ts`, `components/admin/Chart.tsx`, `lib/admin-statistics.ts`, `services/statisticsService.ts`, `tests/admin-statistics.test.mjs` và `PROJECT_PROGRESS.md`.
+- Commit `b72bf05` đã đưa thay đổi Dashboard lên `main`; Vercel báo deployment hoàn tất thành công. Chỉ lần cập nhật `PROJECT_PROGRESS.md` này còn ở workspace, chưa commit hoặc push.

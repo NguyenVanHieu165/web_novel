@@ -6,6 +6,7 @@ import { once } from "node:events";
 import test from "node:test";
 import "dotenv/config";
 import { loadNotificationModule as load } from "./notification-support.mjs";
+import { OnlinePresenceTracker, isInternalStatsRequestAuthorized } from "../socket-server/onlineStats.ts";
 
 const require = createRequire(import.meta.url);
 const socketRequire = createRequire(new URL("../socket-server/package.json", import.meta.url));
@@ -68,6 +69,7 @@ test("MySQL + production HTTP/Socket.IO handlers: follow and public chapter reac
     "socket.io": { Server: function (...args) { io = new RealServer(...args); return io; } },
     "./auth/socketAuth": auth, "./handlers/notification": handlers, "./handlers/notificationDispatch": dispatch,
     "./handlers/collaborative": { registerCollaborativeHandlers() {} },
+    "./onlineStats": { OnlinePresenceTracker, isInternalStatsRequestAuthorized },
   }, { process: { env: { INTERNAL_SECRET_TOKEN: "internal-fixture" } } });
   await new Promise((resolve) => listen(0, "127.0.0.1", resolve));
   const socketUrl = `http://127.0.0.1:${http.address().port}`;
@@ -77,6 +79,16 @@ test("MySQL + production HTTP/Socket.IO handlers: follow and public chapter reac
     clients.push(socket); await once(socket, "connect"); return socket;
   }
   const admin = await client(1), reader = await client(7), other = await client(8);
+  const guest = connect(socketUrl, { transports: ["websocket"], forceNew: true });
+  clients.push(guest); await once(guest, "connect");
+  const statsResponse = await fetch(`${socketUrl}/internal/online-stats`, { headers: { "x-internal-token": "internal-fixture" } });
+  assert.equal(statsResponse.status, 200);
+  const stats = await statsResponse.json();
+  assert.equal(stats.totalConnections, 4);
+  assert.equal(stats.authenticatedUsers, 3);
+  assert.equal(stats.guestConnections, 1);
+  assert.match(stats.updatedAt, /^\d{4}-\d{2}-\d{2}T/u);
+  assert.equal((await fetch(`${socketUrl}/internal/online-stats`)).status, 401);
   const otherEvents = []; other.on("notification", (event) => otherEvents.push(event));
   const notifications = load("lib/server/notifications.ts", {}, { process: { env: { INTERNAL_SECRET_TOKEN: "internal-fixture", SOCKET_SERVER_URL: socketUrl } } });
   const common = (id) => ({

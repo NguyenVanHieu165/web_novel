@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestId, resError, resSuccess } from "@/lib/api";
 import { statisticsFilters } from "@/lib/admin-statistics";
 import { requireAdmin } from "@/lib/server/auth-session";
+import { getOnlineStats } from "@/lib/server/online-stats";
 import { getDashboardOverview } from "@/services/statisticsService";
 
 const privateHeaders = { "Cache-Control": "private, no-store" };
@@ -25,7 +26,11 @@ export async function GET(req: NextRequest) {
 
   const requestId = getRequestId();
   try {
-    const data = await getDashboardOverview(filters.data);
+    const [overview, onlineStats] = await Promise.all([
+      getDashboardOverview(filters.data),
+      getOnlineStats(),
+    ]);
+    const data = { ...overview, onlineStats };
     return NextResponse.json(
       resSuccess(data, {
         message: "Dashboard data fetched successfully",

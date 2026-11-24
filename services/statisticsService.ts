@@ -1,6 +1,8 @@
 import { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { CHAPTER_VIEW_ACTION } from "@/lib/chapter-view-log";
 import {
+  dashboardViewTotal,
   statisticsPoints,
   statisticsWindow,
   type DashboardOverview,
@@ -16,6 +18,30 @@ const sources = {
   revenue: { table: Prisma.sql`hoa_don_nap`, where: Prisma.sql`trang_thai = 'success'`, value: Prisma.sql`SUM(so_tien_vnd)` },
   orders: { table: Prisma.sql`hoa_don_nap`, where: Prisma.sql`trang_thai = 'success'`, value: Prisma.sql`COUNT(*)` },
 };
+
+function isMissingSystemLogTable(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "P2021";
+}
+
+async function getChapterViewActivity(createdAt: { gte: Date; lt: Date }) {
+  try {
+    const [count, latest] = await Promise.all([
+      prisma.nhatKyHeThong.count({
+        where: { nguon: CHAPTER_VIEW_ACTION, createdAt },
+      }),
+      prisma.nhatKyHeThong.findFirst({
+        where: { nguon: CHAPTER_VIEW_ACTION },
+        select: { idNhatKy: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+    return { count, hasLogs: Boolean(latest) };
+  } catch (error) {
+    if (!isMissingSystemLogTable(error)) throw error;
+    console.warn("System log table is unavailable; dashboard views are using the legacy fallback.");
+    return { count: 0, hasLogs: false };
+  }
+}
 
 export async function getStatisticsReport(filters: StatisticsFilters): Promise<StatisticsReport> {
   const { from, to, group, start, end } = statisticsWindow(filters);
@@ -37,7 +63,7 @@ export async function getStatisticsReport(filters: StatisticsFilters): Promise<S
 export async function getDashboardOverview(filters: StatisticsFilters): Promise<DashboardOverview> {
   const { from, to, start, end } = statisticsWindow(filters);
   const createdAt = { gte: start, lt: end };
-  const [useTotal, truyensTotal, chuongsTotal, views, revenue] = await Promise.all([
+  const [useTotal, truyensTotal, chuongsTotal, chapterViewActivity, revenue] = await Promise.all([
     prisma.taiKhoan.count({
       where: {
         createdAt,
@@ -56,13 +82,7 @@ export async function getDashboardOverview(filters: StatisticsFilters): Promise<
         OR: [{ isDeleted: false }, { isDeleted: null }],
       },
     }),
-    prisma.truyen.aggregate({
-      _sum: { luotXem: true },
-      where: {
-        createdAt,
-        OR: [{ isDeleted: false }, { isDeleted: null }],
-      },
-    }),
+    getChapterViewActivity(createdAt),
     prisma.hoaDonNap.aggregate({
       _sum: { soTienVnd: true },
       where: {
@@ -72,12 +92,21 @@ export async function getDashboardOverview(filters: StatisticsFilters): Promise<
     }),
   ]);
 
+  const legacyViews = chapterViewActivity.hasLogs ? 0 : Number((await prisma.truyen.aggregate({
+    _sum: { luotXem: true },
+    where: {
+      createdAt,
+      OR: [{ isDeleted: false }, { isDeleted: null }],
+    },
+  }))._sum.luotXem ?? 0);
+
   return {
     useTotal,
     truyensTotal,
     chuongsTotal,
-    viewsTotal: Number(views._sum.luotXem ?? 0),
+    viewsTotal: dashboardViewTotal(chapterViewActivity.count, chapterViewActivity.hasLogs, legacyViews),
     revenueTotal: Number(revenue._sum.soTienVnd ?? 0),
+    onlineStats: null,
     from,
     to,
   };

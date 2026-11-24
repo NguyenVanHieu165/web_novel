@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { BookOpen, Users, Eye, DollarSign, Loader2 } from "lucide-react";
+import { BookOpen, Users, Eye, DollarSign, Loader2, Wifi } from "lucide-react";
 import Chart from "@/components/admin/Chart";
 import Card from "@/components/admin/card";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -37,7 +37,7 @@ function DashboardStatsCards({
 }) {
   const placeholder = pending ? "..." : unavailable ? "—" : null;
   return (
-    <div aria-busy={pending} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div aria-busy={pending} className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
       <Card
         title="Truyện mới"
         value={placeholder ?? data?.truyensTotal ?? 0}
@@ -51,7 +51,7 @@ function DashboardStatsCards({
         color="green"
       />
       <Card
-        title="Lượt xem truyện mới"
+        title="Lượt xem trong kỳ"
         value={placeholder ?? (data?.viewsTotal ?? 0).toLocaleString("vi-VN")}
         icon={<Eye size={22} className="text-purple-600" />}
         color="purple"
@@ -62,6 +62,23 @@ function DashboardStatsCards({
         icon={<DollarSign size={22} className="text-orange-600" />}
         color="orange"
       />
+      <UICard className="py-0">
+        <CardContent className="flex items-center gap-4 p-5">
+          <div className="rounded-lg bg-cyan-50 p-3 text-cyan-600 dark:bg-cyan-950/40 dark:text-cyan-400">
+            <Wifi aria-hidden="true" size={22} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-muted-foreground">Đang trực tuyến</p>
+            <p className="text-2xl font-bold text-card-foreground">
+              {placeholder ?? data?.onlineStats?.totalConnections ?? "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Thành viên {placeholder ?? data?.onlineStats?.authenticatedUsers ?? "—"}
+              {" · "}Khách {placeholder ?? data?.onlineStats?.guestConnections ?? "—"}
+            </p>
+          </div>
+        </CardContent>
+      </UICard>
     </div>
   );
 }

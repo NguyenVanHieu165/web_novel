@@ -9,6 +9,7 @@ import { safeJobErrorDetails } from "../socket-server/jobs/errors.ts";
 import { jobHandlers } from "../socket-server/jobs/handlers/index.ts";
 import { createImportNovelHandler } from "../socket-server/jobs/handlers/import-novel.ts";
 import { JobRunner } from "../socket-server/jobs/runner.ts";
+import { cleanupExpiredChapterViewLogs } from "../socket-server/worker/housekeeping.ts";
 import { downloadImportImage } from "../socket-server/importer/media.ts";
 
 function storedJob(data) {
@@ -145,6 +146,23 @@ function claimedJob(overrides = {}) {
     ...overrides,
   };
 }
+
+test("worker housekeeping removes only CHAPTER_VIEW logs older than 90 days", async () => {
+  let statement;
+  let values;
+  const pool = {
+    async query(sql, parameters) {
+      statement = sql;
+      values = parameters;
+      return { affectedRows: 12 };
+    },
+  };
+  const deleted = await cleanupExpiredChapterViewLogs(pool, new Date("2026-11-24T00:00:00.000Z"));
+  assert.equal(deleted, 12);
+  assert.match(statement, /^DELETE FROM nhat_ky_he_thong WHERE nguon = \? AND created_at < \?$/u);
+  assert.equal(values[0], "CHAPTER_VIEW");
+  assert.equal(values[1].toISOString(), "2026-08-26T00:00:00.000Z");
+});
 
 test("runner executes noop and stores completion", async () => {
   const progress = [];
