@@ -37,6 +37,7 @@ model TaiKhoan {
   viTien            ViTien?
   yeuc_cau_rut_tien yeuc_cau_rut_tien[]
   nhatKyHeThong     NhatKyHeThong[]
+  backgroundJobs    BackgroundJob[]
 
   @@index([email], map: "idx_email")
   @@index([tenTaiKhoan], map: "idx_ten_tai_khoan")
@@ -469,6 +470,35 @@ model GioiHanTanSuat {
 
   @@index([hetHan], map: "idx_gioi_han_tan_suat_het_han")
   @@map("gioi_han_tan_suat")
+}
+
+model BackgroundJob {
+  id             String    @id @db.VarChar(36)
+  type           String    @db.VarChar(50)
+  status         String    @default("queued") @db.VarChar(20)
+  payload        Json
+  result         Json?
+  progress       Int       @default(0) @db.UnsignedTinyInt
+  priority       Int       @default(0) @db.SmallInt
+  attempts       Int       @default(0) @db.UnsignedInt
+  maxAttempts    Int       @default(3) @map("max_attempts") @db.UnsignedInt
+  runAt          DateTime  @default(now()) @map("run_at") @db.DateTime(3)
+  lockedBy       String?   @map("locked_by") @db.VarChar(100)
+  leaseExpiresAt DateTime? @map("lease_expires_at") @db.DateTime(3)
+  heartbeatAt    DateTime? @map("heartbeat_at") @db.DateTime(3)
+  dedupeKey      String?   @unique(map: "uk_background_jobs_dedupe_key") @map("dedupe_key") @db.VarChar(191)
+  ownerId        Int?      @map("owner_id")
+  lastError      String?   @map("last_error") @db.Text
+  startedAt      DateTime? @map("started_at") @db.DateTime(3)
+  finishedAt     DateTime? @map("finished_at") @db.DateTime(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  owner          TaiKhoan? @relation(fields: [ownerId], references: [idTaiKhoan], onDelete: SetNull, onUpdate: NoAction, map: "background_jobs_ibfk_1")
+
+  @@index([status, runAt, priority, createdAt], map: "idx_background_jobs_claim")
+  @@index([status, leaseExpiresAt], map: "idx_background_jobs_lease")
+  @@index([ownerId, createdAt], map: "idx_background_jobs_owner_created_at")
+  @@map("background_jobs")
 }
 
 model truyen_tac_gia_dich {

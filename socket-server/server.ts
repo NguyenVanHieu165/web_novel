@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
+import { z } from "zod";
 import { authenticateSocket, confirmSocketAdministrator, monitorSocketAdministrator, type SocketSession } from "./auth/socketAuth";
 
 dotenv.config();
@@ -35,6 +36,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+const wakeJobSchema = z.object({ jobId: z.string().uuid() }).strict();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     maxHttpBufferSize: 256 * 1024,
@@ -94,6 +96,24 @@ app.post("/api/trigger-notification", (req: Request<Record<string, never>, unkno
     }
 
     return res.json({ success: true, message: "Notification broadcasted successfully" });
+});
+
+// A successful request wakes a sleeping Render web service. TiDB remains the
+// source of truth; the worker will claim the job on its next bounded poll.
+app.post("/api/internal/jobs/wake", (req: Request<Record<string, never>, unknown, unknown>, res: Response) => {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader || authHeader !== `Bearer ${SECRET_TOKEN}`) {
+        return res.status(401).json({ success: false, message: "Unauthorized token" });
+    }
+    const parsed = wakeJobSchema.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(400).json({ success: false, message: "Invalid job wake payload" });
+    }
+    return res.status(202).json({
+        success: true,
+        jobId: parsed.data.jobId,
+        workerEnabled: process.env.WORKER_ENABLED !== "false",
+    });
 });
 
 // Khởi chạy server
