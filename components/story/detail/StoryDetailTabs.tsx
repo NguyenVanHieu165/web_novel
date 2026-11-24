@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { FileText, List, Star } from "lucide-react";
 import dynamic from "next/dynamic";
 import { ChapterListSkeleton, CommentSkeleton } from "@/components/common/InteractionSkeleton";
@@ -82,14 +83,15 @@ export default function StoryDetailTabs({ story }: StoryDetailTabsProps) {
 
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {story.chapters.map((chap) => (
-                <a
+                <Link
                   key={chap.idChuong}
                   href={`/truyen/${story.slug}/${chap.slug}`}
+                  prefetch
                   className="flex items-center justify-between rounded-xl bg-muted/50 p-3 text-xs transition-colors hover:bg-muted"
                 >
                   <span className="font-semibold truncate pr-2">{chap.tieuDeChuong}</span>
                   <span className="shrink-0 text-[11px] text-muted-foreground">{chap.updatedAt}</span>
-                </a>
+                </Link>
               ))}
             </CardContent>
           </Card>

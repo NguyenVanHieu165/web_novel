@@ -1,10 +1,13 @@
 import "dotenv/config";
 import type { SecureContextOptions } from "tls";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import mariadb, { type Pool } from "mariadb";
 import { PrismaClient } from "../app/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
+    prismaAdapter: PrismaMariaDb | undefined;
+    prismaPool: Pool | undefined;
 };
 
 interface DatabaseConnectionConfig {
@@ -14,6 +17,15 @@ interface DatabaseConnectionConfig {
     password?: string;
     database: string;
     ssl?: boolean | (SecureContextOptions & { rejectUnauthorized?: boolean });
+    connectionLimit: number;
+    connectTimeout: number;
+    acquireTimeout: number;
+}
+
+function parsePositiveInteger(value: string | null | undefined): number | undefined {
+    if (!value || !/^\d+$/u.test(value)) return undefined;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function resolveConnectionConfig(): DatabaseConnectionConfig {
@@ -25,6 +37,9 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
     let urlSslAccept: string | null = null;
     let urlSsl: string | null = null;
     let urlSslMode: string | null = null;
+    let urlConnectionLimit: number | undefined;
+    let urlConnectTimeout: number | undefined;
+    let urlAcquireTimeout: number | undefined;
 
     const rawUrl = process.env.DATABASE_URL;
     if (rawUrl) {
@@ -39,6 +54,9 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
             urlSslAccept = parsed.searchParams.get("sslaccept");
             urlSsl = parsed.searchParams.get("ssl");
             urlSslMode = parsed.searchParams.get("sslmode");
+            urlConnectionLimit = parsePositiveInteger(parsed.searchParams.get("connection_limit") ?? parsed.searchParams.get("connectionLimit"));
+            urlConnectTimeout = parsePositiveInteger(parsed.searchParams.get("connect_timeout") ?? parsed.searchParams.get("connectTimeout"));
+            urlAcquireTimeout = parsePositiveInteger(parsed.searchParams.get("acquire_timeout") ?? parsed.searchParams.get("acquireTimeout"));
         } catch {
             console.error("[lib/prisma] Failed to parse DATABASE_URL.");
         }
@@ -94,6 +112,10 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
         };
     }
 
+    const configuredLimit = parsePositiveInteger(process.env.DATABASE_CONNECTION_LIMIT) ?? urlConnectionLimit ?? 10;
+    const configuredConnectTimeout = parsePositiveInteger(process.env.DATABASE_CONNECT_TIMEOUT) ?? urlConnectTimeout ?? 15_000;
+    const configuredAcquireTimeout = parsePositiveInteger(process.env.DATABASE_ACQUIRE_TIMEOUT) ?? urlAcquireTimeout ?? 20_000;
+
     return {
         host,
         port,
@@ -101,27 +123,38 @@ function resolveConnectionConfig(): DatabaseConnectionConfig {
         password,
         database,
         ssl,
+        // A supplied low value is not sufficient for this deployment's serverless fan-out.
+        connectionLimit: Math.max(10, configuredLimit),
+        connectTimeout: Math.min(20_000, Math.max(15_000, configuredConnectTimeout)),
+        acquireTimeout: Math.min(20_000, Math.max(15_000, configuredAcquireTimeout)),
     };
 }
 
-function createPrismaClient() {
+function createPrismaPool() {
     const dbConfig = resolveConnectionConfig();
-    const adapter = new PrismaMariaDb({
+    return mariadb.createPool({
         host: dbConfig.host,
         port: dbConfig.port,
         user: dbConfig.user,
         password: dbConfig.password,
         database: dbConfig.database,
         ssl: dbConfig.ssl,
-        connectionLimit: Number(process.env.DATABASE_CONNECTION_LIMIT) || (process.env.VERCEL ? 3 : 10),
-        connectTimeout: Number(process.env.DATABASE_CONNECT_TIMEOUT) || 15000,
-    });
-
-    return new PrismaClient({
-        adapter,
-        log: process.env.NODE_ENV === "production" ? ["error"] : ["error", "warn"],
+        connectionLimit: dbConfig.connectionLimit,
+        connectTimeout: dbConfig.connectTimeout,
+        acquireTimeout: dbConfig.acquireTimeout,
+        multipleStatements: false,
+        bigIntAsNumber: true,
+        insertIdAsNumber: true,
+        timezone: "Z",
     });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const prismaPool = globalForPrisma.prismaPool ?? createPrismaPool();
+globalForPrisma.prismaPool = prismaPool;
+const prismaAdapter = globalForPrisma.prismaAdapter ?? new PrismaMariaDb(prismaPool, { disposeExternalPool: true });
+globalForPrisma.prismaAdapter = prismaAdapter;
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+    adapter: prismaAdapter,
+    log: process.env.NODE_ENV === "production" ? ["error"] : ["error", "warn"],
+});
 globalForPrisma.prisma = prisma;

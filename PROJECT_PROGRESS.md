@@ -858,3 +858,12 @@ node --import ./socket-server/node_modules/tsx/dist/loader.mjs scripts/normalize
 - `npx tsc --noEmit`, `npm run lint`, `npm run build --prefix socket-server`, test mới TTS 3/3 và bộ test hiện có `chapter-audio` 11/11: Passed. `npm test` tổng suite: 245 passed, 26 failed do esbuild Linux/Windows không tương thích trong node_modules được mount, 7 skipped. Root `npm run build` không chạy qua Prisma generate do registry binaries.prisma.sh trả HTTP 403.
 - Sau khi người dùng cài `msedge-tts@2.1.1`, `npm run build` trong `socket-server`, root TypeScript/lint và 14 test liên quan audio/TTS đều Passed. NPM báo install scripts của `esbuild` và `msedge-tts` chưa được duyệt; build hiện tại vẫn qua, nhưng chưa xác minh Docker clean install.
 - Root `npm run build` tiếp tục bị chặn ở `prisma generate` do registry checksum HTTP 403; toàn bộ `npm test` chạy 278 bài: 245 Passed, 26 Failed bởi esbuild Windows/Linux mismatch trong workspace `node_modules`, 7 Skipped. Cần chạy full suite/root build trên môi trường phụ thuộc tương thích và registry-accessible trước khi phát hành.
+
+
+## 2026-11-24 — Prisma pool và phản hồi điều hướng
+
+- `lib/prisma.ts` sử dụng pool MariaDB được giữ trên `globalThis` cùng adapter và PrismaClient. Pool connection limit tối thiểu 10 (đọc env/URL, ép giá trị thấp lên 10), connect timeout 15–20 giây và acquire timeout 15–20 giây. Không thay schema/migration.
+- Rà soát `public-home-v1`: chỉ được gọi từ trang chủ `app/(reader)/page.tsx`; Header/ReaderShell/layout và các trang thể loại/truyện mới/xếp hạng không kích hoạt truy vấn này. Trang thể loại chi tiết dùng catalog cache nhẹ `public-genre-catalog-v1` để ánh xạ slug; giữ nguyên query của homepage.
+- Thêm loading skeleton cho trang thể loại chi tiết và xếp hạng; các route truyện mới, chi tiết truyện và chương đã có skeleton. Chuyển các liên kết chương trong preview từ thẻ `<a>` sang Next Link và bỏ `prefetch={false}` khỏi `ReaderNavigationLink` để Next.js tự prefetch.
+- Theo lựa chọn của người dùng, không đọc `.env`; không xác minh tình trạng query `connection_limit=3` trong giá trị DATABASE_URL.
+- Verification: `npx tsc --noEmit` và `npm run lint` Passed; 42 test liên quan reader/search/story-list/TTS Passed. Không chạy production build ở lượt này (không nằm trong yêu cầu xác minh).

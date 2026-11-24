@@ -76,7 +76,7 @@ export function ReaderNavigationLink({ href, onClick, tabIndex, children, ...pro
   };
 
   return (
-    <Link {...props} href={href} prefetch={false} scroll onClick={handleClick}
+    <Link {...props} href={href} scroll onClick={handleClick}
       aria-disabled={pending || props["aria-disabled"]} tabIndex={pending ? -1 : tabIndex}>
       {children}
     </Link>
