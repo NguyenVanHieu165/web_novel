@@ -30,6 +30,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+/lint-out.txt
+/tsc-out.txt
+
+# local database/archive backups (keep on disk, do not commit)
+/web_truyen_*.sql
+/uploads.zip
+
+# accidental shell output files
+/$null
+/npx
+/tatus
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -51,5 +62,3 @@ next-env.d.ts
 
 # Private source-import checkpoints (owner/options/progress)
 /.data/story-imports/
-
-.vercel
