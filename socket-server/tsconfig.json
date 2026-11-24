@@ -10,5 +10,5 @@
     "outDir": "./dist",
     "rootDir": "./"
   },
-  "include": ["server.ts", "worker.ts", "auth/**/*.ts", "handlers/**/*.ts", "rooms/**/*.ts", "worker/**/*.ts", "jobs/**/*.ts", "importer/**/*.ts", "onlineStats.ts"]
+  "include": ["server.ts", "worker.ts", "auth/**/*.ts", "handlers/**/*.ts", "rooms/**/*.ts", "worker/**/*.ts", "jobs/**/*.ts", "importer/**/*.ts", "onlineStats.ts", "tts/**/*.ts"]
 }
