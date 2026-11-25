@@ -17,12 +17,21 @@ const worker = {
       if (cached) return new Response(cached.body, { headers: { ...headers, "X-TTS-Cache": "HIT-R2" } });
       const relayUrl = new URL(env.VERCEL_TTS_RELAY_URL);
       if (relayUrl.protocol !== "https:") throw new Error("Relay URL must use HTTPS");
-      const upstream = await fetch(relayUrl, {
-        method: "POST", redirect: "error",
+      // Share one deadline across retries; the calling Next.js route times out at 50s.
+      const signal = AbortSignal.timeout(45000);
+      const callRelay = () => fetch(relayUrl, {
+        method: "POST", redirect: "manual",
         headers: { Authorization: `Bearer ${env.TTS_WORKER_SECRET}`, "Content-Type": "application/json" },
         body: JSON.stringify({ text: body.text, voice: body.voice }),
-        signal: AbortSignal.timeout(45000),
+        signal,
       });
+      let upstream = await callRelay();
+      if ([502, 503, 504].includes(upstream.status)) {
+        console.error("TTS relay retry", { status: upstream.status });
+        await upstream.body?.cancel();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        upstream = await callRelay();
+      }
       if (!upstream.ok) throw new Error(`TTS relay HTTP ${upstream.status}`);
       if (upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "audio/mpeg") throw new Error("TTS relay invalid content type");
       // Buffer bounded chunks before cache writes so partial/failed responses never enter R2.

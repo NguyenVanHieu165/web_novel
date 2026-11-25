@@ -43,16 +43,16 @@ test("Worker enforces bearer auth before R2 and returns cache hit contract", asy
 });
 
 test("R2 MISS calls authenticated Vercel relay and caches only valid MP3", async () => {
-  for (const mode of ["ok", "http", "type", "empty", "network"]) {
+  for (const mode of ["ok", "http", "redirect", "type", "empty", "network"]) {
     const writes = [], pending = [];
     const worker = loadNotificationModule("tts-worker/src/index.ts", {}, { Response, console: { error() {} }, fetch: async (url, options) => {
       assert.equal(String(url), "https://relay.test/api/internal/tts-relay");
       assert.equal(options.method, "POST");
-      assert.equal(options.redirect, "error");
+      assert.equal(options.redirect, "manual");
       assert.equal(options.headers.Authorization, "Bearer fixture");
       assert.deepEqual(JSON.parse(options.body), { text: "Hello", voice: "vi-VN-HoaiMyNeural" });
       if (mode === "network") throw new Error("unreachable");
-      return new Response(mode === "empty" ? "" : "ID3", { status: mode === "http" ? 502 : 200, headers: { "Content-Type": mode === "type" ? "application/json" : "audio/mpeg" } });
+      return new Response(mode === "empty" ? "" : "ID3", { status: mode === "http" ? 502 : mode === "redirect" ? 307 : 200, headers: { "Content-Type": mode === "type" ? "application/json" : "audio/mpeg" } });
     } }).default;
     const result = await worker.fetch(new Request("https://worker.test/synthesize", { method: "POST", headers: { Authorization: "Bearer fixture" }, body: JSON.stringify({ cacheKey: "b".repeat(64), text: "Hello", voice: "vi-VN-HoaiMyNeural" }) }), { TTS_WORKER_SECRET: "fixture", VERCEL_TTS_RELAY_URL: "https://relay.test/api/internal/tts-relay", TTS_BUCKET: { get: async () => null, put: async (key, bytes) => writes.push({ key, bytes }) } }, { waitUntil: p => pending.push(p) });
     assert.equal(result.status, mode === "ok" ? 200 : 502);
@@ -64,5 +64,24 @@ test("R2 MISS calls authenticated Vercel relay and caches only valid MP3", async
       assert.equal(await result.text(), "ID3");
       assert.equal(writes[0].key, `chunks/${"b".repeat(64)}.mp3`);
     }
+  }
+});
+
+test("Worker retries transient relay HTTP status once, sharing its deadline", async () => {
+  for (const status of [502, 503, 504, 401, 400]) {
+    let calls = 0, signal;
+    const pending = [], writes = [];
+    const worker = loadNotificationModule("tts-worker/src/index.ts", {}, { Response, console: { error() {} }, fetch: async (_url, options) => {
+      calls++;
+      if (!signal) signal = options.signal;
+      assert.equal(options.signal, signal);
+      return calls === 1 ? new Response("failed", { status }) : new Response("MP3", { headers: { "Content-Type": "audio/mpeg" } });
+    } }).default;
+    const result = await worker.fetch(new Request("https://worker.test/synthesize", { method: "POST", headers: { Authorization: "Bearer fixture" }, body: JSON.stringify({ cacheKey: "b".repeat(64), text: "Hello", voice: "vi-VN-HoaiMyNeural" }) }), { TTS_WORKER_SECRET: "fixture", VERCEL_TTS_RELAY_URL: "https://relay.test/api/internal/tts-relay", TTS_BUCKET: { get: async () => null, put: async (_key, bytes) => writes.push(bytes) } }, { waitUntil: p => pending.push(p) });
+    const retryable = [502, 503, 504].includes(status);
+    assert.equal(result.status, retryable ? 200 : 502);
+    assert.equal(calls, retryable ? 2 : 1);
+    await Promise.all(pending);
+    assert.equal(writes.length, retryable ? 1 : 0);
   }
 });

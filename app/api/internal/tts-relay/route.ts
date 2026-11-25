@@ -23,31 +23,51 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400, headers });
     input = parsed.data;
   } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers }); }
-  const tts = new MsEdgeTTS({ connectionTimeoutMs: 10000, synthesisTimeoutMs: 20000 });
-  const timeout = setTimeout(() => tts.close(), 35000);
-  const abort = () => tts.close();
-  request.signal.addEventListener("abort", abort, { once: true });
-  try {
-    if (request.signal.aborted) throw new Error("Request aborted");
-    await tts.setMetadata(input.voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const escaped = input.text.replace(/[<>&"']/gu, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '\"': "&quot;", "'": "&apos;" })[char]!);
-    const { audioStream } = tts.rawToStream(`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN"><voice name="${input.voice}">${escaped}</voice></speak>`);
-    const parts: Buffer[] = [];
-    let size = 0;
-    for await (const part of audioStream) {
-      const bytes = Buffer.isBuffer(part) ? part : Buffer.from(part);
-      size += bytes.length;
-      if (size > 4 * 1024 * 1024) throw new Error("Audio too large");
-      parts.push(bytes);
+  let detail = "Unknown synthesis failure";
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    if (request.signal.aborted) break;
+    const tts = new MsEdgeTTS({ connectionTimeoutMs: 10000, synthesisTimeoutMs: 12000 });
+    let expired = false;
+    let rejectAttempt!: (error: Error) => void;
+    const deadline = new Promise<never>((_resolve, reject) => { rejectAttempt = reject; });
+    const stop = (message: string) => {
+      expired = true;
+      rejectAttempt(new Error(message));
+      tts.close();
+    };
+    const timeout = setTimeout(() => stop("Edge synthesis deadline exceeded"), 12000);
+    const abort = () => stop("Request aborted");
+    request.signal.addEventListener("abort", abort, { once: true });
+    try {
+      if (request.signal.aborted) throw new Error("Request aborted");
+      const synthesize = async () => {
+        await tts.setMetadata(input.voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        if (expired) throw new Error("Attempt expired");
+        const escaped = input.text.replace(/[<>&"']/gu, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '\"': "&quot;", "'": "&apos;" })[char]!);
+        const { audioStream } = tts.rawToStream(`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN"><voice name="${input.voice}">${escaped}</voice></speak>`);
+        const parts: Buffer[] = [];
+        let size = 0;
+        for await (const part of audioStream) {
+          const bytes = Buffer.isBuffer(part) ? part : Buffer.from(part);
+          size += bytes.length;
+          if (size > 4 * 1024 * 1024) throw new Error("Audio too large");
+          parts.push(bytes);
+        }
+        if (!size) throw new Error("Empty audio");
+        return new Uint8Array(Buffer.concat(parts));
+      };
+      const audio = await Promise.race([synthesize(), deadline]);
+      return new NextResponse(audio, { headers: { ...headers, "Content-Type": "audio/mpeg", "Content-Length": String(audio.length) } });
+    } catch (error) {
+      // Error names expose no upstream URL, token, stack or chapter text.
+      detail = expired ? (request.signal.aborted ? "Request aborted" : "Edge synthesis deadline exceeded") : error instanceof Error ? error.name.slice(0, 80) : "Unknown synthesis failure";
+      console.error("[tts-relay] synthesis attempt failed", { attempt, detail });
+    } finally {
+      clearTimeout(timeout);
+      request.signal.removeEventListener("abort", abort);
+      tts.close();
     }
-    if (!size) throw new Error("Empty audio");
-    return new NextResponse(new Uint8Array(Buffer.concat(parts)), { headers: { ...headers, "Content-Type": "audio/mpeg", "Content-Length": String(size) } });
-  } catch (error) {
-    console.error("[tts-relay] synthesis failed", error instanceof Error ? error.name : "Unknown error");
-    return NextResponse.json({ error: "TTS_RELAY_FAILED" }, { status: 502, headers });
-  } finally {
-    clearTimeout(timeout);
-    request.signal.removeEventListener("abort", abort);
-    tts.close();
+    if (attempt < 3 && !request.signal.aborted) await new Promise(resolve => setTimeout(resolve, 250));
   }
+  return NextResponse.json({ error: "TTS_RELAY_FAILED", detail }, { status: 502, headers });
 }
