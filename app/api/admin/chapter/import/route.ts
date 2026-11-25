@@ -14,7 +14,8 @@ const chapterImportSchema = z.object({
   chuongSo: z.coerce
     .number()
     .positive("Số chương phải lớn hơn 0")
-    .max(9999.9, "Số chương quá lớn"),
+    .max(999999.9, "Số chương quá lớn")
+    .multipleOf(0.1, "Số chương chỉ được có một chữ số thập phân"),
   tieuDeChuong: z
     .string()
     .trim()
@@ -205,17 +206,17 @@ export async function POST(req: NextRequest) {
       return false;
     });
 
-    let insertedRows = 0;
-
-    await prisma.$transaction(async (tx) => {
+    const insertedRows = await prisma.$transaction(async (tx) => {
+      let insertedCount = 0;
       for (let offset = 0; offset < newRows.length; offset += 500) {
         const batch = newRows.slice(offset, offset + 500);
-        await tx.chuong.createMany({
+        const result = await tx.chuong.createMany({
           data: batch.map(({ idTruyen, chuongSo, tieuDeChuong, slug, isFree, giaXu }) => ({
             idTruyen, chuongSo, tieuDeChuong, slug, isFree, giaXu,
           })),
         });
-        insertedRows += batch.length;
+        if (result.count !== batch.length) throw new Error("Imported chapter metadata could not be verified");
+        insertedCount += result.count;
       }
 
       const insertedStoryIds = Array.from(
@@ -228,13 +229,22 @@ export async function POST(req: NextRequest) {
             select: { idChuong: true, idTruyen: true, chuongSo: true },
           })
         : [];
-      const chapterIds = new Map(insertedChapters.map(({ idTruyen, chuongSo, idChuong }) => [`${idTruyen}:${chuongSo}`, idChuong]));
+      const chapterIds = new Map<string, number>();
+      for (const { idTruyen, chuongSo, idChuong } of insertedChapters) {
+        const key = `${idTruyen}:${chuongSo}`;
+        if (chapterIds.has(key)) throw new Error("Imported chapter lookup is ambiguous");
+        chapterIds.set(key, idChuong);
+      }
       const contentRows = newRows.flatMap((item) => {
         const idChuong = chapterIds.get(`${item.idTruyen}:${item.chuongSo}`);
-        return idChuong && item.noiDung ? [{ idChuong, noiDung: item.noiDung, contentType: "db" as const }] : [];
+        // A lookup mismatch must roll back metadata instead of discarding its body.
+        if (idChuong === undefined) throw new Error("Imported chapter ID could not be resolved");
+        return item.noiDung ? [{ idChuong, noiDung: item.noiDung, contentType: "db" as const }] : [];
       });
       for (let offset = 0; offset < contentRows.length; offset += 500) {
-        await tx.noiDungChuong.createMany({ data: contentRows.slice(offset, offset + 500) });
+        const batch = contentRows.slice(offset, offset + 500);
+        const result = await tx.noiDungChuong.createMany({ data: batch });
+        if (result.count !== batch.length) throw new Error("Imported chapter content could not be verified");
       }
 
       await Promise.all(
@@ -256,6 +266,7 @@ export async function POST(req: NextRequest) {
           });
         }),
       );
+      return insertedCount;
     });
 
     if (insertedRows) revalidatePublicStories();

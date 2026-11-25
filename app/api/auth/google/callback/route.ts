@@ -35,11 +35,23 @@ export async function GET(request: NextRequest) {
     const picture = googleUser.data.picture ? await uploadImageToCloudinary(googleUser.data.picture, "web-novel/avatars") : undefined;
     const email = googleUser.data.email.toLowerCase();
     const account = await prisma.$transaction(async tx => {
+      // Serialize email verification with other callbacks and password changes.
+      await tx.$queryRaw<Array<{ idTaiKhoan: number }>>`
+        SELECT idTAI_KHOAN AS idTaiKhoan FROM tai_khoan
+        WHERE email = ${email} FOR UPDATE
+      `;
       const existing = await tx.taiKhoan.findUnique({ where: { email }, include: { hoSoCaNhan: true, vaiTroNguoiDung: { include: { vaiTro: true } } } });
       if (existing) {
         if (existing.trangThai !== "active" || existing.isDeleted) return null;
+        // Registration did not prove email ownership. Discard its password and
+        // token version before linking this verified Google identity.
+        const credentials = existing.emailXacThuc === true ? {} : await tx.taiKhoan.update({
+          where: { idTaiKhoan: existing.idTaiKhoan },
+          data: { emailXacThuc: true, matKhau: await hashPassword(randomBytes(32).toString("base64url")) },
+          select: { matKhau: true, emailXacThuc: true },
+        });
         if (googleUser.data.picture && !existing.hoSoCaNhan?.anh) await tx.hoSoCaNhan.upsert({ where: { idTaiKhoan: existing.idTaiKhoan }, create: { idTaiKhoan: existing.idTaiKhoan, ho_ten: googleUser.data.name || existing.tenTaiKhoan, anh: picture }, update: { anh: picture } });
-        return { ...existing, roles: existing.vaiTroNguoiDung.map(item => item.vaiTro.tenVaiTro) };
+        return { ...existing, ...credentials, roles: existing.vaiTroNguoiDung.map(item => item.vaiTro.tenVaiTro) };
       }
       const role = await resolveAccountRole(tx);
       const created = await tx.taiKhoan.create({ data: { tenTaiKhoan: usernameFrom(email), email, matKhau: await hashPassword(randomBytes(32).toString("base64url")), emailXacThuc: true, trangThai: "active" }, select: { idTaiKhoan: true, tenTaiKhoan: true, email: true, matKhau: true } });

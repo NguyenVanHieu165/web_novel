@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 export const chapterIdSchema = z.coerce.number().int().positive().max(2_147_483_647);
+export const MAX_CHAPTER_PRICE = 2_147_483_647;
 const chapterNumber = z.number().min(0).max(999999.9).multipleOf(0.1);
-const price = z.number().int().min(1).max(4_294_967_295);
+const price = z.number().int().min(1).max(MAX_CHAPTER_PRICE);
 export const adminChaptersQuerySchema = z.strictObject({
   q: z.string().trim().max(200).default(""),
   storyId: chapterIdSchema.optional(),

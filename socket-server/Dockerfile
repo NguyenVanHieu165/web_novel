@@ -9,6 +9,8 @@ COPY importer ./importer
 COPY jobs ./jobs
 COPY rooms ./rooms
 COPY tts ./tts
+COPY worker ./worker
+COPY onlineStats.ts ./
 COPY server.ts ./
 COPY worker.ts ./
 RUN npm run build

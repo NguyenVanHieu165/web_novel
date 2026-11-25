@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import { createServer } from "http";
+import { createHash } from "node:crypto";
 import { Server, Socket } from "socket.io";
 import { jwtVerify } from "jose";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
@@ -48,15 +49,25 @@ const ttsVoiceSchema = z.enum(["vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"]).def
 const chapterIdSchema = z.string().regex(/^[1-9]\d*$/u).transform(Number).pipe(z.number().int().positive().max(2_147_483_647));
 const ttsPool = createJobPool(loadWorkerConfig().database);
 async function identifyTtsUser(req: Request): Promise<number | null> {
-    const cookie = req.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith("token="));
-    const bearer = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : undefined;
-    const token = cookie ? decodeURIComponent(cookie.slice("token=".length)) : bearer;
-    if (!token || !process.env.JWT_SECRET) return null;
+    let identity: { id: number; passwordVersion: string };
     try {
+        const cookie = req.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith("token="));
+        const bearer = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : undefined;
+        const token = cookie ? decodeURIComponent(cookie.slice("token=".length)) : bearer;
+        if (!token || !process.env.JWT_SECRET) return null;
         const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET));
         const id = payload.idTaiKhoan;
-        return typeof id === "number" && Number.isSafeInteger(id) && id > 0 ? id : null;
+        if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0 ||
+            typeof payload.passwordVersion !== "string" || !payload.passwordVersion) return null;
+        identity = { id, passwordVersion: payload.passwordVersion };
     } catch { return null; }
+    const accounts = await ttsPool.query<Array<{ passwordHash: string }>>(
+        `SELECT mat_khau AS passwordHash FROM tai_khoan
+         WHERE idTAI_KHOAN = ? AND trang_thai = 'active'
+           AND (is_deleted = 0 OR is_deleted IS NULL) LIMIT 1`, [identity.id]);
+    const account = accounts[0];
+    if (!account || createHash("sha256").update(account.passwordHash).digest("hex") !== identity.passwordVersion) return null;
+    return identity.id;
 }
 async function loadChapter(chapterId: number, userId: number | null) {
     const rows = await ttsPool.query<Array<{ idChuong: number; idTruyen: number; title: string; isFree: number | boolean | null; giaXu: number | null; content: string | null }>>(
@@ -68,8 +79,11 @@ async function loadChapter(chapterId: number, userId: number | null) {
     if (chapter.isFree === false || chapter.isFree === 0 || (chapter.giaXu ?? 0) > 0) {
         if (!userId) return { status: 401 as const };
         const accounts = await ttsPool.query<Array<{ validUser: number | boolean; purchased: number | boolean; isAdmin: number | boolean }>>(
-            `SELECT EXISTS(SELECT 1 FROM chuong_da_mua WHERE idTAI_KHOAN = ? AND idCHUONG = ?) AS purchased,
-             EXISTS(SELECT 1 FROM tai_khoan tk JOIN vai_tro_nguoi_dung tv ON tv.idTAI_KHOAN=tk.idTAI_KHOAN JOIN vai_tro v ON v.idVAI_TRO=tv.idVAI_TRO WHERE tk.idTAI_KHOAN=? AND v.ten_vai_tro='admin') AS isAdmin`, [userId, userId, chapterId, userId]);
+            `SELECT 1 AS validUser,
+             EXISTS(SELECT 1 FROM chuong_da_mua WHERE idTAI_KHOAN = ? AND idCHUONG = ?) AS purchased,
+             EXISTS(SELECT 1 FROM vai_tro_nguoi_dung tv JOIN vai_tro v ON v.idVAI_TRO=tv.idVAI_TRO WHERE tv.idTAI_KHOAN=tk.idTAI_KHOAN AND v.ten_vai_tro='admin') AS isAdmin
+             FROM tai_khoan tk WHERE tk.idTAI_KHOAN = ? AND tk.trang_thai = 'active'
+               AND (tk.is_deleted = 0 OR tk.is_deleted IS NULL) LIMIT 1`, [userId, chapterId, userId]);
         const account = accounts[0];
         if (!account?.validUser || (!account.purchased && !account.isAdmin)) return { status: 403 as const };
     }
@@ -108,7 +122,6 @@ app.get("/api/tts/chapters/:chapterId/chunk/:index", async (req: Request, res: R
         if (result.status !== 200) return res.status(result.status).json({ message: result.status === 401 ? "Vui lòng đăng nhập để nghe chương VIP." : result.status === 403 ? "Bạn cần mở khóa chương trước khi nghe." : "Không tìm thấy chương." });
         const chunks = chunkChapterText(result.chapter.content);
         if (index.data >= chunks.length) return res.status(404).json({ message: "Không tìm thấy đoạn audio." });
-        const { createHash } = await import("node:crypto");
         const textHash = createHash("sha256").update(chunks[index.data]).digest("hex");
         const key = `${id.data}:${voice.data}:${index.data}:${textHash}`;
         const buffer = await getOrCreateAudio(key, () => synthesizeChunk(chunks[index.data], voice.data));

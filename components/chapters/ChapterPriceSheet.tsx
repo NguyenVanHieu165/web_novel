@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/axios";
+import { MAX_CHAPTER_PRICE } from "@/schemas/admin-chapters.schema";
 import { toast } from "sonner";
 
 type Target = { kind: "chapters"; ids: number[] } | { kind: "story"; storyId: number };
@@ -22,7 +23,7 @@ export default function ChapterPriceSheet({ target, onClose, onSuccess }: { targ
       } catch { setError("Không thể đặt giá VIP. Kiểm tra dữ liệu và thử lại."); } finally { setBusy(false); }
     }}>
       {target?.kind === "story" && <label className="block space-y-1"><span>Từ chương</span><Input name="fromChapter" type="number" min="0" max="999999.9" step="0.1" defaultValue="1" required disabled={busy} /></label>}
-      <label className="block space-y-1"><span>Giá VIP (xu)</span><Input name="giaXu" type="number" min="1" max="4294967295" step="1" defaultValue="5" required disabled={busy} /></label>
+      <label className="block space-y-1"><span>Giá VIP (xu)</span><Input name="giaXu" type="number" min="1" max={MAX_CHAPTER_PRICE} step="1" defaultValue="5" required disabled={busy} /></label>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2"><Button type="submit" disabled={busy}>{busy ? "Đang lưu…" : "Áp dụng giá VIP"}</Button><Button type="button" variant="outline" disabled={busy} onClick={onClose}>Hủy</Button></div>
     </form>

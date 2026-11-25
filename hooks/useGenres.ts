@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import api from "@/lib/axios";
 import type { Genre } from "@/components/genres/GenreTable";
 
@@ -63,7 +63,7 @@ const normalizeGenresResponse = (payload: GenresPayload) => {
 
 export function useGenres(initialQuery: Partial<GenreQuery> = {}) {
   const [genres, setGenres] = useState<Genre[]>([]);
-  const [query, setQuery] = useState<GenreQuery>({
+  const [query, setQueryState] = useState<GenreQuery>({
     ...defaultQuery,
     ...initialQuery,
   });
@@ -73,15 +73,38 @@ export function useGenres(initialQuery: Partial<GenreQuery> = {}) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
+  const currentQuery = useRef(query);
+  const invalidateRequest = useCallback(() => {
+    requestVersion.current++;
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+  }, []);
+  const setQuery = useCallback((next: SetStateAction<GenreQuery>) => {
+    const resolved = typeof next === "function" ? next(currentQuery.current) : next;
+    if (resolved === currentQuery.current) return;
+    currentQuery.current = resolved;
+    // Invalidate immediately, including the gap before the next debounced request.
+    invalidateRequest();
+    setLoading(true);
+    setQueryState(resolved);
+  }, [invalidateRequest]);
 
   const fetchGenres = useCallback(async () => {
+    invalidateRequest();
+    const version = requestVersion.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
     try {
       setLoading(true);
       setError(null);
 
       const res = await api.get<GenresPayload>("/admin/genres", {
         params: query,
+        signal: controller.signal,
       });
+      if (controller.signal.aborted || version !== requestVersion.current) return;
 
       if (res.data?.success === false) {
         throw new Error(res.data.message || "Lấy danh sách thể loại thất bại");
@@ -92,21 +115,28 @@ export function useGenres(initialQuery: Partial<GenreQuery> = {}) {
       setGenres(normalized.genres);
       setMeta(normalized.meta);
     } catch (err: unknown) {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
       const message =
         err instanceof Error ? err.message : "Có lỗi khi lấy danh sách thể loại";
 
       setError(message);
       setGenres([]);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && version === requestVersion.current) {
+        activeRequest.current = null;
+        setLoading(false);
+      }
     }
-  }, [query]);
+  }, [query, invalidateRequest]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(fetchGenres, 300);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [fetchGenres]);
+    return () => {
+      window.clearTimeout(timeoutId);
+      invalidateRequest();
+    };
+  }, [fetchGenres, invalidateRequest]);
 
   const setSearch = useCallback((search: string) => {
     setQuery((current) => ({
@@ -114,14 +144,14 @@ export function useGenres(initialQuery: Partial<GenreQuery> = {}) {
       search,
       page: 1,
     }));
-  }, []);
+  }, [setQuery]);
 
   const setPage = useCallback((page: number) => {
     setQuery((current) => ({
       ...current,
       page,
     }));
-  }, []);
+  }, [setQuery]);
 
   const setLimit = useCallback((limit: number) => {
     setQuery((current) => ({
@@ -129,7 +159,7 @@ export function useGenres(initialQuery: Partial<GenreQuery> = {}) {
       limit,
       page: 1,
     }));
-  }, []);
+  }, [setQuery]);
 
   return {
     genres,

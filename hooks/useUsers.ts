@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import api from "@/lib/axios";
 import type { UserFormValues } from "@/schemas/user_schema";
 
@@ -54,7 +54,7 @@ type UsersPayload = {
 
 export function useUsers(initialQuery: Partial<UserQuery> = {}) {
   const [users, setUsers] = useState<User[]>([]);
-  const [query, setQuery] = useState<UserQuery>({
+  const [query, setQueryState] = useState<UserQuery>({
     ...defaultQuery,
     ...initialQuery,
   });
@@ -64,15 +64,38 @@ export function useUsers(initialQuery: Partial<UserQuery> = {}) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
+  const currentQuery = useRef(query);
+  const invalidateRequest = useCallback(() => {
+    requestVersion.current++;
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+  }, []);
+  const setQuery = useCallback((next: SetStateAction<UserQuery>) => {
+    const resolved = typeof next === "function" ? next(currentQuery.current) : next;
+    if (resolved === currentQuery.current) return;
+    currentQuery.current = resolved;
+    // Invalidate immediately, including the gap before the next debounced request.
+    invalidateRequest();
+    setLoading(true);
+    setQueryState(resolved);
+  }, [invalidateRequest]);
 
   const fetchUsers = useCallback(async () => {
+    invalidateRequest();
+    const version = requestVersion.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
     try {
       setLoading(true);
       setError(null);
 
       const res = await api.get<UsersPayload>("/admin/users", {
         params: query,
+        signal: controller.signal,
       });
+      if (controller.signal.aborted || version !== requestVersion.current) return;
 
       if (res.data?.success === false) {
         throw new Error(res.data.message || "Lấy danh sách người dùng thất bại");
@@ -90,21 +113,28 @@ export function useUsers(initialQuery: Partial<UserQuery> = {}) {
         totalPage: responseMeta.totalPage || 1,
       });
     } catch (err: unknown) {
+      if (controller.signal.aborted || version !== requestVersion.current) return;
       const message =
         err instanceof Error ? err.message : "Có lỗi khi lấy danh sách người dùng";
 
       setError(message);
       setUsers([]);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && version === requestVersion.current) {
+        activeRequest.current = null;
+        setLoading(false);
+      }
     }
-  }, [query]);
+  }, [query, invalidateRequest]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(fetchUsers, 300);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [fetchUsers]);
+    return () => {
+      window.clearTimeout(timeoutId);
+      invalidateRequest();
+    };
+  }, [fetchUsers, invalidateRequest]);
 
   const setSearch = useCallback((search: string) => {
     setQuery((current) => ({
@@ -112,14 +142,14 @@ export function useUsers(initialQuery: Partial<UserQuery> = {}) {
       search,
       page: 1,
     }));
-  }, []);
+  }, [setQuery]);
 
   const setPage = useCallback((page: number) => {
     setQuery((current) => ({
       ...current,
       page,
     }));
-  }, []);
+  }, [setQuery]);
 
   const setLimit = useCallback((limit: number) => {
     setQuery((current) => ({
@@ -127,7 +157,7 @@ export function useUsers(initialQuery: Partial<UserQuery> = {}) {
       limit,
       page: 1,
     }));
-  }, []);
+  }, [setQuery]);
 
   return {
     users,

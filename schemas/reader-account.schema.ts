@@ -26,8 +26,7 @@ export const readerProfileSchema = z.strictObject({
 
 export const readerPasswordSchema = z.strictObject({
   currentPassword: z.string().min(1, "Nhập mật khẩu hiện tại").max(1024, "Mật khẩu quá dài"),
-  newPassword: strongPasswordSchema
-    .refine((value) => new TextEncoder().encode(value).length <= 72, "Mật khẩu mới không được vượt quá 72 byte"),
+  newPassword: strongPasswordSchema,
   confirmPassword: z.string().min(1, "Nhập lại mật khẩu mới").max(128, "Mật khẩu xác nhận tối đa 128 ký tự"),
 }).refine((value) => value.newPassword !== value.currentPassword, {
   path: ["newPassword"],

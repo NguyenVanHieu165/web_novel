@@ -6,7 +6,7 @@ function parseDatabaseUrl(rawUrl: string) {
   const tlsParameters = new Set(["sslaccept", "ssl-mode", "sslmode", "ssl"]);
   return {
     host: parsed.hostname,
-    port: parsed.port ? Number(parsed.port) : 4_000,
+    port: parsed.port ? Number(parsed.port) : undefined,
     user: decodeURIComponent(parsed.username),
     password: decodeURIComponent(parsed.password),
     database: parsed.pathname.replace(/^\//u, ""),

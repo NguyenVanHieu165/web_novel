@@ -197,13 +197,15 @@ test("paid chapter access and wallet balance remain request-specific, with conte
       neighborReads++;
       return null;
     } },
-    taiKhoan: { async findFirst() { return { idTaiKhoan: accountId, viTien: { soDuXu: accountId * 10 }, vaiTroNguoiDung: [] }; } },
+    viTien: { async findUnique() { return { soDuXu: accountId * 10 }; } },
     chuongDaMua: { async findUnique() { return accountId === 7 ? { idChuong: 1 } : null; } },
     noiDungChuong: { async findUnique() { contentReads++; await Promise.resolve(); assert.ok(neighborReads >= 4); return { noiDung: "Paid content" }; } },
   };
   const query = await load("lib/queries/chapter.query.ts", { ...app.dependencies, "@/lib/prisma": { prisma },
     "next/headers": { cookies: async () => ({ get: () => accountId ? { value: String(accountId) } : undefined }) },
-    "@/lib/auth": { verifyToken: async (token) => ({ idTaiKhoan: Number(token) }) } });
+    "@/lib/server/auth-session": { authenticateUser: async (token) => token
+      ? { authorized: true, user: { idTaiKhoan: Number(token), roles: [] } }
+      : { authorized: false } } });
   const guest = await query.getChapterDetail("truyen-1", "chuong-1");
   assert.equal(guest.access.canRead, false);
   assert.equal(guest.currentChapter.noiDungChuong, null);

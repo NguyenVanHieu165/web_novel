@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { requireUser } from "@/lib/server/auth-session";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: "Chưa đăng nhập", user: null },
-        { status: 401 }
-      );
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload) {
-      return NextResponse.json(
+    const auth = await requireUser(req);
+    if (!auth.authorized) {
+      const response = NextResponse.json(
         { success: false, message: "Phiên đăng nhập hết hạn hoặc không hợp lệ", user: null },
-        { status: 401 }
+        { status: 401, headers: { "Cache-Control": "private, no-store" } },
       );
+      response.cookies.set("token", "", { maxAge: 0, path: "/" });
+      return response;
     }
 
     const user = await prisma.taiKhoan.findUnique({
-      where: { idTaiKhoan: payload.idTaiKhoan },
+      where: { idTaiKhoan: auth.user.idTaiKhoan },
       select: {
         idTaiKhoan: true,
         tenTaiKhoan: true,
@@ -40,20 +34,13 @@ export async function GET(req: NextRequest) {
             anh: true,
           },
         },
-        vaiTroNguoiDung: {
-          select: {
-            vaiTro: {
-              select: { tenVaiTro: true },
-            },
-          },
-        },
       },
     });
 
     if (!user || user.isDeleted || user.trangThai !== "active") {
       const res = NextResponse.json(
         { success: false, message: "Tài khoản không tồn tại hoặc đã bị khóa", user: null },
-        { status: 401 }
+        { status: 401, headers: { "Cache-Control": "private, no-store" } }
       );
       res.cookies.set("token", "", { maxAge: 0, path: "/" });
       return res;
@@ -65,7 +52,7 @@ export async function GET(req: NextRequest) {
         idTaiKhoan: user.idTaiKhoan,
         tenTaiKhoan: user.tenTaiKhoan,
         email: user.email,
-        roles: user.vaiTroNguoiDung.map(({ vaiTro }) => vaiTro.tenVaiTro),
+        roles: auth.user.roles,
         soDuXu: user.viTien?.soDuXu ?? 0,
         hoTen: user.hoSoCaNhan?.ho_ten ?? user.tenTaiKhoan,
         anh: user.hoSoCaNhan?.anh ?? null,
@@ -75,7 +62,7 @@ export async function GET(req: NextRequest) {
     console.error("Auth Me Error:", error);
     return NextResponse.json(
       { success: false, message: "Lỗi hệ thống máy chủ", user: null },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "private, no-store" } }
     );
   }
 }

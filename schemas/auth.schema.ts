@@ -3,7 +3,8 @@ import { z } from "zod";
 export const strongPasswordSchema = z.string().min(8, "Mật khẩu cần ít nhất 8 ký tự").max(128, "Mật khẩu không được quá 128 ký tự")
   .regex(/[a-z]/, "Mật khẩu cần có chữ thường")
   .regex(/[A-Z]/, "Mật khẩu cần có chữ in hoa")
-  .regex(/\d/, "Mật khẩu cần có chữ số");
+  .regex(/\d/, "Mật khẩu cần có chữ số")
+  .refine((value) => new TextEncoder().encode(value).length <= 72, "Mật khẩu không được vượt quá 72 byte");
 
 export const registerSchema = z
   .object({

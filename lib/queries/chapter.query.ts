@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { authenticateUser } from "@/lib/server/auth-session";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
@@ -44,34 +44,19 @@ export const getChapterDetail = cache(async (storySlug: string, chapterSlug: str
 
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
-    const session = token ? await verifyToken(token) : null;
+    const auth = await authenticateUser(token);
     let account: { idTaiKhoan: number; isAdmin: boolean; balance: number } | null = null;
 
-    if (session?.idTaiKhoan) {
-      const authenticatedAccount = await prisma.taiKhoan.findFirst({
-        where: {
-          idTaiKhoan: session.idTaiKhoan,
-          trangThai: "active",
-          OR: [{ isDeleted: false }, { isDeleted: null }],
-        },
-        select: {
-          idTaiKhoan: true,
-          viTien: { select: { soDuXu: true } },
-          vaiTroNguoiDung: {
-            select: { vaiTro: { select: { tenVaiTro: true } } },
-          },
-        },
+    if (auth.authorized) {
+      const wallet = await prisma.viTien.findUnique({
+        where: { idTaiKhoan: auth.user.idTaiKhoan },
+        select: { soDuXu: true },
       });
-
-      if (authenticatedAccount) {
-        account = {
-          idTaiKhoan: authenticatedAccount.idTaiKhoan,
-          balance: authenticatedAccount.viTien?.soDuXu ?? 0,
-          isAdmin: authenticatedAccount.vaiTroNguoiDung.some(
-            ({ vaiTro }) => vaiTro.tenVaiTro === "admin",
-          ),
-        };
-      }
+      account = {
+        idTaiKhoan: auth.user.idTaiKhoan,
+        balance: wallet?.soDuXu ?? 0,
+        isAdmin: auth.user.roles.includes("admin"),
+      };
     }
 
     const isFree = currentChapter.isFree ?? true;
