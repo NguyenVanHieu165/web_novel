@@ -1,12 +1,13 @@
-HTTP/1.1 401 Unauthorized
-Date: Wed, 25 Nov 2026 07:33:12 GMT
-Content-Type: text/plain;charset=UTF-8
-Content-Length: 12
+HTTP/1.1 502 Bad Gateway
+Date: Wed, 25 Nov 2026 07:52:54 GMT
+Content-Type: application/json
+Content-Length: 122
 Connection: keep-alive
-Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=6X8yHR5evMYIe%2FoGoVetoqF%2FjiDrxtfW6JHzJs3DqgWO4REn%2BBnAG1AD2QWxhTdEC79pz4ynV0I9Ccr4%2Bmqdg4l6elWpUa%2Fcs09gSmNzfZsJCGGJrWpcF5I0pl36KJDxYfnLMJ1C5nXr5%2BC%2BBZXPlvZz%2BrL5TBcJ2eT3AiLq0czT5FOBc9Lg0iuQgj4%3D"}]}
+Cache-Control: no-store
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=89ap4C5sAsU2n0SGjbmTd5fLr3fJlJz9twJwtBsHaNYWeerMuTX8Wz7MfJKPsC8TVpMWSsgQclqnZeDQ5GSYKcmHKic8EAegMAMszdc1Mk2%2FpMVn96i%2BQ74myeZPaUvspseEUOotUPLGesy3nwBqKtcknfSH3aOs7aszfpTU8idgywXWUsixl3EG44Y%3D"}]}
 Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 Server: cloudflare
-CF-RAY: a5fef6befffb85be-HKG
+CF-RAY: a5ff138c7f5c1fa9-HKG
 alt-svc: h3=":443"; ma=86400
 
-Unauthorized
+{"error":"TTS_SYNTHESIS_FAILED","detail":"Edge WebSocket close 1006: WebSocket disconnected without sending Close frame."}

@@ -59,3 +59,6 @@ function toUpperHex(bytes: Uint8Array) {
 
 export const TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 export function generateSecMsGec(now = Date.now()) { const seconds = Math.floor(now / 1000) + 11644473600; return hashSecMsGecV2(`${BigInt(seconds - seconds % 300) * 10000000n}${TOKEN}`); }
+
+// Keep the advertised browser version and GEC protocol version aligned.
+export const EDGE_VERSION = "143.0.3650.75";

@@ -42,51 +42,27 @@ test("Worker enforces bearer auth before R2 and returns cache hit contract", asy
   assert.equal(await response.text(), "mp3");
 });
 
-function synthesisHarness({ status = 101, mode = "audio" } = {}) {
-  const handlers = {};
-  const writes = [], pending = [], logs = [];
-  let sends = 0;
-  const ws = { accept() {}, close() {}, addEventListener(name, fn) { handlers[name] = fn; }, send() {
-    if (++sends !== 2) return;
-    queueMicrotask(() => {
-      if (mode === "close") return handlers.close({ code: 1008, reason: "denied" });
-      if (mode === "timeout") return;
-      const header = new TextEncoder().encode("Path:audio\r\n");
-      const frame = new Uint8Array(2 + header.length + 3);
-      new DataView(frame.buffer).setUint16(0, header.length); frame.set(header, 2); frame.set([1, 2, 3], 2 + header.length);
-      handlers.message({ data: frame.buffer });
-      handlers.message({ data: "Path:turn.end\r\n" });
-    });
-  } };
-  const worker = loadNotificationModule("tts-worker/src/index.ts", { "./sec-ms-gec": { TOKEN: "fixture", generateSecMsGec: async () => "gec" } }, {
-    Response, ReadableStream, TextDecoder, crypto: webcrypto,
-    console: { error: (...args) => logs.push(args) },
-    setTimeout: fn => setTimeout(fn, 20),
-    fetch: async (_url, options) => {
-      assert.match(options.headers["User-Agent"], /Edg\/143/u);
-      return { status, webSocket: status === 101 ? ws : null };
-    },
-  }).default;
-  return { logs, writes, run: () => worker.fetch(new Request("https://worker.test/synthesize", { method: "POST", headers: { Authorization: "Bearer fixture" }, body: JSON.stringify({ cacheKey: "b".repeat(64), text: "Hello", voice: "vi-VN-HoaiMyNeural" }) }), { TTS_WORKER_SECRET: "fixture", TTS_BUCKET: { get: async () => null, put: async (_key, bytes) => writes.push(bytes) } }, { waitUntil: value => pending.push(value) }), finish: () => Promise.all(pending) };
-}
-test("Worker returns logged 502 for Edge 403, premature close and first-audio timeout", async () => {
-  for (const setup of [{ status: 403 }, { mode: "close" }, { mode: "timeout" }]) {
-    const h = synthesisHarness(setup);
-    const response = await h.run();
-    assert.equal(response.status, 502);
-    const body = await response.json();
-    assert.match(body.detail, /403|1008|timeout/u);
-    assert.ok(h.logs.length);
-    assert.equal(h.writes.length, 0);
+test("R2 MISS calls authenticated Vercel relay and caches only valid MP3", async () => {
+  for (const mode of ["ok", "http", "type", "empty", "network"]) {
+    const writes = [], pending = [];
+    const worker = loadNotificationModule("tts-worker/src/index.ts", {}, { Response, console: { error() {} }, fetch: async (url, options) => {
+      assert.equal(String(url), "https://relay.test/api/internal/tts-relay");
+      assert.equal(options.method, "POST");
+      assert.equal(options.redirect, "error");
+      assert.equal(options.headers.Authorization, "Bearer fixture");
+      assert.deepEqual(JSON.parse(options.body), { text: "Hello", voice: "vi-VN-HoaiMyNeural" });
+      if (mode === "network") throw new Error("unreachable");
+      return new Response(mode === "empty" ? "" : "ID3", { status: mode === "http" ? 502 : 200, headers: { "Content-Type": mode === "type" ? "application/json" : "audio/mpeg" } });
+    } }).default;
+    const result = await worker.fetch(new Request("https://worker.test/synthesize", { method: "POST", headers: { Authorization: "Bearer fixture" }, body: JSON.stringify({ cacheKey: "b".repeat(64), text: "Hello", voice: "vi-VN-HoaiMyNeural" }) }), { TTS_WORKER_SECRET: "fixture", VERCEL_TTS_RELAY_URL: "https://relay.test/api/internal/tts-relay", TTS_BUCKET: { get: async () => null, put: async (key, bytes) => writes.push({ key, bytes }) } }, { waitUntil: p => pending.push(p) });
+    assert.equal(result.status, mode === "ok" ? 200 : 502);
+    await Promise.all(pending);
+    assert.equal(writes.length, mode === "ok" ? 1 : 0);
+    if (mode === "ok") {
+      assert.equal(result.headers.get("Content-Type"), "audio/mpeg");
+      assert.equal(result.headers.get("X-TTS-Cache"), "MISS");
+      assert.equal(await result.text(), "ID3");
+      assert.equal(writes[0].key, `chunks/${"b".repeat(64)}.mp3`);
+    }
   }
-});
-test("Worker streams first audio and caches only completed MP3", async () => {
-  const h = synthesisHarness();
-  const response = await h.run();
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("Content-Type"), "audio/mpeg");
-  assert.equal(response.headers.get("X-TTS-Cache"), "MISS");
-  assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [1, 2, 3]);
-  await h.finish();
-  assert.equal(h.writes.length, 1);
 });

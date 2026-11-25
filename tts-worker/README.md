@@ -1,9 +1,11 @@
-# TTS Worker + R2
+# R2 cache + Vercel TTS relay
 
-1. In this directory run `npx wrangler r2 bucket create lacatruyen-tts` (once).
-2. Run `npx wrangler secret put TTS_WORKER_SECRET` and enter a strong random secret.
-3. Run `npm run deploy` after authenticating Wrangler.
-4. Set server-only Next.js TTS_WORKER_URL to the deployed HTTPS Worker URL and TTS_WORKER_SECRET to the same secret, then redeploy Next.js.
-5. Check GET /health; check a free chapter and purchased/unpurchased VIP chapter through /api/tts/chapters/:id/meta and /chunk/0. A repeated authorized request should return X-TTS-Cache: HIT-R2.
+Next.js checks chapter/story visibility and VIP access before calling this Worker. Worker authenticates TTS_WORKER_SECRET, checks private R2 chunks/<cacheKey>.mp3, then on MISS POSTs { text, voice } to VERCEL_TTS_RELAY_URL with the same Bearer secret. The Node.js relay uses the existing msedge-tts dependency; it does not call this Worker. Successful, nonempty MP3 buffers alone are cached asynchronously. Responses retain audio/mpeg and X-TTS-Cache: HIT-R2 or MISS.
 
-No Prisma migration is required. R2 must remain private. Cache keys include the normalized chapter fingerprint, voice and chunk index. Access checks run before every cache lookup. R2 write errors are logged and never prevent audio playback. Edge is an external unofficial service; its protocol can change. Audio frames stream immediately; only a successful turn.end permits writing the complete chunk to R2. Configure an R2 lifecycle policy to expire stale chunks according to storage requirements.
+1. Configure TTS_WORKER_SECRET in Next.js and with `npx wrangler secret put TTS_WORKER_SECRET` in this directory (same value).
+2. Deploy Next.js first so POST /api/internal/tts-relay exists.
+3. Set vars.VERCEL_TTS_RELAY_URL in wrangler.jsonc to that deployment's relay endpoint, then `npm run deploy`.
+4. Keep TTS_WORKER_URL pointing to the Worker on Next.js. Never point VERCEL_TTS_RELAY_URL at the public /api/tts route (that would recurse).
+5. Verify a free and purchased/unpurchased VIP chapter, then repeat an authorized chunk request to confirm HIT-R2.
+
+No Google API key is used. No local/public files or Prisma migrations are needed. This implementation requires no new dependencies or third-party API key. Hosting/storage usage remains subject to provider quotas; Edge is an unofficial external service and availability from Vercel must be verified after deployment. Remove the obsolete GOOGLE_TTS_API_KEY secret separately if it was previously configured.
