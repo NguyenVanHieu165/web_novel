@@ -1,66 +1,39 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import test from "node:test";
+import { NextResponse } from "next/server";
 import { loadNotificationModule } from "./notification-support.mjs";
-
-const passwordHash = "stored-password-hash";
-const passwordVersion = createHash("sha256").update(passwordHash).digest("hex");
-
+const passwordVersion = "current-version";
 function harness({ free = false, purchased = false, admin = false, active = true, deleted = false, payload = { idTaiKhoan: 7, passwordVersion }, missing = false, databaseFailure = false } = {}) {
-  const routes = new Map(), queries = [];
   let synthesized = 0;
-  const pool = {
-    async query(sql, values) {
-      if (databaseFailure) throw new Error("fixture database failure");
-      queries.push({ sql, values });
-      assert.equal((sql.match(/\?/gu) ?? []).length, values.length, "every placeholder must have exactly one binding");
-      if (/FROM chuong c/u.test(sql)) return missing ? [] : [{ idChuong: 13, idTruyen: 2, title: "VIP chapter", isFree: free, giaXu: free ? 0 : 5, content: "Nội dung chương đủ để nghe." }];
-      assert.match(sql, /trang_thai\s*=\s*'active'/u);
-      assert.match(sql, /is_deleted\s*=\s*0/u);
-      assert.match(sql, /is_deleted\s+IS\s+NULL/iu);
-      if (/passwordHash/u.test(sql)) {
-        assert.deepEqual(Array.from(values), [7]);
-        return active && !deleted ? [{ passwordHash }] : [];
-      }
-      assert.match(sql, /AS validUser/u);
-      assert.deepEqual(Array.from(values), [7, 13, 7], "purchase identity, chapter and account identity must stay ordered");
-      return active && !deleted ? [{ validUser: 1, purchased: Number(purchased), isAdmin: Number(admin) }] : [];
-    },
-  };
-  const app = { disable() {}, use() {}, get: (route, handler) => routes.set(route, handler), post() {} };
-  const express = Object.assign(() => app, { json: () => () => {} });
-  class SocketServer { use() {} on() {} }
-  loadNotificationModule("socket-server/server.ts", {
-    dotenv: { config() {} }, express, cors: () => () => {},
-    http: { createServer: () => ({ listen() {}, close() {} }) },
-    "socket.io": { Server: SocketServer },
-    jose: { jwtVerify: async token => {
-      if (token === "invalid") throw new Error("invalid signature");
-      return { payload };
+  const route = loadNotificationModule("app/api/tts/[...path]/route.ts", {
+    "next/server": { NextResponse },
+    "@/lib/prisma": { prisma: {
+      chuong: { findFirst: async args => {
+        assert.ok(args.where.truyen.OR, "parent deletion must be checked");
+        assert.equal(args.where.truyen.trang_thai.not, "sap_ra_mat");
+        if (databaseFailure) throw new Error("DB failure");
+        return missing ? null : { tieuDeChuong: "Chapter", isFree: free, giaXu: free ? 0 : 5, noiDungChuong: { noiDung: "Content" } };
+      } },
+      chuongDaMua: { findUnique: async args => {
+        assert.equal(args.where.idTaiKhoan_idChuong.idTaiKhoan, 7);
+        return purchased ? { idChuong: 13 } : null;
+      } },
     } },
-    "msedge-tts": {},
-    "./tts/chunker": { chunkChapterText: content => [content] },
-    "./tts/audioCache": { getOrCreateAudio: async () => { synthesized++; return Buffer.from("audio"); } },
-    "./jobs/config": { loadWorkerConfig: () => ({ database: {} }) },
-    "./jobs/database": { createJobPool: () => pool },
-    "./auth/socketAuth": {},
-    "./onlineStats": { OnlinePresenceTracker: class {} },
-    "./handlers/notificationDispatch": {}, "./handlers/notification": {}, "./handlers/collaborative": {},
-  }, { Buffer, process: { env: { JWT_SECRET: "test-only", INTERNAL_SECRET_TOKEN: "test-only" }, once() {} } });
+    "@/lib/server/auth-session": { authenticateUser: async token => ({ authorized: Boolean(token && token !== "invalid" && active && !deleted && payload.idTaiKhoan === 7 && payload.passwordVersion === passwordVersion), user: { idTaiKhoan: 7, roles: admin ? ["admin"] : [] } }) },
+    "@/lib/server/tts/chunker": { chunkChapterText: text => [text] },
+  }, { process: { env: { TTS_WORKER_URL: "https://worker.test", TTS_WORKER_SECRET: "test-secret" } }, fetch: async (_url, options) => {
+    assert.equal(_url, "https://worker.test/synthesize");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    synthesized++;
+    assert.equal(options.headers.Authorization, "Bearer test-secret");
+    assert.match(JSON.parse(options.body).cacheKey, /^[a-f0-9]{64}$/u);
+    return new Response("audio", { headers: { "content-type": "audio/mpeg" } });
+  } });
   return {
-    queries,
     get synthesized() { return synthesized; },
     async request(kind, token = "valid", cookie = true) {
-      const result = { status: 200 };
-      const response = {
-        status(value) { result.status = value; return this; },
-        set() { return this; },
-        json(body) { result.body = body; return result; },
-        send(body) { result.body = body; return result; },
-      };
-      const handler = routes.get(kind === "meta" ? "/api/tts/chapters/:chapterId/meta" : "/api/tts/chapters/:chapterId/chunk/:index");
-      await handler({ params: { chapterId: "13", index: "0" }, query: {}, headers: token ? (cookie ? { cookie: `token=${token}` } : { authorization: `Bearer ${token}` }) : {} }, response);
-      return result;
+      return route.GET({ cookies: { get: () => cookie && token ? { value: token } : undefined }, headers: new Headers(!cookie && token ? { authorization: `Bearer ${token}` } : {}), nextUrl: new URL("https://app.test") }, { params: Promise.resolve({ path: ["chapters", "13", ...(kind === "meta" ? ["meta"] : ["chunk", "0"])] }) });
     },
   };
 }
@@ -71,7 +44,7 @@ test("real TTS meta and chunk handlers allow purchased readers and current admin
     assert.equal((await h.request("meta")).status, 200);
     assert.equal((await h.request("chunk", "valid", false)).status, 200);
     assert.equal(h.synthesized, 1);
-    assert.ok(h.queries.some(query => /AS validUser/u.test(query.sql)));
+
   }
 });
 

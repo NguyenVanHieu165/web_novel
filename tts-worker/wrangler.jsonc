@@ -1,0 +1,11 @@
+{
+  "name": "lacatruyen-tts-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "r2_buckets": [
+    {
+      "binding": "TTS_BUCKET",
+      "bucket_name": "lacatruyen-tts"
+    }
+  ]
+}

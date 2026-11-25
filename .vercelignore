@@ -12,3 +12,5 @@
 /tests/
 **/*.test.*
 **/*.spec.*
+
+/tts-worker/

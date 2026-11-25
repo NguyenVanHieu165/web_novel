@@ -1,14 +1,7 @@
 import dotenv from "dotenv";
 import express, { Request, Response } from "express";
 import { createServer } from "http";
-import { createHash } from "node:crypto";
 import { Server, Socket } from "socket.io";
-import { jwtVerify } from "jose";
-import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
-import { chunkChapterText } from "./tts/chunker";
-import { getOrCreateAudio, type TtsVoice } from "./tts/audioCache";
-import { loadWorkerConfig } from "./jobs/config";
-import { createJobPool } from "./jobs/database";
 import cors from "cors";
 import { z } from "zod";
 import { authenticateSocket, confirmSocketAdministrator, monitorSocketAdministrator, type SocketSession } from "./auth/socketAuth";
@@ -45,89 +38,6 @@ app.use(cors({
 }));
 app.use(express.json());
 const wakeJobSchema = z.object({ jobId: z.string().uuid() }).strict();
-const ttsVoiceSchema = z.enum(["vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"]).default("vi-VN-HoaiMyNeural");
-const chapterIdSchema = z.string().regex(/^[1-9]\d*$/u).transform(Number).pipe(z.number().int().positive().max(2_147_483_647));
-const ttsPool = createJobPool(loadWorkerConfig().database);
-async function identifyTtsUser(req: Request): Promise<number | null> {
-    let identity: { id: number; passwordVersion: string };
-    try {
-        const cookie = req.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith("token="));
-        const bearer = req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : undefined;
-        const token = cookie ? decodeURIComponent(cookie.slice("token=".length)) : bearer;
-        if (!token || !process.env.JWT_SECRET) return null;
-        const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET));
-        const id = payload.idTaiKhoan;
-        if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0 ||
-            typeof payload.passwordVersion !== "string" || !payload.passwordVersion) return null;
-        identity = { id, passwordVersion: payload.passwordVersion };
-    } catch { return null; }
-    const accounts = await ttsPool.query<Array<{ passwordHash: string }>>(
-        `SELECT mat_khau AS passwordHash FROM tai_khoan
-         WHERE idTAI_KHOAN = ? AND trang_thai = 'active'
-           AND (is_deleted = 0 OR is_deleted IS NULL) LIMIT 1`, [identity.id]);
-    const account = accounts[0];
-    if (!account || createHash("sha256").update(account.passwordHash).digest("hex") !== identity.passwordVersion) return null;
-    return identity.id;
-}
-async function loadChapter(chapterId: number, userId: number | null) {
-    const rows = await ttsPool.query<Array<{ idChuong: number; idTruyen: number; title: string; isFree: number | boolean | null; giaXu: number | null; content: string | null }>>(
-        `SELECT c.idCHUONG AS idChuong, c.idTRUYEN AS idTruyen, c.tieu_de_chuong AS title, c.is_free AS isFree, c.gia_xu AS giaXu, n.noi_dung AS content
-         FROM chuong c LEFT JOIN noi_dung_chuong n ON n.idCHUONG = c.idCHUONG
-         WHERE c.idCHUONG = ? AND (c.is_deleted = 0 OR c.is_deleted IS NULL) LIMIT 1`, [chapterId]);
-    const chapter = rows[0];
-    if (!chapter) return { status: 404 as const };
-    if (chapter.isFree === false || chapter.isFree === 0 || (chapter.giaXu ?? 0) > 0) {
-        if (!userId) return { status: 401 as const };
-        const accounts = await ttsPool.query<Array<{ validUser: number | boolean; purchased: number | boolean; isAdmin: number | boolean }>>(
-            `SELECT 1 AS validUser,
-             EXISTS(SELECT 1 FROM chuong_da_mua WHERE idTAI_KHOAN = ? AND idCHUONG = ?) AS purchased,
-             EXISTS(SELECT 1 FROM vai_tro_nguoi_dung tv JOIN vai_tro v ON v.idVAI_TRO=tv.idVAI_TRO WHERE tv.idTAI_KHOAN=tk.idTAI_KHOAN AND v.ten_vai_tro='admin') AS isAdmin
-             FROM tai_khoan tk WHERE tk.idTAI_KHOAN = ? AND tk.trang_thai = 'active'
-               AND (tk.is_deleted = 0 OR tk.is_deleted IS NULL) LIMIT 1`, [userId, chapterId, userId]);
-        const account = accounts[0];
-        if (!account?.validUser || (!account.purchased && !account.isAdmin)) return { status: 403 as const };
-    }
-    if (!chapter.content?.trim()) return { status: 404 as const };
-    return { status: 200 as const, chapter: { ...chapter, content: chapter.content } };
-}
-async function synthesizeChunk(text: string, voice: TtsVoice): Promise<Buffer> {
-    const tts = new MsEdgeTTS({ connectionTimeoutMs: 12_000, synthesisTimeoutMs: 15_000 });
-    try {
-        await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-        const { audioStream } = tts.rawToStream(`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN"><voice name="${voice}">${text.replace(/[<>&]/gu, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char)}</voice></speak>`);
-        const parts: Buffer[] = [];
-        for await (const part of audioStream) parts.push(Buffer.isBuffer(part) ? part : Buffer.from(part));
-        const buffer = Buffer.concat(parts);
-        if (!buffer.length) throw new Error("Edge TTS returned empty audio");
-        return buffer;
-    } finally { tts.close(); }
-}
-app.get("/api/tts/chapters/:chapterId/meta", async (req: Request, res: Response) => {
-    const id = chapterIdSchema.safeParse(req.params.chapterId);
-    const voice = ttsVoiceSchema.safeParse(req.query.voice);
-    if (!id.success || !voice.success) return res.status(400).json({ message: "ID chương hoặc giọng đọc không hợp lệ." });
-    try {
-        const result = await loadChapter(id.data, await identifyTtsUser(req));
-        if (result.status !== 200) return res.status(result.status).json({ message: result.status === 401 ? "Vui lòng đăng nhập để nghe chương VIP." : result.status === 403 ? "Bạn cần mở khóa chương trước khi nghe." : "Không tìm thấy chương." });
-        return res.set("Cache-Control", "private, no-store").json({ chapterId: id.data, title: result.chapter.title, totalChunks: chunkChapterText(result.chapter.content).length, voice: voice.data });
-    } catch (error) { console.error("[tts] chapter metadata failed", error instanceof Error ? error.name : "UNKNOWN"); return res.status(503).json({ message: "Chưa thể tải thông tin audio." }); }
-});
-app.get("/api/tts/chapters/:chapterId/chunk/:index", async (req: Request, res: Response) => {
-    const id = chapterIdSchema.safeParse(req.params.chapterId);
-    const index = z.string().regex(/^(0|[1-9]\d{0,5})$/u).transform(Number).safeParse(req.params.index);
-    const voice = ttsVoiceSchema.safeParse(req.query.voice);
-    if (!id.success || !index.success || !voice.success) return res.status(400).json({ message: "Tham số audio không hợp lệ." });
-    try {
-        const result = await loadChapter(id.data, await identifyTtsUser(req));
-        if (result.status !== 200) return res.status(result.status).json({ message: result.status === 401 ? "Vui lòng đăng nhập để nghe chương VIP." : result.status === 403 ? "Bạn cần mở khóa chương trước khi nghe." : "Không tìm thấy chương." });
-        const chunks = chunkChapterText(result.chapter.content);
-        if (index.data >= chunks.length) return res.status(404).json({ message: "Không tìm thấy đoạn audio." });
-        const textHash = createHash("sha256").update(chunks[index.data]).digest("hex");
-        const key = `${id.data}:${voice.data}:${index.data}:${textHash}`;
-        const buffer = await getOrCreateAudio(key, () => synthesizeChunk(chunks[index.data], voice.data));
-        return res.status(200).set({ "Content-Type": "audio/mpeg", "Content-Length": String(buffer.length), "Cache-Control": "private, max-age=1200", "X-Content-Type-Options": "nosniff" }).send(buffer);
-    } catch (error) { console.error("[tts] chunk synthesis failed", error instanceof Error ? error.name : "UNKNOWN"); return res.status(503).json({ message: "Chưa thể tạo đoạn audio. Vui lòng thử lại." }); }
-});
 const httpServer = createServer(app);
 const onlinePresence = new OnlinePresenceTracker();
 const io = new Server(httpServer, {
@@ -230,7 +140,7 @@ function shutdown(signal: string) {
     shuttingDown = true;
     console.info(`[realtime] received ${signal}, closing connections`);
     io.close(() => {
-        httpServer.close(() => { void ttsPool.end().finally(() => process.exit(0)); });
+        httpServer.close(() => { process.exit(0); });
     });
     setTimeout(() => process.exit(1), 10_000).unref();
 }
