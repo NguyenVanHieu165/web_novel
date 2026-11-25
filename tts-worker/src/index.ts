@@ -4,20 +4,23 @@ async function synthesize(text: string, voice: string): Promise<{ stream: Readab
   const id = crypto.randomUUID().replaceAll("-", "");
   const url = new URL("https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1");
   url.search = new URLSearchParams({ TrustedClientToken: TOKEN, ConnectionId: id, "Sec-MS-GEC": await generateSecMsGec(), "Sec-MS-GEC-Version": "2-143.0.3650.96" }).toString();
-  const response = await fetch(url, { headers: { Upgrade: "websocket", Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold" }, signal: AbortSignal.timeout(12000) });
+  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0", Upgrade: "websocket", Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold" }, signal: AbortSignal.timeout(12000) });
   const ws = response.webSocket;
-  if (!ws) throw new Error("Upgrade failed");
+  if (response.status !== 101 || !ws) throw new Error(`Edge handshake HTTP ${response.status}`);
   ws.accept();
   let controller: ReadableStreamDefaultController<Uint8Array>;
   let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value; }, cancel() { cancelled = true; } });
+  let readyResolve!: () => void;
+  let readyReject!: (error: Error) => void;
+  const ready = new Promise<void>((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
   const completed = new Promise<Uint8Array>((resolve, reject) => {
     const parts: Uint8Array[] = [];
     let size = 0, done = false;
     const finish = (error?: Error) => {
       if (done) return;
       done = true; clearTimeout(timer); ws.close();
-      if (error || !size) { const failure = error ?? new Error("Empty audio"); if (!cancelled) controller.error(failure); reject(failure); return; }
+      if (error || !size) { const failure = error ?? new Error("Empty audio"); if (!cancelled) controller.error(failure); readyReject(failure); reject(failure); return; }
       const audio = new Uint8Array(size); let offset = 0;
       for (const part of parts) { audio.set(part, offset); offset += part.length; }
       if (!cancelled) controller.close();
@@ -25,7 +28,7 @@ async function synthesize(text: string, voice: string): Promise<{ stream: Readab
     };
     const timer = setTimeout(() => finish(new Error("Synthesis timeout")), 25000);
     ws.addEventListener("error", () => finish(new Error("WebSocket error")));
-    ws.addEventListener("close", () => finish(new Error("Premature close")));
+    ws.addEventListener("close", event => finish(new Error(`Edge WebSocket close ${event.code}: ${event.reason.slice(0, 120)}`)));
     ws.addEventListener("message", event => {
       if (done) return;
       if (typeof event.data === "string") { if (event.data.includes("Path:turn.end")) finish(); return; }
@@ -36,7 +39,9 @@ async function synthesize(text: string, voice: string): Promise<{ stream: Readab
       if (!new TextDecoder().decode(data.slice(2, offset)).includes("Path:audio")) return;
       const part = data.slice(offset); size += part.length;
       if (size > 4 * 1024 * 1024) { finish(new Error("Audio too large")); return; }
+      if (!part.length) return;
       parts.push(part);
+      readyResolve();
       if (!cancelled) controller.enqueue(part);
     });
     const stamp = new Date().toUTCString();
@@ -46,6 +51,9 @@ async function synthesize(text: string, voice: string): Promise<{ stream: Readab
     ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${stamp}\r\nPath:ssml\r\n\r\n<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="vi-VN"><voice name="${voice}">${escaped}</voice></speak>`);
     } catch { finish(new Error("WebSocket send failed")); }
   });
+  // Attach immediately: failures before the first frame must not become unhandled rejections.
+  void completed.catch(() => {});
+  await ready;
   return { stream, completed };
 }
 const worker = {
@@ -65,9 +73,13 @@ const worker = {
       const headers = { "Content-Type": "audio/mpeg", "Cache-Control": "private, no-store" };
       if (cached) return new Response(cached.body, { headers: { ...headers, "X-TTS-Cache": "HIT-R2" } });
       const audio = await synthesize(body.text, body.voice);
-      ctx.waitUntil(audio.completed.then(bytes => env.TTS_BUCKET.put(key, bytes, { httpMetadata: { contentType: "audio/mpeg" } })).catch(() => { console.error("TTS R2 write failed"); }));
+      ctx.waitUntil(audio.completed.then(bytes => env.TTS_BUCKET.put(key, bytes, { httpMetadata: { contentType: "audio/mpeg" } })).catch(error => { console.error("TTS stream/cache failed", error instanceof Error ? error.message : "Unknown error"); }));
       return new Response(audio.stream, { headers: { ...headers, "X-TTS-Cache": "MISS" } });
-    } catch { return new Response("Synthesis unavailable", { status: 502 }); }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown synthesis failure";
+      console.error("TTS synthesis failed", detail);
+      return Response.json({ error: "TTS_SYNTHESIS_FAILED", detail }, { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
   },
 };
 

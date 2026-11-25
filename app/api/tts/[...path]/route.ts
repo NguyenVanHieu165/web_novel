@@ -35,7 +35,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const fingerprint = createHash("sha256").update(JSON.stringify(chunks)).digest("hex");
     const cacheKey = createHash("sha256").update(JSON.stringify([chapterId, fingerprint, voice.data, index])).digest("hex");
     const upstream = await fetch(`${base}/synthesize`, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }, body: JSON.stringify({ cacheKey, text: chunks[index], voice: voice.data }), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(50000) });
-    if (!upstream.ok || !upstream.headers.get("content-type")?.startsWith("audio/mpeg")) return fail(503, "Chưa thể tạo audio.");
+    if (!upstream.ok || upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "audio/mpeg") {
+      console.error("[tts] Worker response rejected", { status: upstream.status, contentType: upstream.headers.get("content-type"), cache: upstream.headers.get("X-TTS-Cache") });
+      return fail(503, "Chưa thể tạo audio.");
+    }
     return new NextResponse(upstream.body, { headers: { ...headers, "Content-Type": "audio/mpeg", "X-TTS-Cache": upstream.headers.get("X-TTS-Cache") ?? "UNKNOWN" } });
   } catch { return fail(503, "Máy chủ audio tạm thời không phản hồi."); }
 }
